@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # text_nn
 
 Text Classification models. Used as a submodule for other projects.
@@ -54,3 +55,6 @@ Note, the rationale model is very sensitive to hyperparameters and the example r
 
 
 
+=======
+# encoder-s-search-for-meaning
+>>>>>>> c070f7eeb2a629ec79921e2cfba07063128d15e0
