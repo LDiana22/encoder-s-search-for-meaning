@@ -5,6 +5,9 @@ import numpy as np
 import torch.utils.data as data
 import pdb
 
+def tensor_to_numpy(tensor):
+    return tensor.data
+
 def get_train_loader(train_data, args):
     if args.class_balance:
         sampler = data.sampler.WeightedRandomSampler(

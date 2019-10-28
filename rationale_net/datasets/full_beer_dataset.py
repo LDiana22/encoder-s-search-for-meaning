@@ -18,7 +18,7 @@ class FullBeerDataset(AbstractDataset):
         self.dataset = []
         self.word_to_indx  = word_to_indx
         self.max_length = max_length
-        self.aspects_to_num = {'appearance':0, 'aroma':1, 'palate':2,'taste':3}#, 'overall':4}
+        self.aspects_to_num = {'appearance':0, 'aroma':1, 'palate':2}#,'taste':3, 'overall':4}
         self.class_map = {0: 0, 1:0, 2:0, 3:0, 4:1, 5:1, 6:1, 7:1, 8:2, 9:2, 10:2}
         self.name_to_key = {'train':'train', 'dev':'heldout', 'test':'heldout'}
         self.class_balance = {}
@@ -33,8 +33,10 @@ class FullBeerDataset(AbstractDataset):
                 lines = lines[5000:10000]
             elif self.name == 'train':
                 lines = lines[0:20000]
-
+            import ipdb
+            ipdb.set_trace(context=10)
             for indx, line in tqdm.tqdm(enumerate(lines)):
+
                 uid, line_content = line
                 sample = self.processLine(line_content, self.aspects_to_num[aspect], indx)
 

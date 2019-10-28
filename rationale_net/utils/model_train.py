@@ -3,13 +3,12 @@ import sys
 import torch
 import torch.autograd as autograd
 import torch.nn.functional as F
-import rationale_net.utils.generic as generic
 import rationale_net.utils.metrics as metrics
 import tqdm
 import numpy as np
 import pdb
 import sklearn.metrics
-import rationale_net.utils.learn as learn
+import rationale_net.utils.helpers as helpers
 
 
 def train_model(train_data, dev_data, model, gen, args):
@@ -28,7 +27,7 @@ def train_model(train_data, dev_data, model, gen, args):
         gen = gen.cuda()
 
     args.lr = args.init_lr
-    optimizer = learn.get_optimizer([model, gen], args)
+    optimizer = helpers.get_optimizer([model, gen], args)
 
     num_epoch_sans_improvement = 0
     epoch_stats = metrics.init_metrics_dictionary(modes=['train', 'dev'])
@@ -36,8 +35,8 @@ def train_model(train_data, dev_data, model, gen, args):
     tuning_key = "dev_{}".format(args.tuning_metric)
     best_epoch_func = min if tuning_key == 'loss' else max
 
-    train_loader = learn.get_train_loader(train_data, args)
-    dev_loader = learn.get_dev_loader(dev_data, args)
+    train_loader = helpers.get_train_loader(train_data, args)
+    dev_loader = helpers.get_dev_loader(dev_data, args)
 
 
 
@@ -73,7 +72,7 @@ def train_model(train_data, dev_data, model, gen, args):
             # Subtract one because epoch is 1-indexed and arr is 0-indexed
             epoch_stats['best_epoch'] = epoch - 1
             torch.save(model, args.model_path)
-            torch.save(gen, learn.get_gen_path(args.model_path))
+            torch.save(gen, helpers.get_gen_path(args.model_path))
         else:
             num_epoch_sans_improvement += 1
 
@@ -89,20 +88,20 @@ def train_model(train_data, dev_data, model, gen, args):
             model.cpu()
             gen.cpu()
             model = torch.load(args.model_path)
-            gen = torch.load(learn.get_gen_path(args.model_path))
+            gen = torch.load(helpers.get_gen_path(args.model_path))
 
             if args.cuda:
                 model = model.cuda()
                 gen   = gen.cuda()
             args.lr *= .5
-            optimizer = learn.get_optimizer([model, gen], args)
+            optimizer = helpers.get_optimizer([model, gen], args)
 
     # Restore model to best dev performance
     if os.path.exists(args.model_path):
         model.cpu()
         model = torch.load(args.model_path)
         gen.cpu()
-        gen = torch.load(learn.get_gen_path(args.model_path))
+        gen = torch.load(helpers.get_gen_path(args.model_path))
 
     return epoch_stats, model, gen
 
@@ -166,7 +165,15 @@ def run_epoch(data_loader, train_model, model, gen, optimizer, step, args):
 
     if train_model:
         model.train()
+        print("Gen bf train")
+        # import ipdb
+        # ipdb.set_trace(context=20)
+        print(gen.hidden.weight[0][0])         
         gen.train()
+        print("Gen after train")
+        print(gen.hidden.weight[0][0]) 
+        # print(max(gen.embedding_layer.weight.data[0].cpu().numpy()))         
+        # print(len([x for x in gen.embedding_layer.weight.data[0].cpu().numpy() if x]))       
     else:
         gen.eval()
         model.eval()
@@ -182,7 +189,7 @@ def run_epoch(data_loader, train_model, model, gen, optimizer, step, args):
             if  step % 100 == 0 or args.debug_mode:
                 args.gumbel_temprature = max( np.exp((step+1) *-1* args.gumbel_decay), .05)
 
-        x_indx = learn.get_x_indx(batch, args, eval_model)
+        x_indx = helpers.get_x_indx(batch, args, eval_model)
         text = batch['text']
         y = autograd.Variable(batch['y'], volatile=eval_model)
 
@@ -196,7 +203,6 @@ def run_epoch(data_loader, train_model, model, gen, optimizer, step, args):
             mask, z = gen(x_indx)
         else:
             mask = None
-
         logit, _ = model(x_indx, mask=mask)
 
         if args.use_as_tagger:
@@ -213,20 +219,28 @@ def run_epoch(data_loader, train_model, model, gen, optimizer, step, args):
             loss += args.continuity_lambda * continuity_cost
 
         if train_model:
+            print("Gen bf loss bkp")
+            print(gen.hidden.weight[0][0]) 
+            # print(max(gen.embedding_layer.weight.data[0].cpu().numpy()))         
+            # print(len([x for x in gen.embedding_layer.weight.data[0].cpu().numpy() if x]))    
             loss.backward()
+            print("Gen after loss bkp")
+            print(gen.hidden.weight[0][0]) 
+            # print(max(gen.embedding_layer.weight.data[0].cpu().numpy()))         
+            # print(len([x for x in gen.embedding_layer.weight.data[0].cpu().numpy() if x]))       
             optimizer.step()
 
         if args.get_rationales:
-            k_selection_losses.append( generic.tensor_to_numpy(selection_cost))
-            k_continuity_losses.append( generic.tensor_to_numpy(continuity_cost))
+            k_selection_losses.append( helpers.tensor_to_numpy(selection_cost))
+            k_continuity_losses.append( helpers.tensor_to_numpy(continuity_cost))
 
-        obj_losses.append(generic.tensor_to_numpy(obj_loss))
-        losses.append( generic.tensor_to_numpy(loss) )
+        obj_losses.append(helpers.tensor_to_numpy(obj_loss))
+        losses.append( helpers.tensor_to_numpy(loss) )
         batch_softmax = F.softmax(logit, dim=-1).cpu()
         preds.extend(torch.max(batch_softmax, 1)[1].view(y.size()).data.numpy())
 
         texts.extend(text)
-        rationales.extend(learn.get_rationales(mask, text))
+        rationales.extend(helpers.get_rationales(mask, text))
 
         if args.use_as_tagger:
             golds.extend(batch['y'].view(-1).numpy())

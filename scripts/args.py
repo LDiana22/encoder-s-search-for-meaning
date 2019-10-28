@@ -2,9 +2,6 @@ import torch
 import pdb
 import argparse
 
-def tensor_to_numpy(tensor):
-    return tensor.data
-
 class Namespace:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)

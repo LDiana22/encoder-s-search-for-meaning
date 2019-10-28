@@ -5,9 +5,9 @@ import argparse
 
 import rationale_net.datasets.factory as dataset_factory
 import rationale_net.utils.embedding as embedding
-import rationale_net.utils.model as model_factory
-import rationale_net.utils.generic as generic
-import rationale_net.learn.train as train
+import rationale_net.utils.model_factory as model_factory
+import args as generic
+import rationale_net.utils.model_train as model_helper
 import os
 import torch
 import datetime
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     print()
     # train
     if args.train :
-        epoch_stats, model, gen = train.train_model(train_data, dev_data, model, gen, args)
+        epoch_stats, model, gen = model_helper.train_model(train_data, dev_data, model, gen, args)
         args.epoch_stats = epoch_stats
         save_path = args.results_path
         print("Save train/dev results to", save_path)
@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
     # test
     if args.test :
-        test_stats = train.test_model(test_data, model, gen, args)
+        test_stats = model_helper.test_model(test_data, model, gen, args)
         args.test_stats = test_stats
         args.train_data = train_data
         args.test_data = test_data
