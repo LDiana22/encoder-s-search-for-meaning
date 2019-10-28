@@ -2,6 +2,7 @@
 ## Beer reviews dataset
 - run main: ```python -u scripts/main.py  --batch_size 32 --cuda --dataset full_beer --embedding glove --dropout 0.05 --weight_decay 5e-06 --num_layers 1 --model_form cnn --hidden_dim 100 --epochs 50 --init_lr 0.0001 --num_workers 0 --objective cross_entropy --patience 5 --save_dir snapshot --train --test --results_path logs/demo_run.results  --gumbel_decay 1e-5 --get_rationales --selection_lambda .001 --continuity_lambda 0 --aspect aroma```  
 aspect: {appearance, aroma, palate, taste}
+* http://people.csail.mit.edu/taolei/beer/
 
 
 ## Code and readme forked from https://github.com/yala/text_nn 
