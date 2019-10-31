@@ -47,6 +47,8 @@ class Generator(nn.Module):
             Given input x_indx of dim (batch, length), return z (batch, length) such that z
             can act as element-wise mask on x
         '''
+        import ipdb
+        ipdb.set_trace(context=10)
         if self.args.model_form == 'cnn':
             x = self.embedding_layer(x_indx.squeeze(1))
             if self.args.cuda:

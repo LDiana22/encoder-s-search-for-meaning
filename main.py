@@ -6,21 +6,20 @@ import argparse
 import rationale_net.datasets.factory as dataset_factory
 import rationale_net.utils.embedding as embedding
 import rationale_net.utils.model_factory as model_factory
-import args as generic
+import scripts.args as generic
 import rationale_net.utils.model_train as model_helper
 import os
 import torch
-import datetime
 import pickle
-import pdb
 
 
 if __name__ == '__main__':
     # update args and print
     args = generic.parse_args()
-
+    print("Loading embeddings")
     embeddings, word_to_indx = embedding.get_embedding_tensor(args)
-
+    print("Loaded embeddings")
+ 
     train_data, dev_data, test_data = dataset_factory.get_dataset(args, word_to_indx)
 
     results_path_stem = args.results_path.split('/')[-1].split('.')[0]

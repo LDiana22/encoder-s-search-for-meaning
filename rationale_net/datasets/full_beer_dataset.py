@@ -4,6 +4,7 @@ from rationale_net.utils.embedding import get_indices_tensor
 from rationale_net.datasets.factory import RegisterDataset
 from rationale_net.datasets.abstract_dataset import AbstractDataset
 
+from rationale_net.corpus_analysis.vocabulary import TfidfVocabulary
 
 SMALL_TRAIN_SIZE = 800
 
@@ -33,8 +34,6 @@ class FullBeerDataset(AbstractDataset):
                 lines = lines[5000:10000]
             elif self.name == 'train':
                 lines = lines[0:20000]
-            import ipdb
-            ipdb.set_trace(context=10)
             for indx, line in tqdm.tqdm(enumerate(lines)):
 
                 uid, line_content = line
@@ -45,11 +44,22 @@ class FullBeerDataset(AbstractDataset):
                 self.class_balance[ sample['y'] ] += 1
                 sample['uid'] = uid
                 self.dataset.append(sample)
-            gfile.close()
+        self.explanations_vocab = self._get_explanations_vocab()
         print ("Class balance", self.class_balance)
 
         if args.class_balance:
             raise NotImplementedError("Beer review dataset doesn't support balanced sampling!")
+
+    def _get_explanations_vocab(self):
+        vocabulary = TfidfVocabulary(self.dataset)
+        possible_explanations = vocabulary.possible_explanations()
+        explanations_vocab = {}
+        for explanation in possible_explanations:
+            explanations_vocab[explanation] = self.explanations_vocab.get(explanation, [])
+            explanations_vocab[explanation].append(
+                    get_indices_tensor([explanation],
+                                       self.word_to_indx, 1)) 
+        return explanations_vocab
 
     ## Convert one line from beer dataset to {Text, Tensor, Labels}
     def processLine(self, line, aspect_num, i):
@@ -60,10 +70,12 @@ class FullBeerDataset(AbstractDataset):
             label = float(labels[aspect_num])
             self.args.num_class = 1
         else:
+            # 0 [0-3]/ 1 [4-7]/ 2 [8-10] for the corresponding aspect
             label = int(self.class_map[ int(labels[aspect_num] *10) ])
             self.args.num_class = 3
         text_list = line.split('\t')[-1].split()[:self.max_length]
         text = " ".join(text_list)
         x =  get_indices_tensor(text_list, self.word_to_indx, self.max_length)
+        # x = encoding of the text
         sample = {'text':text,'x':x, 'y':label, 'i':i}
         return sample
