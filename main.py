@@ -1,7 +1,6 @@
 from os.path import dirname, realpath
 import sys
 sys.path.append(dirname(dirname(realpath(__file__))))
-import argparse
 
 import rationale_net.datasets.factory as dataset_factory
 import rationale_net.utils.embedding as embedding
@@ -9,8 +8,8 @@ import rationale_net.utils.model_factory as model_factory
 import scripts.args as generic
 import rationale_net.utils.model_train as model_helper
 import os
-import torch
 import pickle
+
 
 
 if __name__ == '__main__':

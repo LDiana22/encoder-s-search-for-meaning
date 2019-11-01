@@ -73,5 +73,5 @@ class TfidfVocabulary(Vocabulary):
         for doc in self.class_documents.keys():
             ranked_words = sorted(self.tf_idf[doc], key=self.tf_idf[doc].get, reverse=True)
             explanations.extend(ranked_words[:self.max_dim//self.N])
-        return explanations
+        return {(i,explanation) for i,explanation in enumerate(explanations)}
 
