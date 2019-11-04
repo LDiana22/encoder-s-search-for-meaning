@@ -3,14 +3,15 @@ import torch.nn as nn
 import torch.autograd as autograd
 import torch.nn.functional as F
 import rationale_net.models.cnn as cnn
-import pdb
 
 class Encoder(nn.Module):
 
-    def __init__(self, embeddings, args):
+    def __init__(self, embeddings, args, expl_vocab):
         super(Encoder, self).__init__()
         ### Encoder
         self.args = args
+        # embedded possible explanations (word indices)
+        self.expl_vocab = expl_vocab
         vocab_size, hidden_dim = embeddings.shape
         self.embedding_dim = hidden_dim
         self.embedding_layer = nn.Embedding( vocab_size, hidden_dim)
@@ -18,6 +19,9 @@ class Encoder(nn.Module):
         self.embedding_layer.weight.requires_grad = True
         self.embedding_fc = nn.Linear( hidden_dim, hidden_dim )
         self.embedding_bn = nn.BatchNorm1d( hidden_dim)
+        expl_tensors = torch.tensor([self.expl_vocab[e_id]["emb"] for e_id in sorted(self.expl_vocab.keys())])
+            
+        self.embedded_vocab = self.embedding_layer(expl_tensors)
 
         if args.model_form == 'cnn':
             self.cnn = cnn.CNN(args, max_pool_over_time=(not args.use_as_tagger))
@@ -37,7 +41,8 @@ class Encoder(nn.Module):
         if self.args.cuda:
                 x = x.cuda()
         if not mask is None:
-            x = x * mask.unsqueeze(-1)
+            x = torch.cat((x, self.embedded_vocab * mask.unsqueeze(-1)),1)
+            #x = x * mask.unsqueeze(-1)
         x = F.relu( self.embedding_fc(x))
         x = self.dropout(x)
 
@@ -46,7 +51,7 @@ class Encoder(nn.Module):
             hidden = self.cnn(x)
             hidden = F.relu( self.fc(hidden) )
         else:
-            raise Exception("Model form {} not yet supported for encoder!".format(args.model_form))
+            raise Exception("Model form {} not yet supported for encoder!".format(self.args.model_form))
 
         hidden = self.dropout(hidden)
         logit = self.hidden(hidden)

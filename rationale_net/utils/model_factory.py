@@ -14,7 +14,7 @@ def get_model(args, embeddings, train_data, expl_vocab):
             model = tagger.Tagger(embeddings, args)
         else:
             gen   = generator.Generator(embeddings, args, expl_vocab)
-            model = encoder.Encoder(embeddings, args)
+            model = encoder.Encoder(embeddings, args, expl_vocab)
     else :
         print('\nLoading model from [%s]...' % args.snapshot)
         try:

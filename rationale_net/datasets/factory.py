@@ -21,7 +21,8 @@ def get_dataset(args, word_to_indx, truncate_train=False):
 
     if args.dataset in DATASET_REGISTRY:
         train = DATASET_REGISTRY[args.dataset](args, word_to_indx, 'train')
+        expl_vocab = train.explanations_vocab
         dev = DATASET_REGISTRY[args.dataset](args, word_to_indx, 'dev')
         test = DATASET_REGISTRY[args.dataset](args, word_to_indx, 'test')
-
-    return train, dev, test
+    
+    return train, dev, test, expl_vocab

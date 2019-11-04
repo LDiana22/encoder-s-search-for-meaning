@@ -44,7 +44,8 @@ class FullBeerDataset(AbstractDataset):
                 self.class_balance[ sample['y'] ] += 1
                 sample['uid'] = uid
                 self.dataset.append(sample)
-        self.explanations_vocab = self._get_explanations_vocab()
+        if self.name == 'train':
+            self.explanations_vocab = self._get_explanations_vocab()
         print ("Class balance", self.class_balance)
 
         if args.class_balance:
@@ -57,7 +58,7 @@ class FullBeerDataset(AbstractDataset):
         for e_id, text in possible_explanations.items():
             explanations_vocab[e_id] = { "emb":
                     get_indices_tensor([text],
-                                       self.word_to_indx, 1),
+                                       self.word_to_indx, 1), # one word
                                        "text": text} 
         return explanations_vocab
 

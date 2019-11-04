@@ -4,7 +4,6 @@ import torch.autograd as autograd
 import torch.nn.functional as F
 import rationale_net.models.cnn as cnn
 import rationale_net.utils.helpers as helpers
-import pdb
 
 '''
     The generator selects a rationale z from a document x that should be sufficient
@@ -24,9 +23,9 @@ class Generator(nn.Module):
         if args.model_form == 'cnn':
             self.cnn = cnn.CNN(args, max_pool_over_time = False)
         
-        self.z_dim = len(expl_vacab.keys())
-        self.compress = nn.Linear((len(args.filters)* args.filter_num), )
-        self.hidden = nn.Linear(, self.z_dim)
+        self.z_dim = len(expl_vocab.keys())
+        self.compress = nn.Linear((len(args.filters)* args.filter_num), 300)
+        self.hidden = nn.Linear(300, self.z_dim)
         self.dropout = nn.Dropout(args.dropout)
 
 
@@ -48,7 +47,7 @@ class Generator(nn.Module):
     def forward(self, x_indx):
         '''
             Given input x_indx of dim (batch, length), return z (batch, length) such that z
-            can act as element-wise mask on x
+            can act as element-wise mask on the explanation dict
         '''
         if self.args.model_form == 'cnn':
             x = self.embedding_layer(x_indx.squeeze(1))
@@ -83,8 +82,8 @@ class Generator(nn.Module):
             Compute the generator specific costs, i.e selection cost, continuity cost, and global vocab cost
         '''
         selection_cost = torch.mean( torch.sum(mask, dim=1) )
-        l_padded_mask =  torch.cat( [mask[:,0].unsqueeze(1), mask] , dim=1)
-        r_padded_mask =  torch.cat( [mask, mask[:,-1].unsqueeze(1)] , dim=1)
-        continuity_cost = torch.mean( torch.sum( torch.abs( l_padded_mask - r_padded_mask ) , dim=1) )
-        return selection_cost, continuity_cost
+        #l_padded_mask =  torch.cat( [mask[:,0].unsqueeze(1), mask] , dim=1)
+        #r_padded_mask =  torch.cat( [mask, mask[:,-1].unsqueeze(1)] , dim=1)
+        #continuity_cost = torch.mean( torch.sum( torch.abs( l_padded_mask - r_padded_mask ) , dim=1) )
+        return selection_cost
 

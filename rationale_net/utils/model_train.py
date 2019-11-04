@@ -213,10 +213,9 @@ def run_epoch(data_loader, train_model, model, gen, optimizer, step, args):
         obj_loss = loss
 
         if args.get_rationales:
-            selection_cost, continuity_cost = gen.loss(mask, x_indx)
-
-            loss += args.selection_lambda * selection_cost
-            loss += args.continuity_lambda * continuity_cost
+            selection_cost = gen.loss(mask, x_indx)
+            
+            loss += selection_cost
 
         if train_model:
             print("Gen bf loss bkp")
@@ -232,7 +231,6 @@ def run_epoch(data_loader, train_model, model, gen, optimizer, step, args):
 
         if args.get_rationales:
             k_selection_losses.append( helpers.tensor_to_numpy(selection_cost))
-            k_continuity_losses.append( helpers.tensor_to_numpy(continuity_cost))
 
         obj_losses.append(helpers.tensor_to_numpy(obj_loss))
         losses.append( helpers.tensor_to_numpy(loss) )

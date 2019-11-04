@@ -13,7 +13,7 @@ def parse_args():
     parser.add_argument('--train', action='store_true', default=True, help='Whether or not to train model')
     parser.add_argument('--test', action='store_true', default=True, help='Whether or not to run model on test set')
     # device
-    parser.add_argument('--cuda', action='store_true', default=False, help='enable the gpu' )
+    parser.add_argument('--cuda', action='store_true', default=True, help='enable the gpu' )
     parser.add_argument('--num_gpus', type=int, default=1, help='Num GPUs to use. More than one gpu turns on multi_gpu training with nn.DataParallel.')
     parser.add_argument('--debug_mode', action='store_true', default=False, help='debug mode' )
     parser.add_argument('--class_balance', action='store_true', default=False, help='use balanced samlping for train loaded' )
