@@ -24,8 +24,9 @@ if __name__ == '__main__':
     results_path_stem = args.results_path.split('/')[-1].split('.')[0]
     args.model_path = '{}.pt'.format(os.path.join(args.save_dir, results_path_stem))
 
+    explanation_vocab = train_data.explanations_vocab
     # model
-    gen, model = model_factory.get_model(args, embeddings, train_data)
+    gen, model = model_factory.get_model(args, embeddings, train_data, explanation_vocab)
 
     print()
     # train

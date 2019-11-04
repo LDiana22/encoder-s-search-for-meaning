@@ -7,13 +7,13 @@ import rationale_net.utils.helpers as helpers
 import os
 import pdb
 
-def get_model(args, embeddings, train_data):
+def get_model(args, embeddings, train_data, expl_vocab):
     if args.snapshot is None:
         if args.use_as_tagger == True:
             gen = empty.Empty()
             model = tagger.Tagger(embeddings, args)
         else:
-            gen   = generator.Generator(embeddings, args)
+            gen   = generator.Generator(embeddings, args, expl_vocab)
             model = encoder.Encoder(embeddings, args)
     else :
         print('\nLoading model from [%s]...' % args.snapshot)

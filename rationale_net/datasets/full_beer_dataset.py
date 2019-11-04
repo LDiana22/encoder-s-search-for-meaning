@@ -54,14 +54,14 @@ class FullBeerDataset(AbstractDataset):
         vocabulary = TfidfVocabulary(self.dataset)
         possible_explanations = vocabulary.possible_explanations()
         explanations_vocab = {}
-        for explanation in possible_explanations:
-            explanations_vocab[explanation] = self.explanations_vocab.get(explanation, [])
-            explanations_vocab[explanation].append(
-                    get_indices_tensor([explanation],
-                                       self.word_to_indx, 1)) 
+        for e_id, text in possible_explanations.items():
+            explanations_vocab[e_id] = { "emb":
+                    get_indices_tensor([text],
+                                       self.word_to_indx, 1),
+                                       "text": text} 
         return explanations_vocab
 
-    ## Convert one line from beer dataset to {Text, Tensor, Labels}
+    ## Convert one line from beer dataset to {Text,explanations_vocab Tensor, Labels}
     def processLine(self, line, aspect_num, i):
         if isinstance(line, bytes):
             line = line.decode()

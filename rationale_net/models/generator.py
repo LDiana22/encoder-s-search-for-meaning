@@ -14,7 +14,7 @@ import pdb
 '''
 class Generator(nn.Module):
 
-    def __init__(self, embeddings, args):
+    def __init__(self, embeddings, args, expl_vocab):
         super(Generator, self).__init__()
         vocab_size, hidden_dim = embeddings.shape
         self.embedding_layer = nn.Embedding( vocab_size, hidden_dim)
@@ -23,23 +23,26 @@ class Generator(nn.Module):
         self.args = args
         if args.model_form == 'cnn':
             self.cnn = cnn.CNN(args, max_pool_over_time = False)
-
-        self.z_dim = 2
-
-        self.hidden = nn.Linear((len(args.filters)* args.filter_num), self.z_dim)
+        
+        self.z_dim = len(expl_vacab.keys())
+        self.compress = nn.Linear((len(args.filters)* args.filter_num), )
+        self.hidden = nn.Linear(, self.z_dim)
         self.dropout = nn.Dropout(args.dropout)
 
 
 
     def  __z_forward(self, activ):
         '''
-            Returns prob of each token being selected
+            Returns prob of each token being selected out of the vocabulary tokens
         '''
+#        import ipdb 
+#        ipdb.set_trace(context=10)
         activ = activ.transpose(1,2)
-        logits = self.hidden(activ)
+        activ = self.compress()
+        logits = self.hidden(activ) # batch, length, z_dim
         probs = helpers.gumbel_softmax(logits, self.args.gumbel_temprature, self.args.cuda)
         z = probs[:,:,1]
-        return z
+        return z #batch, length
 
 
     def forward(self, x_indx):
@@ -47,8 +50,6 @@ class Generator(nn.Module):
             Given input x_indx of dim (batch, length), return z (batch, length) such that z
             can act as element-wise mask on x
         '''
-        import ipdb
-        ipdb.set_trace(context=10)
         if self.args.model_form == 'cnn':
             x = self.embedding_layer(x_indx.squeeze(1))
             if self.args.cuda:
@@ -56,7 +57,7 @@ class Generator(nn.Module):
             x = torch.transpose(x, 1, 2) # Switch X to (Batch, Embed, Length)
             activ = self.cnn(x)
         else:
-            raise NotImplementedError("Model form {} not yet supported for generator!".format(args.model_form))
+            raise NotImplementedError("Model form {} not yet supported for generator!".format(self.args.model_form))
 
         z = self.__z_forward(F.relu(activ))
         mask = self.sample(z)
