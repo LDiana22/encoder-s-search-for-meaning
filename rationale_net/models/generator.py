@@ -24,7 +24,7 @@ class Generator(nn.Module):
             self.cnn = cnn.CNN(args, max_pool_over_time = False)
         
         self.z_dim = len(expl_vocab.keys())
-        self.compress = nn.Linear((len(args.filters)* args.filter_num), 300)
+        self.layer = nn.Linear((len(args.filters)* args.filter_num), 300)
         self.hidden = nn.Linear(300, self.z_dim)
         self.dropout = nn.Dropout(args.dropout)
 
@@ -37,11 +37,12 @@ class Generator(nn.Module):
 #        import ipdb 
 #        ipdb.set_trace(context=10)
         activ = activ.transpose(1,2)
-        activ = self.compress()
-        logits = self.hidden(activ) # batch, length, z_dim
+        layer_out = self.layer(activ)
+        logits = self.hidden(layer_out) # batch, length, z_dim
         probs = helpers.gumbel_softmax(logits, self.args.gumbel_temprature, self.args.cuda)
-        z = probs[:,:,1]
-        return z #batch, length
+        z = torch.sum(probs, 1)
+        mask = torch.div(z,torch.norm(z,2))
+        return mask #batch, length
 
 
     def forward(self, x_indx):

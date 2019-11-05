@@ -41,7 +41,8 @@ class Encoder(nn.Module):
         if self.args.cuda:
                 x = x.cuda()
         if not mask is None:
-            x = torch.cat((x, self.embedded_vocab * mask.unsqueeze(-1)),1)
+            explanation =  self.embedded_vocab * mask.unsqueeze(-1)
+            x = torch.cat((x, explanation),1)
             #x = x * mask.unsqueeze(-1)
         x = F.relu( self.embedding_fc(x))
         x = self.dropout(x)

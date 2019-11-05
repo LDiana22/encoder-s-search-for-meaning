@@ -218,15 +218,7 @@ def run_epoch(data_loader, train_model, model, gen, optimizer, step, args):
             loss += selection_cost
 
         if train_model:
-            print("Gen bf loss bkp")
-            print(gen.hidden.weight[0][0]) 
-            # print(max(gen.embedding_layer.weight.data[0].cpu().numpy()))         
-            # print(len([x for x in gen.embedding_layer.weight.data[0].cpu().numpy() if x]))    
-            loss.backward()
-            print("Gen after loss bkp")
-            print(gen.hidden.weight[0][0]) 
-            # print(max(gen.embedding_layer.weight.data[0].cpu().numpy()))         
-            # print(len([x for x in gen.embedding_layer.weight.data[0].cpu().numpy() if x]))       
+            loss.backward(retain_graph=True)
             optimizer.step()
 
         if args.get_rationales:

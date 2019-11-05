@@ -27,7 +27,7 @@ class TfidfVocabulary(Vocabulary):
     """TF-IDF for words relative to the document of each class
     (each document comprises the collection of text labeled the same)
     """
-    def __init__(self, data, vocab_dim=300):
+    def __init__(self, data, vocab_dim=200):
         Vocabulary.__init__(self, data)
         self.max_dim=vocab_dim
         # Number of documents = number of distinc labels
