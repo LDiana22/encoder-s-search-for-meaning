@@ -13,7 +13,7 @@ def parse_args():
     parser.add_argument('--train', action='store_true', default=True, help='Whether or not to train model')
     parser.add_argument('--test', action='store_true', default=True, help='Whether or not to run model on test set')
     # device
-    parser.add_argument('--cuda', action='store_true', default=False, help='enable the gpu' )
+    parser.add_argument('--cuda', action='store_true', default=True, help='enable the gpu' )
     parser.add_argument('--num_gpus', type=int, default=1, help='Num GPUs to use. More than one gpu turns on multi_gpu training with nn.DataParallel.')
     parser.add_argument('--debug_mode', action='store_true', default=False, help='debug mode' )
     parser.add_argument('--class_balance', action='store_true', default=False, help='use balanced samlping for train loaded' )
@@ -21,10 +21,10 @@ def parse_args():
     parser.add_argument('--objective', default='cross_entropy', help='choose which loss objective to use')
     
     ####### ASPECT
-    parser.add_argument('--aspect', default='aroma', help='which aspect to train/eval on')
+    parser.add_argument('--aspect', default='palate', help='which aspect to train/eval on')
     parser.add_argument('--init_lr', type=float, default=0.0001, help='initial learning rate [default: 0.001]')
     ####### EPOCHS
-    parser.add_argument('--epochs', type=int, default=10, help='number of epochs for train [default: 256]')
+    parser.add_argument('--epochs', type=int, default=50, help='number of epochs for train [default: 256]')
     parser.add_argument('--batch_size', type=int, default=32, help='batch size for training [default: 32]')
     parser.add_argument('--patience', type=int, default=5, help='Num epochs of no dev progress before half learning rate [default: 10]')
     parser.add_argument('--tuning_metric', type=str, default='loss', help='Metric to judge dev set results. Possible options loss, accuracy, precision, recall or f1, where precision/recall/f1 are all microaveraged. [default: loss]')
@@ -59,6 +59,8 @@ def parse_args():
     parser.add_argument('--use_as_tagger',  action='store_true', default=False, help="Use model for a taggign task, i.e with labels per word in the document. Note only supports binary tagging")
     parser.add_argument('--tag_lambda', type=float, default=.5, help="Lambda to weight the null entity class")
 
+    parser.add_argument('--vocab_path', default='rationale_net/generated_data/vocabulary/', help='path to save the extracted voabulary of possible explanations')
+
     args = parser.parse_args()
 
     # update args and print
@@ -66,9 +68,9 @@ def parse_args():
     if args.objective == 'mse':
         args.num_class = 1
 
-    #print("\nParameters:")
-    #for attr, value in sorted(args.__dict__.items()):
-    #   print("\t{}={}".format(attr.upper(), value))
+    print("\nParameters:")
+    for attr, value in sorted(args.__dict__.items()):
+       print("\t{}={}".format(attr.upper(), value))
 
     return args
 

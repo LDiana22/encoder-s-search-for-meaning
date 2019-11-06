@@ -27,8 +27,9 @@ class TfidfVocabulary(Vocabulary):
     """TF-IDF for words relative to the document of each class
     (each document comprises the collection of text labeled the same)
     """
-    def __init__(self, data, vocab_dim=200):
+    def __init__(self, args, data, vocab_dim=200):
         Vocabulary.__init__(self, data)
+        self.path = args.vocab_path + "tfidf-200.txt"
         self.max_dim=vocab_dim
         # Number of documents = number of distinc labels
         self.N = len(self.class_documents.keys())
@@ -73,5 +74,8 @@ class TfidfVocabulary(Vocabulary):
         for doc in self.class_documents.keys():
             ranked_words = sorted(self.tf_idf[doc], key=self.tf_idf[doc].get, reverse=True)
             explanations.extend(ranked_words[:self.max_dim//self.N])
-        return {i: explanation for i,explanation in enumerate(explanations)}
+        expl = {i: explanation for i,explanation in enumerate(explanations)}
+        with open(self.path, 'w') as f:
+            f.write(str(expl))
+        return expl
 

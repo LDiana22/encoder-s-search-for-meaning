@@ -52,7 +52,7 @@ class FullBeerDataset(AbstractDataset):
             raise NotImplementedError("Beer review dataset doesn't support balanced sampling!")
 
     def _get_explanations_vocab(self):
-        vocabulary = TfidfVocabulary(self.dataset)
+        vocabulary = TfidfVocabulary(self.args, self.dataset)
         possible_explanations = vocabulary.possible_explanations()
         explanations_vocab = {}
         for e_id, text in possible_explanations.items():
