@@ -21,7 +21,7 @@ def parse_args():
     parser.add_argument('--objective', default='cross_entropy', help='choose which loss objective to use')
     
     ####### ASPECT
-    parser.add_argument('--aspect', default='palate', help='which aspect to train/eval on')
+    parser.add_argument('--aspect', default='aroma', help='which aspect to train/eval on')
     parser.add_argument('--init_lr', type=float, default=0.0001, help='initial learning rate [default: 0.001]')
     ####### EPOCHS
     parser.add_argument('--epochs', type=int, default=50, help='number of epochs for train [default: 256]')
@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument('--patience', type=int, default=5, help='Num epochs of no dev progress before half learning rate [default: 10]')
     parser.add_argument('--tuning_metric', type=str, default='loss', help='Metric to judge dev set results. Possible options loss, accuracy, precision, recall or f1, where precision/recall/f1 are all microaveraged. [default: loss]')
     #paths
-    parser.add_argument('--save_dir', type=str, default='snapshot', help='where to save the snapshot')
+    parser.add_argument('--save_dir', type=str, default='snapshot/aroma', help='where to save the snapshot')
     parser.add_argument('--results_path', type=str, default='logs/demo_run.results', help='where to dump model config and epoch stats. If get_rationales is set to true, rationales for the test set will also be stored here.')
     parser.add_argument('--snapshot', type=str, default=None, help='filename of model snapshot to load[default: None]')
     # data loading

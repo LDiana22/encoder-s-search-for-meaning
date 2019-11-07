@@ -162,16 +162,13 @@ def run_epoch(data_loader, train_model, model, gen, optimizer, step, args):
     losses = []
     texts = []
     rationales = []
+    if args.cuda:
+        model = model.cuda()
+        gen = gen.cuda()
 
     if train_model:
         model.train()
-        print("Gen bf train")
-        # import ipdb
-        # ipdb.set_trace(context=20)
-        print(gen.hidden.weight[0][0])         
         gen.train()
-        print("Gen after train")
-        print(gen.hidden.weight[0][0]) 
         # print(max(gen.embedding_layer.weight.data[0].cpu().numpy()))         
         # print(len([x for x in gen.embedding_layer.weight.data[0].cpu().numpy() if x]))       
     else:
@@ -270,4 +267,6 @@ def get_loss(logit,y, args):
     else:
         raise Exception(
             "Objective {} not supported!".format(args.objective))
+    if args.cuda:
+        loss = loss.cuda()
     return loss

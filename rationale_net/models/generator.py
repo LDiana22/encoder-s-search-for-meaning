@@ -30,6 +30,7 @@ class Generator(nn.Module):
 
 
 
+
     def  __z_forward(self, activ):
         '''
             Returns prob of each token being selected out of the vocabulary tokens
@@ -83,6 +84,7 @@ class Generator(nn.Module):
             Compute the generator specific costs, i.e selection cost, continuity cost, and global vocab cost
         '''
         selection_cost = torch.mean( torch.sum(mask, dim=1) )
+        
         #l_padded_mask =  torch.cat( [mask[:,0].unsqueeze(1), mask] , dim=1)
         #r_padded_mask =  torch.cat( [mask, mask[:,-1].unsqueeze(1)] , dim=1)
         #continuity_cost = torch.mean( torch.sum( torch.abs( l_padded_mask - r_padded_mask ) , dim=1) )
