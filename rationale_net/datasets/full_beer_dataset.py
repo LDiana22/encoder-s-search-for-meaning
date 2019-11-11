@@ -33,8 +33,6 @@ class FullBeerDataset(AbstractDataset):
                 lines = lines[5000:10000]
             elif self.name == 'train':
                 lines = lines[0:20000]
-            import ipdb
-            ipdb.set_trace(context=10)
             for indx, line in tqdm.tqdm(enumerate(lines)):
 
                 uid, line_content = line
