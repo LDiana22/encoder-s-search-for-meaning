@@ -41,8 +41,8 @@ class Generator(nn.Module):
         layer_out = self.layer(activ)
         logits = self.hidden(layer_out) # batch, length, z_dim
         probs = helpers.gumbel_softmax(logits, self.args.gumbel_temprature, self.args.cuda)
-        z = torch.sum(probs, 1)
-        mask = torch.div(z,torch.norm(z,2))
+        probs = torch.sum(probs, 1)
+        mask = torch.div(probs,torch.norm(probs,2))
         return mask #batch, length
 
 

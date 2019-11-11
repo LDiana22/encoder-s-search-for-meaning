@@ -42,7 +42,9 @@ class Encoder(nn.Module):
                 x = x.cuda()
                 self.embedded_vocab = self.embedded_vocab.cuda()
         if not mask is None:
-            explanation =  self.embedded_vocab * mask.unsqueeze(-1)
+            explanation =  torch.mul(self.embedded_vocab, mask.unsqueeze(-1))
+            if self.args.cuda:
+                explanation = explanation.cuda()
             x = torch.cat((x, explanation),1)
             #x = x * mask.unsqueeze(-1)
         x = F.relu( self.embedding_fc(x))

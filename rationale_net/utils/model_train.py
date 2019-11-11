@@ -33,7 +33,6 @@ def train_model(train_data, dev_data, model, gen, args):
     epoch_stats = metrics.init_metrics_dictionary(modes=['train', 'dev'])
     step = 0
     tuning_key = "dev_{}".format(args.tuning_metric)
-    best_epoch_func = min if tuning_key == 'loss' else max
 
     train_loader = helpers.get_train_loader(train_data, args)
     dev_loader = helpers.get_dev_loader(dev_data, args)
@@ -102,6 +101,9 @@ def train_model(train_data, dev_data, model, gen, args):
         model = torch.load(args.model_path)
         gen.cpu()
         gen = torch.load(helpers.get_gen_path(args.model_path))
+        if args.cuda:
+            model = model.cuda()
+            gen   = gen.cuda()
 
     return epoch_stats, model, gen
 
