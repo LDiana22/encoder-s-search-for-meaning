@@ -188,9 +188,9 @@ def run_epoch(data_loader, train_model, model, gen, optimizer, step, args):
             if  step % 100 == 0 or args.debug_mode:
                 args.gumbel_temprature = max( np.exp((step+1) *-1* args.gumbel_decay), .05)
 
-        x_indx = helpers.get_x_indx(batch, args, eval_model)
+        x_indx = helpers.get_x_indx(batch, args, train_model)
         text = batch['text']
-        y = autograd.Variable(batch['y'], volatile=eval_model)
+        y = torch.tensor(batch['y'])
 
         if args.cuda:
             x_indx, y = x_indx.cuda(), y.cuda()
@@ -221,7 +221,7 @@ def run_epoch(data_loader, train_model, model, gen, optimizer, step, args):
             optimizer.step()
 
         if args.get_rationales:
-            k_selection_losses.append( helpers.tensor_to_numpy(selection_cost))
+            k_selection_losses.append(helpers.tensor_to_numpy(selection_cost))
 
         obj_losses.append(helpers.tensor_to_numpy(obj_loss))
         losses.append( helpers.tensor_to_numpy(loss) )
@@ -258,6 +258,8 @@ def run_epoch(data_loader, train_model, model, gen, optimizer, step, args):
 def get_loss(logit,y, args):
     if args.objective == 'cross_entropy':
         if args.use_as_tagger:
+            if args.cuda:
+                logit, y = logit.cuda(), y.cuda()
             loss = F.cross_entropy(logit, y, reduce=False)
             neg_loss = torch.sum(loss * (y == 0).float()) / torch.sum(y == 0).float()
             pos_loss = torch.sum(loss * (y == 1).float()) / torch.sum(y == 1).float()
@@ -269,6 +271,6 @@ def get_loss(logit,y, args):
     else:
         raise Exception(
             "Objective {} not supported!".format(args.objective))
-    if args.cuda:
-        loss = loss.cuda()
+    #if args.cuda:
+    #    loss = loss.cuda()
     return loss

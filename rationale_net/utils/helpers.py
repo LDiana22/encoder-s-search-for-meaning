@@ -61,12 +61,15 @@ def get_optimizer(models, args):
     '''
     params = []
     for model in models:
-        params.extend([param for param in model.parameters() if param.requires_grad])
+        if args.cuda:
+            params.extend([param for param in model.parameters() if param.requires_grad])
+        else:
+            params.extend([param.cuda() for param in model.parameters() if param.requires_grad])
     return torch.optim.Adam(params, lr=args.lr,  weight_decay=args.weight_decay)
 
 
-def get_x_indx(batch, args, eval_model):
-    x_indx = autograd.Variable(batch['x'], volatile=eval_model)
+def get_x_indx(batch, args, some_param):
+    x_indx = torch.tensor(batch['x'])
     return x_indx
 
 
@@ -105,7 +108,7 @@ def gumbel_softmax(inpt, temperature, cuda):
     noise = torch.rand(inpt.size())
     noise.add_(1e-9).log_().neg_()
     noise.add_(1e-9).log_().neg_()
-    noise = autograd.Variable(noise)
+    noise = torch.tensor(noise)
     if cuda:
         noise = noise.cuda()
     x = (inpt + noise) / temperature

@@ -19,8 +19,7 @@ class Encoder(nn.Module):
         self.embedding_layer.weight.requires_grad = True
         self.embedding_fc = nn.Linear( hidden_dim, hidden_dim )
         self.embedding_bn = nn.BatchNorm1d( hidden_dim)
-        
-        expl_tensors = torch.tensor([expl_vocab[e_id]["emb"] for e_id in sorted(expl_vocab.keys())])
+        expl_tensors = torch.tensor([expl_vocab[e_id]["emb"].data for e_id in sorted(expl_vocab.keys())])
         self.embedded_vocab = self.embedding_layer(expl_tensors)
 
         if args.model_form == 'cnn':
@@ -38,17 +37,18 @@ class Encoder(nn.Module):
             mask: Mask to apply over embeddings for tao ratioanles
         '''
         x = self.embedding_layer(x_indx.squeeze(1))
-        if self.args.cuda:
-                x = x.cuda()
-                self.embedded_vocab = self.embedded_vocab.cuda()
+        #if self.args.cuda:
+        #        x = x.cuda()
+        #        self.embedded_vocab = self.embedded_vocab.cuda()
         if not mask is None:
-            explanation =  torch.mul(self.embedded_vocab, mask.unsqueeze(-1))
-            if self.args.cuda:
-                explanation = explanation.cuda()
-                x=explanation
-                #x = torch.cat((x, explanation),1).cuda()
-            else:
-                x = torch.cat((x,explanation),1)
+            self.embedded_vocab = self.embedded_vocab.cuda()
+            explanation =  torch.mul(self.embedded_vocab.cuda(), mask.unsqueeze(-1).cuda()).cuda()
+        #    if self.args.cuda:
+        #        explanation = explanation.cuda()
+        #        x=explanation
+            x = torch.cat((x, explanation),1).cuda()
+        #    else:
+        #        x = torch.cat((x,explanation),1)
 
         x = F.relu( self.embedding_fc(x))
         x = self.dropout(x)
