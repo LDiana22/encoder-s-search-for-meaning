@@ -22,8 +22,9 @@ if __name__ == '__main__':
  
     train_data, dev_data, test_data, explanation_vocab = dataset_factory.get_dataset(args, word_to_indx)
 
-    args.expl_vocab = torch.tensor([explanation_vocab[e_id]["emb"].data for e_id in sorted(explanation_vocab.keys())]).cuda()
-
+    args.expl_vocab = torch.tensor([explanation_vocab[e_id]["emb"].data for e_id in sorted(explanation_vocab.keys())])
+    if args.cuda:
+        args.expl_vocab = args.expl_vocab.cuda()
     results_path_stem = args.results_path.split('/')[-1].split('.')[0]
     args.model_path = '{}.pt'.format(os.path.join(args.save_dir, results_path_stem))
     print(args.model_path)

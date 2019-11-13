@@ -17,7 +17,13 @@ print("Loaded embeddings")
  
 train_data, dev_data, test_data, explanation_vocab = dataset_factory.get_dataset(args, word_to_indx)
 
-gen = torch.load("snapshot/demo_run.pt.gen")
+args.expl_vocab = torch.tensor([explanation_vocab[e_id]["emb"].data for e_id in sorted(explanation_vocab.keys())])
+
+if args.cuda:
+    args.expl_vocab = args.expl_vocab.cuda()
+
+
+gen = torch.load("snapshot/aroma32/demo_run_aroma.pt.gen")
 gen.training=False
 
 test_loader = torch.utils.data.DataLoader(
