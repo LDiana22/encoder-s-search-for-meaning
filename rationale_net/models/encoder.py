@@ -17,10 +17,17 @@ class Encoder(nn.Module):
         self.embedding_layer = nn.Embedding( vocab_size, hidden_dim)
         self.embedding_layer.weight.data = torch.from_numpy( embeddings )
         self.embedding_layer.weight.requires_grad = True
+        
+        self.embedding_layer2 = nn.Embedding( vocab_size, hidden_dim)
+        self.embedding_layer2.weight.data = torch.from_numpy( embeddings )
+        self.embedding_layer2.weight.requires_grad = True
+        
+        
         self.embedding_fc = nn.Linear( hidden_dim, hidden_dim )
         self.embedding_bn = nn.BatchNorm1d( hidden_dim)
-        expl_tensors = torch.tensor([expl_vocab[e_id]["emb"].data for e_id in sorted(expl_vocab.keys())])
-        self.embedded_vocab = self.embedding_layer(expl_tensors)
+        
+        self.expl_tensors = torch.tensor([expl_vocab[e_id]["emb"].data for e_id in sorted(expl_vocab.keys())])
+        self.embedded_vocab = self.embedding_layer2(self.expl_tensors)
 
         if args.model_form == 'cnn':
             self.cnn = cnn.CNN(args, max_pool_over_time=(not args.use_as_tagger))
@@ -42,7 +49,7 @@ class Encoder(nn.Module):
         #        self.embedded_vocab = self.embedded_vocab.cuda()
         if not mask is None:
             self.embedded_vocab = self.embedded_vocab.cuda()
-            explanation =  torch.mul(self.embedded_vocab.cuda(), mask.unsqueeze(-1).cuda()).cuda()
+            explanation =  torch.mul(self.embedded_vocab, mask.unsqueeze(-1).cuda()).cuda()
         #    if self.args.cuda:
         #        explanation = explanation.cuda()
         #        x=explanation
