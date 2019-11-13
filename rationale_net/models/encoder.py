@@ -26,8 +26,8 @@ class Encoder(nn.Module):
         self.embedding_fc = nn.Linear( hidden_dim, hidden_dim )
         self.embedding_bn = nn.BatchNorm1d( hidden_dim)
         
-        self.expl_tensors = torch.tensor([expl_vocab[e_id]["emb"].data for e_id in sorted(expl_vocab.keys())])
-        self.embedded_vocab = self.embedding_layer2(self.expl_tensors)
+        #self.expl_tensors = torch.tensor([expl_vocab[e_id]["emb"].data for e_id in sorted(expl_vocab.keys())])
+        #self.embedded_vocab = self.embedding_layer2(self.expl_tensors)
 
         if args.model_form == 'cnn':
             self.cnn = cnn.CNN(args, max_pool_over_time=(not args.use_as_tagger))
@@ -48,12 +48,12 @@ class Encoder(nn.Module):
         #        x = x.cuda()
         #        self.embedded_vocab = self.embedded_vocab.cuda()
         if not mask is None:
-            self.embedded_vocab = self.embedded_vocab.cuda()
-            explanation =  torch.mul(self.embedded_vocab, mask.unsqueeze(-1).cuda()).cuda()
+            vocab_emb = self.embedding_layer2(self.args.expl_vocab)
+            explanation =  torch.mul(vocab_emb, mask.unsqueeze(-1))
         #    if self.args.cuda:
         #        explanation = explanation.cuda()
         #        x=explanation
-            x = torch.cat((x, explanation),1).cuda()
+            x = torch.cat((x, explanation),1)
         #    else:
         #        x = torch.cat((x,explanation),1)
 
