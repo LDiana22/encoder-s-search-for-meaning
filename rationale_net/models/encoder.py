@@ -11,7 +11,7 @@ class Encoder(nn.Module):
         ### Encoder
         self.args = args
         # embedded possible explanations (word indices)
-        self.expl_vocab = expl_vocab
+        #self.expl_vocab = expl_vocab
         vocab_size, hidden_dim = embeddings.shape
         self.embedding_dim = hidden_dim
         self.embedding_layer = nn.Embedding( vocab_size, hidden_dim)
@@ -19,8 +19,8 @@ class Encoder(nn.Module):
         self.embedding_layer.weight.requires_grad = True
         self.embedding_fc = nn.Linear( hidden_dim, hidden_dim )
         self.embedding_bn = nn.BatchNorm1d( hidden_dim)
-        expl_tensors = torch.tensor([self.expl_vocab[e_id]["emb"] for e_id in sorted(self.expl_vocab.keys())])
-            
+        
+        expl_tensors = torch.tensor([expl_vocab[e_id]["emb"] for e_id in sorted(expl_vocab.keys())])
         self.embedded_vocab = self.embedding_layer(expl_tensors)
 
         if args.model_form == 'cnn':
@@ -45,8 +45,11 @@ class Encoder(nn.Module):
             explanation =  torch.mul(self.embedded_vocab, mask.unsqueeze(-1))
             if self.args.cuda:
                 explanation = explanation.cuda()
-            x = torch.cat((x, explanation),1)
-            #x = x * mask.unsqueeze(-1)
+                x=explanation
+                #x = torch.cat((x, explanation),1).cuda()
+            else:
+                x = torch.cat((x,explanation),1)
+
         x = F.relu( self.embedding_fc(x))
         x = self.dropout(x)
 

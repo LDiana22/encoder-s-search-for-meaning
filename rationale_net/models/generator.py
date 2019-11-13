@@ -35,8 +35,6 @@ class Generator(nn.Module):
         '''
             Returns prob of each token being selected out of the vocabulary tokens
         '''
-#        import ipdb 
-#        ipdb.set_trace(context=10)
         activ = activ.transpose(1,2)
         layer_out = self.layer(activ)
         logits = self.hidden(layer_out) # batch, length, z_dim
