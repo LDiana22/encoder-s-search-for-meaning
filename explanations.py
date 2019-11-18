@@ -23,7 +23,7 @@ if args.cuda:
     args.expl_vocab = args.expl_vocab.cuda()
 
 
-gen = torch.load("snapshot/aroma32/demo_run_aroma.pt.gen")
+gen = torch.load("snapshot/palate_range/demo_run_palate_range.pt.gen")
 gen.training=False
 
 test_loader = torch.utils.data.DataLoader(
@@ -35,14 +35,21 @@ test_loader = torch.utils.data.DataLoader(
 
 data_iter = test_loader.__iter__()
 
+e=[]
+
 num_batches_per_epoch = len(data_iter)
 with open("explanations.txt", "w") as f:
     for _ in tqdm.tqdm(range(num_batches_per_epoch)):
         batch = data_iter.next()
         
         x_indx = helpers.get_x_indx(batch, args, True)
+        if args.cuda:
+            x_indx=x_indx.cuda()
         text = batch['text']
         masks, z = gen(x_indx)
         for i, mask in enumerate(masks):
             explanations = decode_mask(mask, explanation_vocab)
             print(text[i], "\n**\n", explanations, file=f)
+            e.append(explanations[0]['text'])
+
+print(e)

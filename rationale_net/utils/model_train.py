@@ -212,9 +212,9 @@ def run_epoch(data_loader, train_model, model, gen, optimizer, step, args):
         obj_loss = loss
 
         if args.get_rationales:
-            selection_cost = gen.loss(mask, x_indx)
-            
+            selection_cost, sem_cost = gen.loss(mask, x_indx)
             loss += selection_cost
+            loss += sem_cost
 
         if train_model:
             loss.backward(retain_graph=True)

@@ -1,9 +1,24 @@
 import torch
 import torch.nn as nn
-import torch.autograd as autograd
 import torch.nn.functional as F
 import rationale_net.models.cnn as cnn
 import rationale_net.utils.helpers as helpers
+
+#from semantic_text_similarity.models import WebBertSimilarity
+"""
+class Similarity(object):
+    class __BertSimilarity:
+        def __init__(self):
+            self.compute = WebBertSimilarity(device='cuda') 
+    instance = None
+    def __new__(cls):
+        if not Similarity.instance:
+            Similarity.instance = Similarity.__BertSimilarity()
+        return Similarity.instance
+
+bert_similarity = Similarity()
+"""
+#bert_similarity = WebBertSimilarity()
 
 '''
     The generator selects a rationale z from a document x that should be sufficient
@@ -27,10 +42,14 @@ class Generator(nn.Module):
         self.layer = nn.Linear((len(args.filters)* args.filter_num), 300)
         self.hidden = nn.Linear(300, self.z_dim)
         self.dropout = nn.Dropout(args.dropout)
+        if self.args.cuda:
+            self.device='cuda'
+        else:
+            self.device='cpu'
 
 
-
-
+    def __range01(self, x):
+        return torch.div(x-torch.min(x), torch.max(x)-torch.min(x))
     def  __z_forward(self, activ):
         '''
             Returns prob of each token being selected out of the vocabulary tokens
@@ -40,7 +59,8 @@ class Generator(nn.Module):
         logits = self.hidden(layer_out) # batch, length, z_dim
         probs = helpers.gumbel_softmax(logits, self.args.gumbel_temprature, self.args.cuda)
         probs = torch.sum(probs, 1)
-        mask = torch.div(probs,torch.norm(probs,2))
+        mask = self.__range01(probs)
+       # mask = torch.div(probs,torch.norm(probs,2))
         return mask #batch, length
 
 
@@ -76,15 +96,42 @@ class Generator(nn.Module):
             mask = helpers.get_hard_mask(z)
         return mask
 
+    def masks_to_vocab_idx(self, masks):
+        """
+        masks (batch, vocab_size)
+        return (batch, [words]) -> batch, expl_dim
+        """
+        return [[idx for idx in range(len(instance)) if instance[idx]!=0] for instance in masks]
 
     def loss(self, mask, x_indx):
         '''
+            text (batch-sized list of text)
             Compute the generator specific costs, i.e selection cost, continuity cost, and global vocab cost
         '''
-        selection_cost = torch.mean( torch.sum(mask, dim=1) )
+        selection_cost = torch.mean(torch.sum(mask, dim=1))
         
+        batch_size=x_indx.size()[0]
+        masks = helpers.get_hard_mask(mask) 
+        expl_idx = [[idx for idx in range(masks[i].size()[0]) if masks[i][idx]] for i in range(batch_size)]
+        
+        vocab_emb = self.embedding_layer(self.args.expl_vocab)
+        
+        expl_emb = [vocab_emb[e_idx] for e_idx in expl_idx]
+        #explanation =  torch.mul(vocab_emb, masks.unsqueeze(-1))
+        
+        x_emb = self.embedding_layer(x_indx)  
+        #w_idx = self.masks_to_vocab_idx(masks)
+        #expl_text = [[self.args.expl_vocab[i]['text'] for i in range(len(expl))] for expl in w_idx]
+        # (batch, expl_size)
+        #with open("gen/expl.txt", "w") as f:
+        #    f.write(f"{text}\n&&\n{expl_text}\n{str(sim)}\n==========")
+        cos = nn.CosineSimilarity()
+        semantic_cost = torch.zeros([batch_size, 1], dtype=torch.float32, device=self.device)
+        for i in range(batch_size): # batch
+            similarities_cost = [1-cos(word,expl_emb[i][0]) for word in x_emb[i][0]]
+            semantic_cost[i] = torch.sum(similarities_cost)
         #l_padded_mask =  torch.cat( [mask[:,0].unsqueeze(1), mask] , dim=1)
         #r_padded_mask =  torch.cat( [mask, mask[:,-1].unsqueeze(1)] , dim=1)
         #continuity_cost = torch.mean( torch.sum( torch.abs( l_padded_mask - r_padded_mask ) , dim=1) )
-        return selection_cost
+        return selection_cost, semantic_cost
 

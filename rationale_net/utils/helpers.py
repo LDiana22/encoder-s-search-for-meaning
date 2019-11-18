@@ -72,8 +72,6 @@ def get_x_indx(batch, args, some_param):
     x_indx = torch.tensor(batch['x'])
     return x_indx
 
-
-
 def get_hard_mask(z, return_ind=False):
     '''
         -z: torch Tensor where each element probablity of element
