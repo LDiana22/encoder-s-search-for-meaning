@@ -105,19 +105,41 @@ class Generator(nn.Module):
 
     def loss(self, mask, x_indx):
         '''
+            x_indx - batch, ipt_size
+            mask - batch, vocab_size, 
             text (batch-sized list of text)
             Compute the generator specific costs, i.e selection cost, continuity cost, and global vocab cost
         '''
+        batch_size=x_indx.size()[0]
+        x_indx = x_indx.view(batch_size,-1)
+        #expl_idx = [[idx for idx in range(mask[i].size()[0]) if mask[i][idx]>=0.5] for i in range(batch_size)]
+        
+        #expl1_idx = mask.argmax(-1)[0]
+        
         selection_cost = torch.mean(torch.sum(mask, dim=1))
         
-        batch_size=x_indx.size()[0]
-        masks = helpers.get_hard_mask(mask) 
-        expl_idx = [[idx for idx in range(masks[i].size()[0]) if masks[i][idx]] for i in range(batch_size)]
+
+         
         
-        vocab_emb = self.embedding_layer(self.args.expl_vocab)
+        ##expl = self.args.expl_vocab[expl_idx]
         
-        expl_emb = [vocab_emb[e_idx] for e_idx in expl_idx]
-        #explanation =  torch.mul(vocab_emb, masks.unsqueeze(-1))
+        ##expl_emb = self.embedding_layer(expl)
+        
+        
+        vocab_emb = self.embedding_layer(self.args.expl_vocab) # vocab_dim, emb_dim
+        
+        ##expl_emb = [vocab_emb[e_idx] for e_idx in expl_idx]
+        ###batch, vocab_Size, emb_size
+        explanation =  torch.mul(vocab_emb, mask.unsqueeze(-1)) 
+        #explanation =  torch.mul(expl_emb, mask.unsqueeze(-1)) 
+        
+        aggregated_explanation = torch.sum(explanation, dim=-2).view(batch_size, 1,-1)
+        
+        #explanation_vals = torch.masked_select(explanation, explanation.ge(0.5))
+        
+        #explanations = explanation.expand(batch_size, explanation.size()[1], explanation.size()[2])
+        
+        #expl = explanation[:expl1_idx:]
         
         x_emb = self.embedding_layer(x_indx)  
         #w_idx = self.masks_to_vocab_idx(masks)
@@ -125,13 +147,16 @@ class Generator(nn.Module):
         # (batch, expl_size)
         #with open("gen/expl.txt", "w") as f:
         #    f.write(f"{text}\n&&\n{expl_text}\n{str(sim)}\n==========")
-        cos = nn.CosineSimilarity()
-        semantic_cost = torch.zeros([batch_size, 1], dtype=torch.float32, device=self.device)
-        for i in range(batch_size): # batch
-            similarities_cost = [1-cos(word,expl_emb[i][0]) for word in x_emb[i][0]]
-            semantic_cost[i] = torch.sum(similarities_cost)
+        cos = nn.CosineSimilarity(dim=2)
+        semantic_cost = -cos(x_emb, aggregated_explanation)
+        
+        #semantic_cost = torch.zeros([batch_size, 1], dtype=torch.float32, device=self.device)
+        #for i in range(batch_size): # batch
+        #    similarities_cost = [1-cos(word,expl_emb[i][0]) for word in x_emb[i][0]]
+        #    semantic_cost[i] = sum(similarities_cost)
+       
         #l_padded_mask =  torch.cat( [mask[:,0].unsqueeze(1), mask] , dim=1)
         #r_padded_mask =  torch.cat( [mask, mask[:,-1].unsqueeze(1)] , dim=1)
         #continuity_cost = torch.mean( torch.sum( torch.abs( l_padded_mask - r_padded_mask ) , dim=1) )
-        return selection_cost, semantic_cost
+        return selection_cost, torch.mean(semantic_cost)
 
