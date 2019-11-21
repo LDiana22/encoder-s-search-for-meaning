@@ -9,7 +9,7 @@ import numpy as np
 import pdb
 import sklearn.metrics
 import rationale_net.utils.helpers as helpers
-
+import datetime
 
 def train_model(train_data, dev_data, model, gen, args):
     '''
@@ -57,7 +57,16 @@ def train_model(train_data, dev_data, model, gen, args):
                 args=args)
 
             epoch_stats, log_statement = metrics.collate_epoch_stat(epoch_stats, epoch_details, key_prefix, args)
-
+            if not os.path.isdir(args.loss_dir):
+                    os.makedirs(args.loss_dir)
+            if train_model:
+                metric= "train_loss"
+            else:
+                metric = "dev_loss"
+            file_suffix = f"{metric}_{datetime.date.today().strftime('%Y%m%d-%H.%M.%S')}"
+            file_name = f"{args.loss_dir}/{file_suffix}"
+            with open(file_name, "w") as f:
+                f.write(str(epoch_stats[metric]))
             # Log  performance
             print(log_statement)
 

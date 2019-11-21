@@ -38,6 +38,7 @@ class TfidfVocabulary(Vocabulary):
         self.tf, self.df = self.t_freq()
         # {doc_name:{word:score}}
         self.tf_idf = self.tf_idf_scores()
+        print(f"Corpus of {sum([len(words) for doc, words in self.class_documents.items()])}")
 
     def t_freq(self):
         tf = {}

@@ -29,13 +29,15 @@ def parse_args():
     parser.add_argument('--patience', type=int, default=5, help='Num epochs of no dev progress before half learning rate [default: 10]')
     parser.add_argument('--tuning_metric', type=str, default='loss', help='Metric to judge dev set results. Possible options loss, accuracy, precision, recall or f1, where precision/recall/f1 are all microaveraged. [default: loss]')
     #paths
+    parser.add_argument('--loss_dir', type=str, default='logs/loss', help='where to save the snapshot')
+    
     parser.add_argument('--save_dir', type=str, default='snapshot/aroma', help='where to save the snapshot')
     parser.add_argument('--results_path', type=str, default='logs/demo_run.results', help='where to dump model config and epoch stats. If get_rationales is set to true, rationales for the test set will also be stored here.')
     parser.add_argument('--snapshot', type=str, default=None, help='filename of model snapshot to load[default: None]')
     # data loading
     parser.add_argument('--num_workers' , type=int, default=0, help='num workers for data loader')
     # model
-    parser.add_argument('--model_form', type=str, default='cnn', help="Form of model, i.e cnn, rnn, etc.")
+    parser.add_argument('--model_form', type=str, default='lstm', help="Form of model, i.e cnn, rnn, etc.")
     parser.add_argument('--hidden_dim', type=int, default=100, help="Dim of hidden layer")
     parser.add_argument('--num_layers', type=int, default=1, help="Num layers of model_form to use")
     parser.add_argument('--dropout', type=float, default=0.05, help='the probability for dropout [default: 0.5]')

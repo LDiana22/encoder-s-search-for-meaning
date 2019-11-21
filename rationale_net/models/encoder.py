@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.autograd as autograd
 import torch.nn.functional as F
 import rationale_net.models.cnn as cnn
+import rationale_net.models.attention as lstm
 
 class Encoder(nn.Module):
 
@@ -32,8 +33,11 @@ class Encoder(nn.Module):
         if args.model_form == 'cnn':
             self.cnn = cnn.CNN(args, max_pool_over_time=(not args.use_as_tagger))
             self.fc = nn.Linear( len(args.filters)*args.filter_num,  args.hidden_dim)
+        elif args.model_form == 'lstm':
+            self.lstm = lstm.AttentionModel(args.batch_size, args.hidden_dim, 3* args.hidden_dim, vocab_size, hidden_dim, embeddings)
         else:
             raise NotImplementedError("Model form {} not yet supported for encoder!".format(args.model_form))
+
 
         self.dropout = nn.Dropout(args.dropout)
         self.hidden = nn.Linear(args.hidden_dim, args.num_class)
@@ -64,6 +68,8 @@ class Encoder(nn.Module):
             x = torch.transpose(x, 1, 2) # Switch X to (Batch, Embed, Length)
             hidden = self.cnn(x)
             hidden = F.relu( self.fc(hidden) )
+        elif self.args.model_form == 'lstm':
+            hidden = self.lstm(x_indx.squeeze(1))
         else:
             raise Exception("Model form {} not yet supported for encoder!".format(self.args.model_form))
 
