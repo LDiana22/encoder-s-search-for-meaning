@@ -56,10 +56,12 @@ class FullBeerDataset(AbstractDataset):
         possible_explanations = vocabulary.possible_explanations()
         explanations_vocab = {}
         for e_id, text in possible_explanations.items():
-            explanations_vocab[e_id] = { "emb":
-                    get_indices_tensor([text],
-                                       self.word_to_indx, 1), # one word
-                                       "text": text} 
+            index=get_indices_tensor([text],
+                                       self.word_to_indx, 1)
+            if index[0] != 0:
+                explanations_vocab[e_id] = { "emb":
+                                            index, # one word
+                                           "text": text} 
         return explanations_vocab
 
     ## Convert one line from beer dataset to {Text,explanations_vocab Tensor, Labels}

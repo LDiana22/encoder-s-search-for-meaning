@@ -61,7 +61,7 @@ def get_optimizer(models, args):
     '''
     params = []
     for model in models:
-        if args.cuda:
+        if not args.cuda:
             params.extend([param for param in model.parameters() if param.requires_grad])
         else:
             params.extend([param.cuda() for param in model.parameters() if param.requires_grad])

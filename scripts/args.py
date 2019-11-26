@@ -13,7 +13,7 @@ def parse_args():
     parser.add_argument('--train', action='store_true', default=True, help='Whether or not to train model')
     parser.add_argument('--test', action='store_true', default=True, help='Whether or not to run model on test set')
     # device
-    parser.add_argument('--cuda', action='store_true', default=True, help='enable the gpu' )
+    parser.add_argument('--cuda', action='store_true', default=False, help='enable the gpu' )
     parser.add_argument('--num_gpus', type=int, default=1, help='Num GPUs to use. More than one gpu turns on multi_gpu training with nn.DataParallel.')
     parser.add_argument('--debug_mode', action='store_true', default=False, help='debug mode' )
     parser.add_argument('--class_balance', action='store_true', default=False, help='use balanced samlping for train loaded' )
@@ -25,7 +25,7 @@ def parse_args():
     parser.add_argument('--init_lr', type=float, default=0.0001, help='initial learning rate [default: 0.001]')
     ####### EPOCHS
     parser.add_argument('--epochs', type=int, default=50, help='number of epochs for train [default: 256]')
-    parser.add_argument('--batch_size', type=int, default=32, help='batch size for training [default: 32]')
+    parser.add_argument('--batch_size', type=int, default=2, help='batch size for training [default: 32]')
     parser.add_argument('--patience', type=int, default=5, help='Num epochs of no dev progress before half learning rate [default: 10]')
     parser.add_argument('--tuning_metric', type=str, default='loss', help='Metric to judge dev set results. Possible options loss, accuracy, precision, recall or f1, where precision/recall/f1 are all microaveraged. [default: loss]')
     #paths
@@ -37,7 +37,7 @@ def parse_args():
     # data loading
     parser.add_argument('--num_workers' , type=int, default=0, help='num workers for data loader')
     # model
-    parser.add_argument('--model_form', type=str, default='lstm', help="Form of model, i.e cnn, rnn, etc.")
+    parser.add_argument('--model_form', type=str, default='transformer', help="Form of model, i.e cnn, rnn, etc.")
     parser.add_argument('--hidden_dim', type=int, default=100, help="Dim of hidden layer")
     parser.add_argument('--num_layers', type=int, default=1, help="Num layers of model_form to use")
     parser.add_argument('--dropout', type=float, default=0.05, help='the probability for dropout [default: 0.5]')

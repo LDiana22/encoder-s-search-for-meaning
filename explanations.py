@@ -23,7 +23,7 @@ if args.cuda:
     args.expl_vocab = args.expl_vocab.cuda()
 
 
-gen = torch.load("snapshot/palate64/demo_run_palate64.pt.gen")
+gen = torch.load("snapshot/palate_semantic/demo_run_palate_sem.pt.gen")
 gen.training=False
 
 test_loader = torch.utils.data.DataLoader(
@@ -38,7 +38,7 @@ data_iter = test_loader.__iter__()
 e=[]
 
 num_batches_per_epoch = len(data_iter)
-with open("explanations_palate64.txt", "w") as f:
+with open("explanations_palate_sem.txt", "w") as f:
     for _ in tqdm.tqdm(range(num_batches_per_epoch)):
         batch = data_iter.next()
         
@@ -47,7 +47,7 @@ with open("explanations_palate64.txt", "w") as f:
             x_indx=x_indx.cuda()
         text = batch['text']
         masks, z = gen(x_indx)
-        print([[idx for idx in mask if mask[idx]!=0] for mask in masks])
+        print((masks!=0).nonzero()[:,-1])
         for i, mask in enumerate(masks):
             explanations = decode_mask(mask, explanation_vocab)
             print(text[i], "\n**\n", explanations[0]['text'], file=f)

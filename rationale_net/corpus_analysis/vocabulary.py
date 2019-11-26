@@ -27,7 +27,7 @@ class TfidfVocabulary(Vocabulary):
     """TF-IDF for words relative to the document of each class
     (each document comprises the collection of text labeled the same)
     """
-    def __init__(self, args, data, vocab_dim=200):
+    def __init__(self, args, data, vocab_dim=400):
         Vocabulary.__init__(self, data)
         self.path = args.vocab_path + "tfidf-200.txt"
         self.max_dim=vocab_dim

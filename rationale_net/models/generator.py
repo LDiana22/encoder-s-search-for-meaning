@@ -3,7 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import rationale_net.models.cnn as cnn
 import rationale_net.utils.helpers as helpers
+import rationale_net.models.transformer as transformer
 
+import rationale_net.models.attention as lstm
 #from semantic_text_similarity.models import WebBertSimilarity
 """
 class Similarity(object):
@@ -31,16 +33,22 @@ class Generator(nn.Module):
     def __init__(self, embeddings, args, expl_vocab):
         super(Generator, self).__init__()
         vocab_size, hidden_dim = embeddings.shape
+        self.embedding_dim = hidden_dim
         self.embedding_layer = nn.Embedding( vocab_size, hidden_dim)
         self.embedding_layer.weight.data = torch.from_numpy( embeddings )
         self.embedding_layer.weight.requires_grad = False
         self.args = args
-        if args.model_form == 'cnn':
-            self.cnn = cnn.CNN(args, max_pool_over_time = False)
-        
         self.z_dim = len(expl_vocab.keys())
-        self.layer = nn.Linear((len(args.filters)* args.filter_num), 300)
-        self.hidden = nn.Linear(300, self.z_dim)
+       # self.model_form = self.args.model_form
+        if self.args.model_form =='transformer':
+            self.transformer = transformer.Transformer(self.embedding_dim, self.args.hidden_dim, vocab_size, self.z_dim, 10, 4, self.args.dropout, True)
+            self.tr_layer = nn.Linear(self.embedding_dim, self.z_dim)
+        elif self.args.model_form == 'cnn':
+            self.cnn = cnn.CNN(args, max_pool_over_time = False)
+        elif self.args.model_form == 'lstm':
+            self.lstm = lstm.AttentionModel(args.batch_size, self.z_dim, args.hidden_dim, vocab_size, self.embedding_dim, embeddings)        
+        self.layer = nn.Linear((len(args.filters)* args.filter_num), self.args.hidden_dim)
+        self.hidden = nn.Linear(self.args.hidden_dim, self.z_dim)
         self.dropout = nn.Dropout(args.dropout)
         if self.args.cuda:
             self.device='cuda'
@@ -50,15 +58,26 @@ class Generator(nn.Module):
 
     def __range01(self, x):
         return torch.div(x-torch.min(x), torch.max(x)-torch.min(x))
+    
+    def gumbel_softmax(self, logits, temp, cuda):
+        probs = helpers.gumbel_softmax(logits, temp, cuda)
+        probs = torch.sum(probs, 1)
+        return probs
+    
     def  __z_forward(self, activ):
         '''
             Returns prob of each token being selected out of the vocabulary tokens
         '''
-        activ = activ.transpose(1,2)
-        layer_out = self.layer(activ)
-        logits = self.hidden(layer_out) # batch, length, z_dim
-        probs = helpers.gumbel_softmax(logits, self.args.gumbel_temprature, self.args.cuda)
-        probs = torch.sum(probs, 1)
+        if self.args.model_form=='cnn':
+            activ = activ.transpose(1,2)
+            layer_out = self.layer(activ)
+            logits = self.hidden(layer_out) # batch, length, z_dim
+            probs = self.gumbel_softmax(logits, self.args.gumbel_temprature, self.args.cuda)
+        elif self.args.model_form == 'lstm':
+            probs = helpers.gumbel_softmax(logits, self.args.gumbel_temprature, self.args.cuda)
+        elif self.args.model_form == 'transformer':
+            logits = self.tr_layer(activ)
+            probs = helpers.gumbel_softmax(logits, self.args.gumbel_temprature, self.args.cuda)
         mask = self.__range01(probs)
        # mask = torch.div(probs,torch.norm(probs,2))
         return mask #batch, length
@@ -74,11 +93,21 @@ class Generator(nn.Module):
             if self.args.cuda:
                 x = x.cuda()
             x = torch.transpose(x, 1, 2) # Switch X to (Batch, Embed, Length)
-            activ = self.cnn(x)
+            activ = self.cnn(x)        
+            z = self.__z_forward(F.relu(activ))
+        elif self.args.model_form == 'lstm':
+            z = self.lstm(x_indx.squeeze(1))
+        elif self.args.model_form == 'transformer':
+            #x_indx [batch,1,250]
+            #[batch, max_sent_size_250]
+            x = self.embedding_layer(x_indx.squeeze(1))
+            # x [batch, max_sent_size_250, emb_dim]
+            activ = self.transformer(x)
+            activ = torch.sum(activ, 1)
+            z=self.__z_forward(activ)
         else:
             raise NotImplementedError("Model form {} not yet supported for generator!".format(self.args.model_form))
 
-        z = self.__z_forward(F.relu(activ))
         mask = self.sample(z)
         return mask, z
 
@@ -117,9 +146,6 @@ class Generator(nn.Module):
         #expl1_idx = mask.argmax(-1)[0]
         
         selection_cost = torch.mean(torch.sum(mask, dim=1))
-        
-
-         
         
         ##expl = self.args.expl_vocab[expl_idx]
         

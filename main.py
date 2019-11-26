@@ -24,7 +24,6 @@ if __name__ == '__main__':
     
  
     train_data, dev_data, test_data, explanation_vocab = dataset_factory.get_dataset(args, word_to_indx)
-
     args.expl_vocab = torch.tensor([explanation_vocab[e_id]["emb"].data for e_id in sorted(explanation_vocab.keys())])
     if args.cuda:
         args.expl_vocab = args.expl_vocab.cuda()

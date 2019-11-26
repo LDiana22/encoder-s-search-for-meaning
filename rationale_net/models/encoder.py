@@ -5,6 +5,8 @@ import torch.nn.functional as F
 import rationale_net.models.cnn as cnn
 import rationale_net.models.attention as lstm
 
+import rationale_net.models.transformer as transformer
+
 class Encoder(nn.Module):
 
     def __init__(self, embeddings, args, expl_vocab):
@@ -35,6 +37,9 @@ class Encoder(nn.Module):
             self.fc = nn.Linear( len(args.filters)*args.filter_num,  args.hidden_dim)
         elif args.model_form == 'lstm':
             self.lstm = lstm.AttentionModel(args.batch_size, args.hidden_dim, 3* args.hidden_dim, vocab_size, hidden_dim, embeddings)
+        elif self.args.model_form=='transformer':
+            self.transformer = transformer.Transformer(hidden_dim, self.args.hidden_dim, vocab_size, 250, 10, 4, self.args.dropout, True)
+            self.tr_layer = nn.Linear(self.embedding_dim, args.num_class)
         else:
             raise NotImplementedError("Model form {} not yet supported for encoder!".format(args.model_form))
 
@@ -45,34 +50,30 @@ class Encoder(nn.Module):
     def forward(self, x_indx, mask=None):
         '''
             x_indx:  batch of word indices
-            mask: Mask to apply over embeddings for tao ratioanles
+            mask: Mask to apply over embeddings for tao rationales
         '''
+        
         x = self.embedding_layer(x_indx.squeeze(1))
-        #if self.args.cuda:
-        #        x = x.cuda()
-        #        self.embedded_vocab = self.embedded_vocab.cuda()
         if not mask is None:
             vocab_emb = self.embedding_layer2(self.args.expl_vocab)
             explanation =  torch.mul(vocab_emb, mask.unsqueeze(-1))
-        #    if self.args.cuda:
-        #        explanation = explanation.cuda()
-        #        x=explanation
             x = torch.cat((x, explanation),1)
-        #    else:
-        #        x = torch.cat((x,explanation),1)
-
-        x = F.relu( self.embedding_fc(x))
-        x = self.dropout(x)
-
-        if self.args.model_form == 'cnn':
+        hidden = None
+        if self.args.model_form == 'cnn':        
+            x = F.relu( self.embedding_fc(x))
+            x = self.dropout(x)
             x = torch.transpose(x, 1, 2) # Switch X to (Batch, Embed, Length)
             hidden = self.cnn(x)
             hidden = F.relu( self.fc(hidden) )
+            hidden = self.dropout(hidden)
+            logit = self.hidden(hidden)
         elif self.args.model_form == 'lstm':
-            hidden = self.lstm(x_indx.squeeze(1))
+            logit = self.lstm(x.squeeze(1))
+            hidden = None
+        elif self.args.model_form == 'transformer':
+            x=self.transformer(x.squeeze(1))
+            logit = self.tr_layer(x)
         else:
             raise Exception("Model form {} not yet supported for encoder!".format(self.args.model_form))
 
-        hidden = self.dropout(hidden)
-        logit = self.hidden(hidden)
         return logit, hidden
