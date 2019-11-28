@@ -9,7 +9,7 @@ import scripts.args as generic
 import rationale_net.utils.model_train as model_helper
 import os
 import pickle
-
+import numpy as np
 import torch
 
 if __name__ == '__main__':
@@ -25,6 +25,9 @@ if __name__ == '__main__':
  
     train_data, dev_data, test_data, explanation_vocab = dataset_factory.get_dataset(args, word_to_indx)
     args.expl_vocab = torch.tensor([explanation_vocab[e_id]["emb"].data for e_id in sorted(explanation_vocab.keys())])
+    config = {}
+    config["expl_text"] = np.array([explanation_vocab[e_id]["text"] for e_id in sorted(explanation_vocab.keys())])
+    
     if args.cuda:
         args.expl_vocab = args.expl_vocab.cuda()
     results_path_stem = args.results_path.split('/')[-1].split('.')[0]
@@ -38,7 +41,7 @@ if __name__ == '__main__':
     print()
     # train
     if args.train :
-        epoch_stats, model, gen = model_helper.train_model(train_data, dev_data, model, gen, args)
+        epoch_stats, model, gen = model_helper.train_model(train_data, dev_data, model, gen, args, config)
         args.epoch_stats = epoch_stats
         save_path = args.results_path
         print("Save train/dev results to", save_path)
@@ -48,7 +51,7 @@ if __name__ == '__main__':
 
     # test
     if args.test :
-        test_stats = model_helper.test_model(test_data, model, gen, args)
+        test_stats = model_helper.test_model(test_data, model, gen, args, config)
         args.test_stats = test_stats
         args.train_data = train_data
         args.test_data = test_data

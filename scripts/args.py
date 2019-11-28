@@ -20,6 +20,8 @@ def parse_args():
     # learning
     parser.add_argument('--objective', default='cross_entropy', help='choose which loss objective to use')
     
+    parser.add_argument('--expl_text_file', default='gen/expl')
+    
     ####### ASPECT
     parser.add_argument('--aspect', default='aroma', help='which aspect to train/eval on')
     parser.add_argument('--init_lr', type=float, default=0.0001, help='initial learning rate [default: 0.001]')
@@ -37,7 +39,7 @@ def parse_args():
     # data loading
     parser.add_argument('--num_workers' , type=int, default=0, help='num workers for data loader')
     # model
-    parser.add_argument('--model_form', type=str, default='transformer', help="Form of model, i.e cnn, rnn, etc.")
+    parser.add_argument('--model_form', type=str, default='cnn', help="Form of model, i.e cnn, rnn, etc.")
     parser.add_argument('--hidden_dim', type=int, default=100, help="Dim of hidden layer")
     parser.add_argument('--num_layers', type=int, default=1, help="Num layers of model_form to use")
     parser.add_argument('--dropout', type=float, default=0.05, help='the probability for dropout [default: 0.5]')
