@@ -59,7 +59,8 @@ class FullBeerDataset(AbstractDataset):
             index=get_indices_tensor([text],
                                        self.word_to_indx, 1)
             if index[0] != 0:
-                explanations_vocab[e_id] = { "emb":
+                idx = len(explanations_vocab)
+                explanations_vocab[idx] = { "emb":
                                             index, # one word
                                            "text": text} 
         return explanations_vocab
