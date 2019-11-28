@@ -38,6 +38,7 @@ class Generator(nn.Module):
         self.embedding_layer.weight.data = torch.from_numpy( embeddings )
         self.embedding_layer.weight.requires_grad = False
         self.args = args
+        #self.args = {"model_form": args.model_form, "expl_vocab": args.expl_vocab, "cuda": args.cuda}
         self.z_dim = len(expl_vocab.keys())
        # self.model_form = self.args.model_form
         if self.args.model_form =='transformer':
@@ -95,6 +96,8 @@ class Generator(nn.Module):
             x = torch.transpose(x, 1, 2) # Switch X to (Batch, Embed, Length)
             activ = self.cnn(x)        
             z = self.__z_forward(F.relu(activ))
+        elif self.args.model_form == 'rcnn':
+            pass
         elif self.args.model_form == 'lstm':
             z = self.lstm(x_indx.squeeze(1))
         elif self.args.model_form == 'transformer':
@@ -135,7 +138,7 @@ class Generator(nn.Module):
     def loss(self, mask, x_indx):
         '''
             x_indx - batch, ipt_size
-            mask - batch, vocab_size, 
+            mask - batch, vocab_size
             text (batch-sized list of text)
             Compute the generator specific costs, i.e selection cost, continuity cost, and global vocab cost
         '''
@@ -151,15 +154,20 @@ class Generator(nn.Module):
         
         ##expl_emb = self.embedding_layer(expl)
         
-        
+        #vocab_Size, emb
         vocab_emb = self.embedding_layer(self.args.expl_vocab) # vocab_dim, emb_dim
-        
+        vocab_emb = vocab_emb.view(1, vocab_emb.size()[0],-1).expand((batch_size, vocab_emb.size()[0],-1))
         ##expl_emb = [vocab_emb[e_idx] for e_idx in expl_idx]
+        
+        #batch,1,vocab_size
+        mask_1 = mask.view(mask.size()[0],1,-1)
         ###batch, vocab_Size, emb_size
-        explanation =  torch.mul(vocab_emb, mask.unsqueeze(-1)) 
+        explanation =  torch.bmm(mask_1, vocab_emb) 
+        #batch, 1, emb_size
+        
         #explanation =  torch.mul(expl_emb, mask.unsqueeze(-1)) 
         
-        aggregated_explanation = torch.sum(explanation, dim=-2).view(batch_size, 1,-1)
+        #aggregated_explanation = torch.sum(explanation, dim=-2).view(batch_size, 1,-1)
         
         #explanation_vals = torch.masked_select(explanation, explanation.ge(0.5))
         
@@ -167,6 +175,7 @@ class Generator(nn.Module):
         
         #expl = explanation[:expl1_idx:]
         
+        ##bacth, 250, emb
         x_emb = self.embedding_layer(x_indx)  
         #w_idx = self.masks_to_vocab_idx(masks)
         #expl_text = [[self.args.expl_vocab[i]['text'] for i in range(len(expl))] for expl in w_idx]
@@ -174,7 +183,7 @@ class Generator(nn.Module):
         #with open("gen/expl.txt", "w") as f:
         #    f.write(f"{text}\n&&\n{expl_text}\n{str(sim)}\n==========")
         cos = nn.CosineSimilarity(dim=2)
-        semantic_cost = -cos(x_emb, aggregated_explanation)
+        semantic_cost = -cos(x_emb, explanation)
         
         #semantic_cost = torch.zeros([batch_size, 1], dtype=torch.float32, device=self.device)
         #for i in range(batch_size): # batch
