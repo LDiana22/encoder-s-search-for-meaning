@@ -32,4 +32,7 @@ def get_model(args, embeddings, train_data, expl_vocab):
         if not gen is None:
             gen = nn.DataParallel(gen,
                                     device_ids=range(args.num_gpus))
+    if args.cuda:
+        gen = gen.cuda()
+        model = model.cuda()
     return gen, model
