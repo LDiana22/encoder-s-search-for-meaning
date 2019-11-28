@@ -81,7 +81,7 @@ def train_model(train_data, dev_data, model, gen, args, config):
             epoch_stats['best_epoch'] = epoch - 1
             torch.save(model, args.model_path)
             torch.save(gen, helpers.get_gen_path(args.model_path))
-        else:
+        else:   
             num_epoch_sans_improvement += 1
 
         if not train_model:
@@ -227,7 +227,6 @@ def run_epoch(data_loader, train_model, model, gen, optimizer, step, args,epoch,
                 print(text[i], file=g_out)
                 print("mask", file=g_out)
                 print(inst, file=g_out)
-                print(inst.size())
                 print("over .5 index", file=g_out)
                 print(non_zero_indices, file=g_out)
                 print("expl", file=g_out)

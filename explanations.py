@@ -11,7 +11,6 @@ def decode_mask(mask, vocab):
     return [vocab[i] for i in range(len(mask)) if mask[i]!=0]
 
 
-torch.set_printoptions(profile="full")
 args = generic.parse_args()
 embeddings, word_to_indx = embedding.get_embedding_tensor(args)
 print("Loaded embeddings")
@@ -40,6 +39,8 @@ data_iter = test_loader.__iter__()
 
 e=[]
 
+torch.set_printoptions(profile="full")
+
 num_batches_per_epoch = len(data_iter)
 with open("explanations_palate_filtered-v2.txt", "w") as f:
     for _ in tqdm.tqdm(range(num_batches_per_epoch)):
@@ -53,10 +54,11 @@ with open("explanations_palate_filtered-v2.txt", "w") as f:
         for i, mask in enumerate(masks):
             print(i)
             print(mask)
-            idx=(mask>0.5).nonzero().squeeze.tolist()
+            idx=(mask>0.5).nonzero().squeeze().tolist()
+            print(idx)
             explanation = args.expl_text[idx]
             #explanations = decode_mask(mask, args.expl_text)
-            print(text[i], "\n**\n", explanation, file=f)
+            print("**\n",text[i], "\n~\n",explanation, "\n**\n",file=f)
             #e.append(explanations[0]['text'])
             e.append(explanation)
 print(e)
