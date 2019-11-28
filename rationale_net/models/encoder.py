@@ -25,20 +25,22 @@ class Encoder(nn.Module):
         self.embedding_layer2.weight.data = torch.from_numpy( embeddings )
         self.embedding_layer2.weight.requires_grad = True
         
+        #self.expl_vocab = args.expl_vocab
         
         self.embedding_fc = nn.Linear( hidden_dim, hidden_dim )
         self.embedding_bn = nn.BatchNorm1d( hidden_dim)
         
         #self.expl_tensors = torch.tensor([expl_vocab[e_id]["emb"].data for e_id in sorted(expl_vocab.keys())])
         #self.embedded_vocab = self.embedding_layer2(self.expl_tensors)
-
-        if args.model_form == 'cnn':
+        self.model_form = args.model_form
+        
+        if self.model_form == 'cnn':
             self.cnn = cnn.CNN(args, max_pool_over_time=(not args.use_as_tagger))
             self.fc = nn.Linear( len(args.filters)*args.filter_num,  args.hidden_dim)
-        elif args.model_form == 'lstm':
+        elif self.model_form == 'lstm':
             self.lstm = lstm.AttentionModel(args.batch_size, args.hidden_dim, 3* args.hidden_dim, vocab_size, hidden_dim, embeddings)
-        elif self.args.model_form=='transformer':
-            self.transformer = transformer.Transformer(hidden_dim, self.args.hidden_dim, vocab_size, 250, 10, 4, self.args.dropout, True)
+        elif self.model_form=='transformer':
+            self.transformer = transformer.Transformer(hidden_dim, args.hidden_dim, vocab_size, 250, 10, 4, args.dropout, True)
             self.tr_layer = nn.Linear(self.embedding_dim, args.num_class)
         else:
             raise NotImplementedError("Model form {} not yet supported for encoder!".format(args.model_form))
@@ -59,7 +61,7 @@ class Encoder(nn.Module):
             explanation =  torch.mul(vocab_emb, mask.unsqueeze(-1))
             x = torch.cat((x, explanation),1)
         hidden = None
-        if self.args.model_form == 'cnn':        
+        if self.model_form == 'cnn':        
             x = F.relu( self.embedding_fc(x))
             x = self.dropout(x)
             x = torch.transpose(x, 1, 2) # Switch X to (Batch, Embed, Length)
@@ -67,13 +69,12 @@ class Encoder(nn.Module):
             hidden = F.relu( self.fc(hidden) )
             hidden = self.dropout(hidden)
             logit = self.hidden(hidden)
-        elif self.args.model_form == 'lstm':
+        elif self.model_form == 'lstm':
             logit = self.lstm(x.squeeze(1))
             hidden = None
-        elif self.args.model_form == 'transformer':
-            x=self.transformer(x.squeeze(1))
+        elif self.model_form == 'transformer':
             logit = self.tr_layer(x)
         else:
-            raise Exception("Model form {} not yet supported for encoder!".format(self.args.model_form))
+            raise Exception("Model form {} not yet supported for encoder!".format(self.model_form))
 
         return logit, hidden
