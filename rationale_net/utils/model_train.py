@@ -230,7 +230,6 @@ def run_epoch(data_loader, train_model, model, gen, optimizer, step, args,epoch,
                 print(inst.size())
                 print("over .5 index", file=g_out)
                 print(non_zero_indices, file=g_out)
-                print(non_zero_indices.size())
                 print("expl", file=g_out)
                 print(config["expl_text"][non_zero_indices], file=g_out)
                 

@@ -11,6 +11,7 @@ def decode_mask(mask, vocab):
     return [vocab[i] for i in range(len(mask)) if mask[i]!=0]
 
 
+torch.set_printoptions(profile="full")
 args = generic.parse_args()
 embeddings, word_to_indx = embedding.get_embedding_tensor(args)
 print("Loaded embeddings")
@@ -49,9 +50,9 @@ with open("explanations_palate_filtered-v2.txt", "w") as f:
             x_indx=x_indx.cuda()
         text = batch['text']
         masks, z = gen(x_indx)
-        print(masks)
-        print((masks!=0).nonzero()[:,-1])
         for i, mask in enumerate(masks):
+            print(i)
+            print(mask)
             idx=(mask>0.5).nonzero().squeeze.tolist()
             explanation = args.expl_text[idx]
             #explanations = decode_mask(mask, args.expl_text)
