@@ -1,3 +1,6 @@
+corpus_explanation/
+gen/
+
 # Data dirs
 data/
 # Byte-compiled / optimized / DLL files
