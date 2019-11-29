@@ -29,7 +29,7 @@ gen = torch.load("snapshot/palate-filtered-v2/demo_run_palate_filtered-v2.pt.gen
 gen.training=False
 
 test_loader = torch.utils.data.DataLoader(
-        test_data,
+        train_data,
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=args.num_workers,
@@ -42,7 +42,7 @@ e=[]
 torch.set_printoptions(profile="full")
 
 num_batches_per_epoch = len(data_iter)
-with open("explanations_palate_filtered-v2.txt", "w") as f:
+with open("explanations_palate_filtered-v2-train.txt", "w") as f:
     for _ in tqdm.tqdm(range(num_batches_per_epoch)):
         batch = data_iter.next()
         
@@ -52,13 +52,11 @@ with open("explanations_palate_filtered-v2.txt", "w") as f:
         text = batch['text']
         masks, z = gen(x_indx)
         for i, mask in enumerate(masks):
-            print(i)
-            print(mask)
-            idx=(mask>0.5).nonzero().squeeze().tolist()
-            print(idx)
+            top_3 = sorted(mask.tolist(), reverse=True)[2]
+            idx=(mask>=top_3).nonzero().squeeze().tolist()
             explanation = args.expl_text[idx]
             #explanations = decode_mask(mask, args.expl_text)
-            print("**\n",text[i], "\n~\n",explanation, "\n**\n",file=f)
+            print("**\n",text[i], "\n~\n",explanation, "\n",idx, "\n**\n",file=f)
             #e.append(explanations[0]['text'])
             e.append(explanation)
 print(e)

@@ -121,11 +121,16 @@ class Generator(nn.Module):
             softmax at train time, hard mask at test time
         '''
         mask = z
-        if self.training:
-            mask = z
-        else:
-            ## pointwise set <.5 to 0 >=.5 to 1
-            mask = helpers.get_hard_mask(z)
+#        if self.training:
+#            mask = z
+#        else:
+#            ## pointwise set <.5 to 0 >=.5 to 1
+#            torch.set_printoptions(profile="full")
+#            print("%%")
+#            print(mask)
+#            mask = helpers.get_hard_mask(z)
+#            print(mask)
+#            print("%%")
         return mask
 
     def masks_to_vocab_idx(self, masks):
