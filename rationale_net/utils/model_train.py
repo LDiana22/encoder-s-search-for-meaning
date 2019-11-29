@@ -158,7 +158,7 @@ def test_model(test_data, model, gen, args, config):
 
     return test_stats
 
-def run_epoch(data_loader, train_model, model, gen, optimizer, step, args,epoch, config):
+def run_epoch(data_loader, train_model, model, gen, optimizer, step, args, config, epoch=None):
     '''
     Train model for one pass of train data, and return loss, acccuracy
     '''
