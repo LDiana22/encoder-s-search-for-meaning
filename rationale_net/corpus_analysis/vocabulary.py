@@ -41,11 +41,11 @@ class TfidfVocabulary(Vocabulary):
         self.tf_idf = self.tf_idf_scores()
         print(f"Corpus of {sum([len(words) for doc, words in self.class_documents.items()])}")
         if self.args.aspect =="aroma":
-            self.ignored_words = ["snowboarding"]
+            self.ignored_words = []#["snowboarding"]
         elif self.args.aspect =="palate":
-            self.ignored_words = ["barbershop"]
+            self.ignored_words = []#["barbershop"]
         elif self.args.aspect == "appearance":
-            self.ignored_words = ["lodi", "shirley", "duff"]
+            self.ignored_words = []#["lodi", "shirley", "duff"]
     def t_freq(self):
         tf = {}
         term_freq = {}

@@ -147,6 +147,7 @@ class Generator(nn.Module):
             text (batch-sized list of text)
             Compute the generator specific costs, i.e selection cost, continuity cost, and global vocab cost
         '''
+        return torch.tensor(0, device=self.device), torch.tensor(0, device=self.device)
         batch_size=x_indx.size()[0]
         x_indx = x_indx.view(batch_size,-1)
         #expl_idx = [[idx for idx in range(mask[i].size()[0]) if mask[i][idx]>=0.5] for i in range(batch_size)]
@@ -198,5 +199,6 @@ class Generator(nn.Module):
         #l_padded_mask =  torch.cat( [mask[:,0].unsqueeze(1), mask] , dim=1)
         #r_padded_mask =  torch.cat( [mask, mask[:,-1].unsqueeze(1)] , dim=1)
         #continuity_cost = torch.mean( torch.sum( torch.abs( l_padded_mask - r_padded_mask ) , dim=1) )
+        selection_cost=torch.tensor(0, device=self.device)
         return selection_cost, torch.mean(semantic_cost)
 

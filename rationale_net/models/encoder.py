@@ -57,7 +57,7 @@ class Encoder(nn.Module):
         
         x = self.embedding_layer(x_indx.squeeze(1))
         if not mask is None:
-            vocab_emb = self.embedding_layer2(self.args.expl_vocab)
+            vocab_emb = self.embedding_layer2(self.args.expl_vocab) # vocab_dim, emb_dim
             explanation =  torch.mul(vocab_emb, mask.unsqueeze(-1))
             x = torch.cat((x, explanation),1)
         hidden = None
