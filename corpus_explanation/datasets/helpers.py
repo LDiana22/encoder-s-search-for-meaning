@@ -1,4 +1,10 @@
 import torch
+SEED = 1234
+
+torch.manual_seed(SEED)
+torch.backends.cudnn.deterministic = True
+
+
 
 def get_indices_tensor(text_arr, word_to_indx, max_length):
     '''

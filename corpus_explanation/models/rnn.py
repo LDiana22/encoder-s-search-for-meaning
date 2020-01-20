@@ -1,8 +1,9 @@
 from models import abstract_model as am
-
+from torchsummary import summary
 from torch import nn
 
-class RNN(am.AbstractModel, nn.Module):
+
+class RNN(am.AbstractModel):
     """
     RNN models
     """
@@ -16,6 +17,17 @@ class RNN(am.AbstractModel, nn.Module):
         model_args: hyperparameters of the model
         """
         super().__init__(id, mapping_file_location, model_args)
+        if self.args["cuda"]:
+            self.device='cuda'
+        else:
+            self.device='cpu'
+        self.lin = nn.Linear(model_args["input_size"][0], 1).to(self.device)
+        super().save_model_type(self)
 
+        
+            
     def forward(self, x):
-       pass
+        x = x.to(self.device)
+        return self.lin(x).to(self.device)
+
+

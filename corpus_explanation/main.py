@@ -1,11 +1,12 @@
-# -*- coding: utf-8 -*-
 from experiment_framework import Experiment
 from models import rnn
 from utils import default_config as dc
-from datasets import fb_dataset as fbd
+from datasets import imdb_dataset as imdb
+import torch
 
-embeddings = None
 
-dataset = fbd.FullBeerDataset(embeddings, dc.DATASET_ARGS)
-model1 = rnn.RNN("m-id-1", dc.MODEL_MAPPING, dc.MODEL_ARGS)
-experiment1 = Experiment("e1").with_model(model1).with_config(dc.CONFIG).with_data(dataset).run()
+dc.CONFIG["input_size"] = (12,)
+model = rnn.RNN("m-id-test", dc.MODEL_MAPPING, dc.CONFIG)
+
+dataset = imdb.IMDBDataset(dc.DATASET_ARGS)
+experiment = Experiment("e1").with_config(dc.CONFIG).with_data(dataset).with_model(model).run()

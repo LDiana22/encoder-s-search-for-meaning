@@ -9,7 +9,7 @@ from rationale_net.corpus_analysis.vocabulary import TfidfVocabulary
 
 SMALL_TRAIN_SIZE = 800
 
-class FullBeerDataset(data.dataset):
+class FullBeerDataset(data.Dataset):
 
     def __init__(self, word_to_indx, args, max_length=250, stem='data/beer_review/reviews.aspect'):
         self.base_path = stem
