@@ -25,14 +25,12 @@ CONFIG = {
     "dirs": {
         "logs_dir": "metrics",
         "checkpoint": "snapshot"
-        }
-}
+        },
 
-MODEL_MAPPING = "experiments/models_mappings"
-
-DATASET_ARGS = {
     "aspect": "palate", # aroma, palate, smell, all
     "max_vocab_size": 25000,
     "emb_dim": 300,
     "batch_size": 32
 }
+
+MODEL_MAPPING = "experiments/models_mappings"

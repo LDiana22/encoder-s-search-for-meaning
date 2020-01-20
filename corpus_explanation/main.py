@@ -8,5 +8,5 @@ import torch
 dc.CONFIG["input_size"] = (12,)
 model = rnn.RNN("m-id-test", dc.MODEL_MAPPING, dc.CONFIG)
 
-dataset = imdb.IMDBDataset(dc.DATASET_ARGS)
+dataset = imdb.IMDBDataset(dc.CONFIG)
 experiment = Experiment("e1").with_config(dc.CONFIG).with_data(dataset).with_model(model).run()
