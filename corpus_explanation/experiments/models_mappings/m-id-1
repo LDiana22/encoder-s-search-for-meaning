@@ -1,0 +1,1 @@
+{'dropout': 0.05, 'weight_decay': 5e-06, 'patience': 5, 'epochs': 50, 'batch_size': 32, 'objective': 'cross_entropy', 'init_lr': 0.0001, 'gumbel_decay': 1e-05, 'prefix_dir': 'experiments', 'dirs': {'logs_dir': 'metrics', 'checkpoint': 'snapshot'}}
