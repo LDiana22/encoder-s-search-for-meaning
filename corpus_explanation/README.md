@@ -8,4 +8,7 @@
 3. python -m spacy download en
 #### Data
 1. GloVe 6B - [download](https://nlp.stanford.edu/projects/glove/) and unzip into .vector_cache/
-2. IMDB data - [download](http://ai.stanford.edu/~amaas/data/sentiment/) and unzip into .data/
+```wget http://nlp.stanford.edu/data/glove.6B.zip```
+
+Optional: 2. IMDB data - [download](http://ai.stanford.edu/~amaas/data/sentiment/) and unzip into .data/
+```wget http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz```
