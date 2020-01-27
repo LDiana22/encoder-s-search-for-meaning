@@ -1,55 +1,71 @@
 import gzip
-import tqdm
-from rationale_net.utils.embedding import get_indices_tensor
-from rationale_net.datasets.factory import RegisterDataset
-from rationale_net.datasets.abstract_dataset import AbstractDataset
 
+import torch.utils.data as data
+import tqdm
+
+
+from rationale_net.utils.embedding import get_indices_tensor
 from rationale_net.corpus_analysis.vocabulary import TfidfVocabulary
 
 SMALL_TRAIN_SIZE = 800
 
-@RegisterDataset('full_beer')
-class FullBeerDataset(AbstractDataset):
+class FullBeerDataset(data.Dataset):
 
-    def __init__(self, args, word_to_indx, mode, max_length=250, stem='raw_data/beer_review/reviews.aspect'):
-        aspect = args.aspect
-        self.args= args
-        self.name = mode
+    def __init__(self, word_to_indx, args, max_length=250, stem='data/beer_review/reviews.aspect'):
+        self.base_path = stem
+        self.aspect= args.aspect
         self.objective = args.objective
-        self.dataset = []
+        
         self.word_to_indx  = word_to_indx
         self.max_length = max_length
         self.aspects_to_num = {'appearance':0, 'aroma':1, 'palate':2}#,'taste':3, 'overall':4}
         self.class_map = {0: 0, 1:0, 2:0, 3:0, 4:1, 5:1, 6:1, 7:1, 8:2, 9:2, 10:2}
         self.name_to_key = {'train':'train', 'dev':'heldout', 'test':'heldout'}
         self.class_balance = {}
-        with gzip.open(stem+str(self.aspects_to_num[aspect])+'.'+self.name_to_key[self.name]+'.txt.gz') as gfile:
+        
+        self.training_set = self._get_data("train")
+        self.dev_set = self._get_data("dev")
+        self.test_set = self._get_data("test")
+
+        if self.name == 'train':
+            self.explanations_vocab = self._get_explanations_vocab()
+        print ("Class balance", self.class_balance)
+
+    def training(self):
+        return self.training_set
+    
+    def dev(self):
+        return self.dev_set
+
+    def test(self):
+        return self.test_set
+
+    def override(self, args):
+        self.args.update(args)
+        return self
+
+    def _get_data(self, name="train"):
+        dataset = []
+        file_name = f"{self.base_path}{self.aspects_to_num[self.aspect]}.{self.name_to_key[name]}.txt.gz"
+        with gzip.open(file_name) as gfile:
             lines = gfile.readlines()
             lines = list(zip( range(len(lines)), lines) )
-            if args.debug_mode:
-                lines = lines[:SMALL_TRAIN_SIZE]
-            elif self.name == 'dev':
+            if name == 'dev':
                 lines = lines[:5000]
-            elif self.name == 'test':
+            elif name == 'test':
                 lines = lines[5000:10000]
-            elif self.name == 'train':
+            elif name == 'train':
                 lines = lines[0:20000]
             for indx, line in tqdm.tqdm(enumerate(lines)):
-
                 uid, line_content = line
-                sample = self.processLine(line_content, self.aspects_to_num[aspect], indx)
+                sample = self.processLine(line_content, self.aspects_to_num[self.aspect], indx)
 
                 if not sample['y'] in self.class_balance:
                     self.class_balance[ sample['y'] ] = 0
                 self.class_balance[ sample['y'] ] += 1
                 sample['uid'] = uid
-                self.dataset.append(sample)
-        if self.name == 'train':
-            self.explanations_vocab = self._get_explanations_vocab()
-        print ("Class balance", self.class_balance)
-
-        if args.class_balance:
-            raise NotImplementedError("Beer review dataset doesn't support balanced sampling!")
+                dataset.append(sample)
+        return dataset
 
     def _get_explanations_vocab(self):
         vocabulary = TfidfVocabulary(self.args, self.dataset)

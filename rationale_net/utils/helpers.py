@@ -61,15 +61,16 @@ def get_optimizer(models, args):
     '''
     params = []
     for model in models:
-        params.extend([param for param in model.parameters() if param.requires_grad])
+        if not args.cuda:
+            params.extend([param for param in model.parameters() if param.requires_grad])
+        else:
+            params.extend([param.cuda() for param in model.parameters() if param.requires_grad])
     return torch.optim.Adam(params, lr=args.lr,  weight_decay=args.weight_decay)
 
 
-def get_x_indx(batch, args, eval_model):
-    x_indx = autograd.Variable(batch['x'], volatile=eval_model)
+def get_x_indx(batch, args, some_param):
+    x_indx = torch.tensor(batch['x'])
     return x_indx
-
-
 
 def get_hard_mask(z, return_ind=False):
     '''
@@ -83,7 +84,7 @@ def get_hard_mask(z, return_ind=False):
     if return_ind:
         del z
         return ind
-    masked = torch.ge(z, max_z.unsqueeze(-1)).float()
+    masked = torch.ge(z, 0.5).float()
     del z
     return masked
 
@@ -101,13 +102,13 @@ def one_hot(label, num_class):
     return vec
 
 
-def gumbel_softmax(input, temperature, cuda):
-    noise = torch.rand(input.size())
+def gumbel_softmax(inpt, temperature, cuda):
+    noise = torch.rand(inpt.size())
     noise.add_(1e-9).log_().neg_()
     noise.add_(1e-9).log_().neg_()
-    noise = autograd.Variable(noise)
+    noise = torch.tensor(noise)
     if cuda:
         noise = noise.cuda()
-    x = (input + noise) / temperature
+    x = (inpt + noise) / temperature
     x = F.softmax(x.view(-1,  x.size()[-1]), dim=-1)
-    return x.view_as(input)
+    return x.view_as(inpt)
