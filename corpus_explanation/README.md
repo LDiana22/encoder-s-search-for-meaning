@@ -1,5 +1,7 @@
 ## Setup
 ### Requirements:
+#### (Recommended) Virtual environment
+```virtualenv env --python=python3.6```
 #### Libs
 1. pip install torch===1.3.1 torchvision===0.4.2 -f https://download.pytorch.org/whl/torch_stable.html
 2. pip install -r requirements.txt
