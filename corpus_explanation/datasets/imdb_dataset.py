@@ -43,6 +43,12 @@ class IMDBDataset:
   def training(self):
     return self.training_data
 
+  def get_training_corpus(self):
+    self.corpus = {"pos":[], "neg":[]}
+    self.corpus["pos"] = [" ".join(example.text) for example in self.train_data if example.label == "pos"]
+    self.corpus["neg"] = [" ".join(example.text) for example in self.train_data if example.label == "neg"]
+    return self.corpus
+
   def dev(self):
     return self.valid_data
 

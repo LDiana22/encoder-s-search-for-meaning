@@ -24,7 +24,8 @@ CONFIG = {
     
     "dirs": {
         "logs_dir": "metrics",
-        "checkpoint": "snapshot"
+        "checkpoint": "snapshot",
+        "dictionary": "dictionaries"
         },
 
     "aspect": "palate", # aroma, palate, smell, all
