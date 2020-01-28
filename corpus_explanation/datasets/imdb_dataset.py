@@ -20,6 +20,7 @@ class IMDBDataset:
     print("Loading the IMDB dataset...")
     train_data, self.test_data = datasets.IMDB.splits(TEXT, LABEL)
     self.train_data, self.valid_data = train_data.split(random_state=random.seed(SEED))
+    self._clean_data()
     print("IMDB...")
     print(f"Train {len(self.train_data)}")
     print(f"Valid {len(self.valid_data)}")
@@ -32,6 +33,11 @@ class IMDBDataset:
     LABEL.build_vocab(self.train_data)
 
     self.device = "cuda" if args["cuda"] else "cpu"
+
+  def _clean_data(self):
+    import ipdb
+    ipdb.set_trace(context=10)
+    print(self.train_data)
 
   def iterators(self):
     return data.BucketIterator.splits(

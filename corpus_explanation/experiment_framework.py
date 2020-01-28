@@ -28,6 +28,10 @@ class Experiment(object):
         self.data = data
         return self
 
+    def with_dictionary(self, dictionary):
+        self.dictionary = dictionary
+        return self
+
     def with_config(self, config):
         self.config = config.copy()
         return self

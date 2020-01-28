@@ -1,14 +1,17 @@
-from rake_nltk import Rake
+import pickle
 import os
+from rake_nltk import Rake
+
 
 class RakeDictionary():
 
-  def __init__(self, id, dataset, args):  
-    self.path = os.path.join(args["dirs"]["dictionary"], id)
+  def __init__(self, id, dataset, args): 
+    self.args = args 
+    self.path = os.path.join(self.args["prefix_dir"], self.args["dirs"]["dictionary"], id)
     self.id = id
     self.dataset = dataset
     self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
-    self.dictionsry = self._build_dict()
+    self.dictionary = self._build_dict()
     self._save_dict()
 
   def _build_dict(self):
@@ -22,6 +25,10 @@ class RakeDictionary():
   def _save_dict(self):
     if not os.path.isdir(self.path):
       os.makedirs(self.path)
-    file = os.join(self.path, "dictionary.txt")
+    file = os.path.join(self.path, "dictionary.h5")
+    with open(file, "wb") as f:
+      f.write(pickle.dumps(self.dictionary))
+
+    file = os.path.join(self.path, "dictionary.txt")
     with open(file, "w") as f:
-      f.write(self.dictionary)
+      f.write(str(self.dictionary))
