@@ -10,7 +10,6 @@ dc.CONFIG["input_size"] = (12,)
 model = rnn.RNN("m-id-test", dc.MODEL_MAPPING, dc.CONFIG)
 
 dataset = imdb.IMDBDataset(dc.CONFIG)
-dictionary = rake.RakeDictionary("rake", dataset, dc.CONFIG)
-
+dictionary = rake.RakePerClassDictionary("rake-per-class", dataset, dc.CONFIG)
 
 experiment = Experiment("e1").with_config(dc.CONFIG).with_data(dataset).with_dictionary(dictionary).with_model(model).run()

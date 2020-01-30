@@ -1,9 +1,12 @@
+from .preprocessing import remove_br_html_tags 
+
 import random
+import re
+import spacy
 from torchtext import datasets
 from torchtext import data as data
 from torchtext.vocab import GloVe
 import torch
-import spacy
 
 SEED = 1234
 
@@ -15,29 +18,26 @@ class IMDBDataset:
   def __init__(self, args, max_length=250):
     super().__init__()
     self.args = args
-    TEXT = data.Field(lower=True, include_lengths=True, tokenize='spacy')
+    TEXT = data.Field(lower=True, 
+                      include_lengths=True,
+                      tokenize='spacy',
+                      preprocessing=remove_br_html_tags)
     LABEL = data.LabelField(dtype = torch.float)
     print("Loading the IMDB dataset...")
     train_data, self.test_data = datasets.IMDB.splits(TEXT, LABEL)
     self.train_data, self.valid_data = train_data.split(random_state=random.seed(SEED))
-    self._clean_data()
     print("IMDB...")
     print(f"Train {len(self.train_data)}")
     print(f"Valid {len(self.valid_data)}")
     print(f"Test {len(self.test_data)}")
     TEXT.build_vocab(self.train_data, 
-                 max_size = args["max_vocab_size"], 
+                 max_size = args["max_vocab_size"],
                  vectors = GloVe(name='6B', dim=args["emb_dim"]), 
                  unk_init = torch.Tensor.normal_)
 
     LABEL.build_vocab(self.train_data)
 
     self.device = "cuda" if args["cuda"] else "cpu"
-
-  def _clean_data(self):
-    import ipdb
-    ipdb.set_trace(context=10)
-    print(self.train_data)
 
   def iterators(self):
     return data.BucketIterator.splits(
