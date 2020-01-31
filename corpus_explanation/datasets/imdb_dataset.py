@@ -24,12 +24,13 @@ class IMDBDataset:
                       preprocessing=remove_br_html_tags)
     LABEL = data.LabelField(dtype = torch.float)
     print("Loading the IMDB dataset...")
-    train_data, self.test_data = datasets.IMDB.splits(TEXT, LABEL)
+    train_data, self.test_data = datasets.IMDB.splits(TEXT, LABEL, path=".data/imdb/aclImdb")
     self.train_data, self.valid_data = train_data.split(random_state=random.seed(SEED))
     print("IMDB...")
     print(f"Train {len(self.train_data)}")
     print(f"Valid {len(self.valid_data)}")
     print(f"Test {len(self.test_data)}")
+    return
     TEXT.build_vocab(self.train_data, 
                  max_size = args["max_vocab_size"],
                  vectors = GloVe(name='6B', dim=args["emb_dim"]), 
@@ -38,6 +39,13 @@ class IMDBDataset:
     LABEL.build_vocab(self.train_data)
 
     self.device = "cuda" if args["cuda"] else "cpu"
+
+  def _load_data(self):
+    for label in ['pos', 'neg']:
+        for fname in glob.iglob(os.path.join(".data", label, '*.txt')):
+            with io.open(fname, 'r', encoding="utf-8") as f:
+                text = f.readline()
+            examples.append(data.Example.fromlist([text, label], fields))
 
   def iterators(self):
     return data.BucketIterator.splits(
