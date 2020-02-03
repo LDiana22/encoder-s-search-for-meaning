@@ -1,0 +1,16 @@
+experiments
+expl.sh
+hist
+out
+prep2.sh
+prep.sh
+/home/dluca058/scratch/encoder-s-search-for-meaning/corpus_explanation/cc_scripts
+Dataset
+Traceback (most recent call last):
+  File "../main2.py", line 14, in <module>
+    dictionary = rake.RakePerClassDictionary("rake-per-class", dataset, dc.CONFIG)
+  File "/scratch/dluca058/encoder-s-search-for-meaning/corpus_explanation/text_mining/rake_dict.py", line 11, in __init__
+    self.dictionary = self._build_dict()
+  File "/scratch/dluca058/encoder-s-search-for-meaning/corpus_explanation/text_mining/rake_dict.py", line 16, in _build_dict
+    corpus = self.dataset.get_training_corpus()
+AttributeError: 'NoneType' object has no attribute 'get_training_corpus'
