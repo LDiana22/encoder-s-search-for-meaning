@@ -24,6 +24,8 @@ class AbstractDictionary:
     with open(file, "w", encoding="utf-8") as f:
       f.write(str(self.dictionary))
 
+    self.print_metrics()
+
   def _compute_metrics(self):
     overlap = 0
     global_avg_w = 0 # global average words per instance

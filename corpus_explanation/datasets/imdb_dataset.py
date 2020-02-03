@@ -1,5 +1,9 @@
 from .preprocessing import remove_br_html_tags 
 
+import glob
+import os
+import io
+
 import random
 import re
 import spacy
@@ -16,7 +20,6 @@ torch.backends.cudnn.deterministic = True
 class IMDBDataset:
 
   def __init__(self, args, max_length=250):
-    super().__init__()
     self.args = args
     TEXT = data.Field(lower=True, 
                       include_lengths=True,
@@ -24,13 +27,15 @@ class IMDBDataset:
                       preprocessing=remove_br_html_tags)
     LABEL = data.LabelField(dtype = torch.float)
     print("Loading the IMDB dataset...")
-    train_data, self.test_data = datasets.IMDB.splits(TEXT, LABEL, path=".data/imdb/aclImdb")
-    self.train_data, self.valid_data = train_data.split(random_state=random.seed(SEED))
+    self.train_data = self._load_data(TEXT, LABEL, ".data/imdb/aclImdb", "train")
+    self.test_data = self._load_data(TEXT, LABEL, ".data/imdb/aclImdb", "test")
+    # train_data, self.test_data = self._load_data(TEXT, LABEL, ".data/imdb/aclImdb")
+    # train_data, self.test_data = datasets.IMDB.splits(TEXT, LABEL, path=".data/imdb/aclImdb")
+    self.train_data, self.valid_data = self.train_data.split(random_state=random.seed(SEED))
     print("IMDB...")
     print(f"Train {len(self.train_data)}")
     print(f"Valid {len(self.valid_data)}")
     print(f"Test {len(self.test_data)}")
-    return
     TEXT.build_vocab(self.train_data, 
                  max_size = args["max_vocab_size"],
                  vectors = GloVe(name='6B', dim=args["emb_dim"]), 
@@ -40,12 +45,27 @@ class IMDBDataset:
 
     self.device = "cuda" if args["cuda"] else "cpu"
 
-  def _load_data(self):
+  def _load_data(self, text_field, label_field, path, data_type="train"):
+
+    fields = [('text', text_field), ('label', label_field)]
+    examples = []
+
+    path = os.path.join(path, data_type)
+
     for label in ['pos', 'neg']:
-        for fname in glob.iglob(os.path.join(".data", label, '*.txt')):
+        print(f"{os.path.join(path, label, '*.txt')}")
+        for fname in glob.iglob(os.path.join(path, label, '*.txt')):
             with io.open(fname, 'r', encoding="utf-8") as f:
                 text = f.readline()
             examples.append(data.Example.fromlist([text, label], fields))
+    self.examples = examples
+    self.fields = dict(fields)
+    # Unpack field tuples
+    for n, f in list(self.fields.items()):
+        if isinstance(n, tuple):
+            self.fields.update(zip(n, f))
+            del self.fields[n]
+    return data.Dataset(examples, fields)
 
   def iterators(self):
     return data.BucketIterator.splits(
