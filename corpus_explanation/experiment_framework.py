@@ -77,9 +77,9 @@ class Experiment(object):
             
             end_time = datetime.now()
             
-            training_losses.append(train_metrics["train_loss"])
+            training_losses.append(train_metrics["train_loss"].item())
             training_acc.append(train_metrics["train_acc"])
-            v_losses.append(valid_metrics["valid_loss"])
+            v_losses.append(valid_metrics["valid_loss"].item())
             v_acc.append(valid_metrics["valid_acc"])
 
             if valid_metrics["valid_loss"] < best_valid_loss:

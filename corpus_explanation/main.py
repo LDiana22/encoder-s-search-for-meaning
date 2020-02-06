@@ -15,8 +15,8 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(dc.CONFIG).override(
 	"hidden_dim": 256,
 	"n_layers": 2,
 	"max_dict": 300, 
-	# "cuda": True,
-	"epochs":1
+	"cuda": True,
+	# "epochs":1
 	})
 
 dataset = imdb.IMDBDataset(dc.CONFIG)
