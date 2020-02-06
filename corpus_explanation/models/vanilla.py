@@ -19,9 +19,12 @@ class LSTM(am.AbstractModel):
         model_args: hyperparameters of the model
         """
         super().__init__(id, mapping_file_location, model_args)
+        self.device = torch.device('cuda' if model_args["cuda"] else 'cpu')
+        
         UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
         PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
         self.input_size = len(TEXT.vocab)
+        self.summary_input = [torch.LongTensor([i for i in range(10)]).unsqueeze(1), torch.LongTensor([10])]
         self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"], padding_idx=PAD_IDX)
         self.embedding.weight.data.copy_(TEXT.vocab.vectors)
         self.embedding.weight.data[UNK_IDX] = torch.zeros(model_args["emb_dim"])
@@ -34,7 +37,6 @@ class LSTM(am.AbstractModel):
                            dropout=model_args["dropout"])
         self.lin = nn.Linear(2*model_args["hidden_dim"], model_args["output_dim"]).to(self.device)
         self.dropout = nn.Dropout(model_args["dropout"])
-        self.device = torch.device('cuda' if model_args["cuda"] else 'cpu')
         
         self.optimizer = optim.Adam(self.parameters())
         self.criterion = nn.BCEWithLogitsLoss().to(self.device)
