@@ -71,7 +71,7 @@ class AbstractModel(nn.Module):
 
     def checkpoint(self, epoch, metrics ={}):
         checkpoint_file = os.path.join(self.model_dir, self.args["dirs"]["checkpoint"], 
-            f"{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}_e{epoch}")
+            f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}_e{epoch}')
         self.dict_checkpoint = {
             'epoch': epoch,
             'model_state_dict': self.state_dict(),
@@ -99,7 +99,7 @@ class AbstractModel(nn.Module):
 
     def save_results(self, metrics):
         metrics_path = os.path.join(self.model_dir, self.args["dirs"]["metrics"])
-        results_file = os.path.join(metrics_path, f"results_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}")
+        results_file = os.path.join(metrics_path, f"results_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
         with open(results_file, "w") as f:
             f.write(str(metrics))
 
