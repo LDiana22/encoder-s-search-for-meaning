@@ -23,7 +23,7 @@ CONFIG = {
 
     
     "dirs": {
-        "logs_dir": "metrics",
+        "metrics": "metrics",
         "checkpoint": "snapshot",
         "dictionary": "dictionaries"
         },
@@ -31,7 +31,9 @@ CONFIG = {
     "aspect": "palate", # aroma, palate, smell, all
     "max_vocab_size": 25000,
     "emb_dim": 300,
-    "batch_size": 32
+    "batch_size": 32,
+    "output_dim": 1,
+    "train": True
 }
 
 MODEL_MAPPING = "experiments/models_mappings"

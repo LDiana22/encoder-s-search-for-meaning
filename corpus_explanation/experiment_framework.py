@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from utils import file_helpers as fh
 import torch
+import time
+from datetime import datetime
 
 class Experiment(object):
     """Holds all the experiment parameters and provides helper functions."""
@@ -14,9 +16,12 @@ class Experiment(object):
                 last_checkpoint = fh.get_last_checkpoint(checkpoint)
                 if last_checkpoint is not None:
                     print(f"Loading latest checkpoint: {last_checkpoint}")
-                    self.model = torch.load(last_checkpoint)    
+                    self.model = torch.load(last_checkpoint)
+                    return True   
                 else:
                     print(f"No checkpoint found at {checkpoint}")
+        return False
+
     def setup(self):
         self.restore_model()
         return self
@@ -56,7 +61,53 @@ class Experiment(object):
     def experiments_dir(self):
         return "experiments"
 
+    def train_model(self):
+        training_start_time = datetime.now()
+
+        training_losses, training_acc = [], []
+        v_losses, v_acc = [], []
+
+        best_valid_loss = float('inf')
+        n_epochs = self.config["epochs"]
+        for epoch in range(n_epochs):
+            start_time = datetime.now()
+    
+            train_metrics = self.model.train_model(self.train_iterator)
+            valid_metrics = self.model.evaluate(self.valid_iterator, "valid")
+            
+            end_time = datetime.now()
+            
+            training_losses.append(train_metrics["train_loss"])
+            training_acc.append(train_metrics["train_acc"])
+            v_losses.append(valid_metrics["valid_loss"])
+            v_acc.append(valid_metrics["valid_acc"])
+
+            if valid_metrics["valid_loss"] < best_valid_loss:
+                best_valid_loss = valid_metrics["valid_loss"]
+                metrics = train_metrics
+                metrics.update(valid_metrics)
+                self.model.checkpoint(epoch, metrics)
+            
+            print(f'Epoch: {epoch+1:02} | Epoch Time: {str(end_time-start_time)}')
+            print(f'\tTrain Loss: {train_metrics["train_loss"]:.3f} | Train Acc: {train_metrics["train_acc"]*100:.2f}%')
+            print(f'\t Val. Loss: {valid_metrics["valid_loss"]:.3f} |  Val. Acc: {valid_metrics["valid_acc"]*100:.2f}%')
+
+        
+        print(f'Training Time: {str(datetime.now()-training_start_time)}')
+        print(f'Training losses: {training_losses}')
+        print(f'Training acc: {training_acc}')
+        print(f'Valid losses: {v_losses}')
+        print(f'Valid acc: {v_acc}')
+
     def run(self):
-        pass
+        if self.config["restore_checkpoint"]:
+            loaded = self.restore_model()
+            if not loaded:
+                return
+        self.train_iterator, self.valid_iterator, self.test_iterator = self.data.iterators()
+        if self.config["train"]:
+            self.train_model()
+        metrics = self.model.evaluate(self.test_iterator)
+        self.model.save_results(metrics)
         
         

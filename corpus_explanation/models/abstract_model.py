@@ -5,6 +5,8 @@ from datetime import datetime
 import torch
 from contextlib import redirect_stdout
 from torch import nn
+from datetime import datetime
+
 
 
 class AbstractModel(nn.Module):
@@ -62,19 +64,18 @@ class AbstractModel(nn.Module):
             print(self, file=map_file)
             print(self.delim, file=map_file)
 
-            with redirect_stdout(map_file):
-                summary(model, torch.zeros(self.args["input_size"]),show_input=True)
-                print(self.delim, file=map_file)
-                summary(model, torch.zeros(self.args["input_size"]),show_input=False)
+            # with redirect_stdout(map_file):
+            #     summary(model, torch.LongTensor(torch.zeros(self.input_size, dtype=torch.long)), torch.LongTensor(torch.zeros(self.input_size, dtype=torch.long)), show_input=True)
+            #     print(self.delim, file=map_file)
+            #     summary(model, torch.zeros(self.input_size, dtype=torch.long),show_input=False)
 
-    def checkpoint(self, metrics ={}):
+    def checkpoint(self, epoch, metrics ={}):
         checkpoint_file = os.path.join(self.model_dir, self.args["dirs"]["checkpoint"], 
-            datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+            f"{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}_e{epoch}")
         self.dict_checkpoint = {
-            'epoch': self.epoch,
+            'epoch': epoch,
             'model_state_dict': self.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
-            'loss': self.loss
             }
         self.dict_checkpoint.update(metrics) 
         self.metrics = metrics
@@ -92,5 +93,30 @@ class AbstractModel(nn.Module):
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.epoch = checkpoint['epoch']
         self.loss = checkpoint['loss']
+        self.acc = checkpoint['acc']
         for key in self.metrics.keys():
             self[key] = checkpoint[key]
+
+    def save_results(self, metrics):
+        metrics_path = os.path.join(self.model_dir, self.args["dirs"]["metrics"])
+        results_file = os.path.join(metrics_path, f"results_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}")
+        with open(results_file, "w") as f:
+            f.write(str(metrics))
+
+    def train_model(self, iterator):
+        """
+        Abstract method, avoiding multiple inheritance
+        Return a metrics dict with the keys prefixed by 'train'
+        e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
+        """
+        pass
+
+    def evaluate(self, iterator, prefix="test"):
+        """
+        Abstract method, avoiding multiple inheritance
+
+        Return a metrics dict with the keys prefixed by prefix
+        e.g. metrics={f"{prefix}_acc": 90.0, f"{prefix}_loss": 0.002}
+        """
+        pass
+

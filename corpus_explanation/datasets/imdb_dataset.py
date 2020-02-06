@@ -46,7 +46,8 @@ class IMDBDataset:
 
     LABEL.build_vocab(self.train_data)
 
-    self.device = "cuda" if args["cuda"] else "cpu"
+    self.TEXT = TEXT
+    self.device = torch.device('cuda' if args["cuda"] else 'cpu')
 
   def _load_data(self, text_field, label_field, path, data_type="train"):
 
@@ -61,20 +62,25 @@ class IMDBDataset:
             with io.open(fname, 'r', encoding="utf-8") as f:
                 text = f.readline()
             examples.append(data.Example.fromlist([text, label], fields))
-    self.examples = examples
-    self.fields = dict(fields)
+            if len(examples)==50 or len(examples) == 100:
+              break
+    fields = dict(fields)
     # Unpack field tuples
-    for n, f in list(self.fields.items()):
+    for n, f in list(fields.items()):
         if isinstance(n, tuple):
-            self.fields.update(zip(n, f))
-            del self.fields[n]
+            fields.update(zip(n, f))
+            del fields[n]
     return data.Dataset(examples, fields)
 
   def iterators(self):
+    """
+      Returns train_iterator, valid_iterator, test_iterator
+    """
     return data.BucketIterator.splits(
       (self.train_data, self.valid_data, self.test_data), 
       batch_size = self.args["batch_size"],
       sort_within_batch = True,
+      sort_key=lambda x: len(x.text),
       device = self.device)
 
   def training(self):
