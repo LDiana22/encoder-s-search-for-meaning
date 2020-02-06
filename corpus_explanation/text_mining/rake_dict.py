@@ -12,6 +12,9 @@ class RakePerClassDictionary(AbstractDictionary):
     self._save_dict()
 
   def _build_dict(self):
+    """
+    Builds a dictionary of keywords for each label.
+    """
     dictionary = {}
     corpus = self.dataset.get_training_corpus()
     for text_class in corpus.keys():

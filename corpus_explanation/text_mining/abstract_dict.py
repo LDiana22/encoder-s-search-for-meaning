@@ -27,7 +27,7 @@ class AbstractDictionary:
     self.print_metrics()
 
   def _compute_metrics(self):
-    overlap = 0
+    overlap = 0 # number of overlapped entries for each label
     global_avg_w = 0 # global average words per instance
     global_count = 0
     class_avg_w = {}
@@ -47,6 +47,7 @@ class AbstractDictionary:
     if global_count:
       global_avg_w = global_avg_w/global_count
     self.metrics = {
+      "dictionary_entries": global_count,
       "overlap_count": overlap,
       "global_average_words_per_instance": global_avg_w,
       "class_average": class_avg_w,
