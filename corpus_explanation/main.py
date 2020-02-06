@@ -15,12 +15,12 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(dc.CONFIG).override(
 	"hidden_dim": 256,
 	"n_layers": 2,
 	"max_dict": 300, 
-	# "cuda": True,
-	"epochs":1
+	"cuda": True,
+	# "epochs":1
 	})
 
 dataset = imdb.IMDBDataset(dc.CONFIG)
-dictionary = rake.RakePerClassDictionary("rake-per-class", dataset, dc.CONFIG)
+dictionary = rake.RakePerClassDictionary("rake-per-class-300", dataset, dc.CONFIG)
 
 model = vanilla.LSTM("m-vanilla-bi-lstm", dc.MODEL_MAPPING, experiment.config, dataset.TEXT)
 experiment.with_data(dataset).with_dictionary(dictionary).with_model(model).run()

@@ -24,7 +24,6 @@ class LSTM(am.AbstractModel):
         UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
         PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
         self.input_size = len(TEXT.vocab)
-        self.summary_input = [torch.LongTensor([i for i in range(10)]).unsqueeze(1), torch.LongTensor([10])]
         self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"], padding_idx=PAD_IDX)
         self.embedding.weight.data.copy_(TEXT.vocab.vectors)
         self.embedding.weight.data[UNK_IDX] = torch.zeros(model_args["emb_dim"])

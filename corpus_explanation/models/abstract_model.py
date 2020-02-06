@@ -64,11 +64,6 @@ class AbstractModel(nn.Module):
             print(self, file=map_file)
             print(self.delim, file=map_file)
 
-            # with redirect_stdout(map_file):
-            #     summary(model, torch.LongTensor(torch.zeros(self.input_size, dtype=torch.long)), torch.LongTensor(torch.zeros(self.input_size, dtype=torch.long)), show_input=True)
-            #     print(self.delim, file=map_file)
-            #     summary(model, torch.zeros(self.input_size, dtype=torch.long),show_input=False)
-
     def checkpoint(self, epoch, metrics ={}):
         checkpoint_file = os.path.join(self.model_dir, self.args["dirs"]["checkpoint"], 
             f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}_e{epoch}')

@@ -62,8 +62,6 @@ class IMDBDataset:
             with io.open(fname, 'r', encoding="utf-8") as f:
                 text = f.readline()
             examples.append(data.Example.fromlist([text, label], fields))
-            if len(examples)==50 or len(examples) == 100:
-              break
     fields = dict(fields)
     # Unpack field tuples
     for n, f in list(fields.items()):
