@@ -60,7 +60,7 @@ class IMDBDataset:
 
         fname = os.path.join(path, label, f'{label}.txt')
         with io.open(fname, 'r', encoding='utf-8', errors='replace') as f:
-            for text in f.readlines():
+            for text in f:
                 if text != '\n':
                     examples.append(data.Example.fromlist([text, label], fields))
         print(f'Loaded {len(examples)}')
