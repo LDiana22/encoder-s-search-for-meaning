@@ -4,7 +4,10 @@
 #SBATCH --mail-type=END
 #SBATCH --mail-type=BEGIN
 #SBATCH --mem=32G
-#SBATCH --cpus-per-task=2
+#SBATCH --nodes=1
+#SBATCH --output=out/%x-%j.out
+
+
 
 #SBATCH --job-name=preprocessing
 
