@@ -45,7 +45,7 @@ class LSTM(am.AbstractModel):
 
     def forward(self, text, text_lengths):
         #text = [sent len, batch size]
-        
+        text.to(self.device)
         embedded = self.dropout(self.embedding(text))
         
         #embedded = [sent len, batch size, emb dim]
@@ -104,7 +104,7 @@ class LSTM(am.AbstractModel):
 
             loss.backward()
 
-            e_loss += loss
+            e_loss += loss.item()
             e_acc += acc
             e_prec += prec
             e_rec += rec
@@ -151,7 +151,7 @@ class LSTM(am.AbstractModel):
                 microf1 = f1_score(batch.label, predictions, average='micro')
                 wf1 = f1_score(batch.label, predictions, average='weighted')
 
-                e_loss += loss
+                e_loss += loss.item()
                 e_acc += acc
                 e_prec += prec
                 e_rec += rec

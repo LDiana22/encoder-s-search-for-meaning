@@ -2,7 +2,6 @@ from .preprocessing import remove_br_html_tags
 
 import glob
 import os
-import io
 
 import random
 import re
@@ -57,11 +56,12 @@ class IMDBDataset:
     path = os.path.join(path, data_type)
 
     for label in ['pos', 'neg']:
-        print(f"{os.path.join(path, label, '*.txt')}")
-        for fname in glob.iglob(os.path.join(path, label, '*.txt')):
-            with io.open(fname, 'r', encoding="utf-8") as f:
-                text = f.readline()
-            examples.append(data.Example.fromlist([text, label], fields))
+        print(f"{os.path.join(path, label, f'{label}.all')}")
+        fname = os.path.join(path, label, f'{label}.all')
+        with open(fname, 'r', encoding='utf-8', errors='replace') as f:
+            for text in f.readlines():
+                if text:
+                    examples.append(data.Example.fromlist([text, label], fields))
     fields = dict(fields)
     # Unpack field tuples
     for n, f in list(fields.items()):
