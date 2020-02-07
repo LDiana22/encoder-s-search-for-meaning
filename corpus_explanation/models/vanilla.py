@@ -95,12 +95,12 @@ class LSTM(am.AbstractModel):
             predictions = torch.round(torch.sigmoid(predictions)).detach().numpy()
             #metrics
             acc = accuracy_score(batch.label, predictions)
-            prec = precision_score(batch.label, predictions)
-            rec = recall_score(batch.label, predictions)
-            f1 = f1_score(batch.label, predictions)
-            macrof1 = f1_score(batch.label, predictions, average='macro')
-            microf1 = f1_score(batch.label, predictions, average='micro')
-            wf1 = f1_score(batch.label, predictions, average='weighted')
+            prec = precision_score(batch.label, predictions, zero_division=0)
+            rec = recall_score(batch.label, predictions, zero_division=0)
+            f1 = f1_score(batch.label, predictions, zero_division=0)
+            macrof1 = f1_score(batch.label, predictions, average='macro', zero_division=0)
+            microf1 = f1_score(batch.label, predictions, average='micro', zero_division=0)
+            wf1 = f1_score(batch.label, predictions, average='weighted', zero_division=0)
 
             loss.backward()
 
