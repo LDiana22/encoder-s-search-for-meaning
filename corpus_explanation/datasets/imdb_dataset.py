@@ -2,7 +2,7 @@ from .preprocessing import remove_br_html_tags
 
 import glob
 import os
-
+import io
 import random
 import re
 import spacy
@@ -27,10 +27,7 @@ class IMDBDataset:
     LABEL = data.LabelField(dtype = torch.float)
     print("Loading the IMDB dataset...")
     self.train_data = self._load_data(TEXT, LABEL, ".data/imdb/aclImdb", "train")
-    print(len(self.train_data.examples))
     self.test_data = self._load_data(TEXT, LABEL, ".data/imdb/aclImdb", "test")
-    print(len(self.train_data.examples))
-    print(len(self.test_data.examples))
     # train_data, self.test_data = self._load_data(TEXT, LABEL, ".data/imdb/aclImdb")
     # train_data, self.test_data = datasets.IMDB.splits(TEXT, LABEL, path=".data/imdb/aclImdb")
     self.train_data, self.valid_data = self.train_data.split(random_state=random.seed(SEED))
@@ -43,6 +40,7 @@ class IMDBDataset:
                  vectors = GloVe(name='6B', dim=args["emb_dim"]), 
                  unk_init = torch.Tensor.normal_)
 
+
     LABEL.build_vocab(self.train_data)
 
     self.TEXT = TEXT
@@ -52,16 +50,20 @@ class IMDBDataset:
 
     fields = [('text', text_field), ('label', label_field)]
     examples = []
-
     path = os.path.join(path, data_type)
-
     for label in ['pos', 'neg']:
-        print(f"{os.path.join(path, label, f'{label}.all')}")
-        fname = os.path.join(path, label, f'{label}.all')
-        with open(fname, 'r', encoding='utf-8', errors='replace') as f:
+        print(f"{os.path.join(path, label, f'{label}.txt')}")
+        # for fname in glob.iglob(os.path.join(path, label, '*.txt')):
+        #     with io.open(fname, 'r', encoding="utf-8") as f:
+        #         text = f.readline()
+        #     examples.append(data.Example.fromlist([text, label], fields))
+
+        fname = os.path.join(path, label, f'{label}.txt')
+        with io.open(fname, 'r', encoding='utf-8', errors='replace') as f:
             for text in f.readlines():
-                if text:
+                if text != '\n':
                     examples.append(data.Example.fromlist([text, label], fields))
+        print(f'Loaded {len(examples)}')
     fields = dict(fields)
     # Unpack field tuples
     for n, f in list(fields.items()):
