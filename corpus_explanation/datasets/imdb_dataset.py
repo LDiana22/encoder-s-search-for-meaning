@@ -53,11 +53,6 @@ class IMDBDataset:
     path = os.path.join(path, data_type)
     for label in ['pos', 'neg']:
         print(f"{os.path.join(path, label, f'{label}.txt')}")
-        # for fname in glob.iglob(os.path.join(path, label, '*.txt')):
-        #     with io.open(fname, 'r', encoding="utf-8") as f:
-        #         text = f.readline()
-        #     examples.append(data.Example.fromlist([text, label], fields))
-
         fname = os.path.join(path, label, f'{label}.txt')
         with io.open(fname, 'r', encoding='utf-8', errors='replace') as f:
             for text in f:
