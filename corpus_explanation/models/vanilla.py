@@ -97,12 +97,12 @@ class LSTM(am.AbstractModel):
             y_true = batch.label.cpu().numpy()
             #metrics
             acc = accuracy_score(y_true, y_pred)
-            prec = precision_score(y_true, y_pred, zero_division=0)
-            rec = recall_score(y_true, y_pred, zero_division=0)
-            f1 = f1_score(y_true, y_pred, zero_division=0)
-            macrof1 = f1_score(y_true, y_pred, average='macro', zero_division=0)
-            microf1 = f1_score(y_true, y_pred, average='micro', zero_division=0)
-            wf1 = f1_score(y_true, y_pred, average='weighted', zero_division=0)
+            prec = precision_score(y_true, y_pred)
+            rec = recall_score(y_true, y_pred)
+            f1 = f1_score(y_true, y_pred)
+            macrof1 = f1_score(y_true, y_pred, average='macro')
+            microf1 = f1_score(y_true, y_pred, average='micro')
+            wf1 = f1_score(y_true, y_pred, average='weighted')
 
             loss.backward()
 
