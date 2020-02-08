@@ -47,7 +47,6 @@ class IMDBDataset:
     self.device = torch.device('cuda' if args["cuda"] else 'cpu')
 
   def _load_data(self, text_field, label_field, path, data_type="train"):
-
     fields = [('text', text_field), ('label', label_field)]
     examples = []
     path = os.path.join(path, data_type)
