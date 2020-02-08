@@ -44,8 +44,8 @@ class LSTM(am.AbstractModel):
         super().save_model_type(self)
 
     def forward(self, text, text_lengths):
+        text = text.to(self.device)
         #text = [sent len, batch size]
-        text.to(self.device)
         embedded = self.dropout(self.embedding(text))
         
         #embedded = [sent len, batch size, emb dim]
@@ -89,18 +89,20 @@ class LSTM(am.AbstractModel):
         for batch in iterator:
             self.optimizer.zero_grad()
             text, text_lengths = batch.text
-            predictions = self.forward(text, text_lengths).squeeze(1)
+            predictions = self.forward(text, text_lengths).squeeze(1).to(self.device)
+            batch.label = batch.label.to(self.device)
             loss = self.criterion(predictions, batch.label)
 
-            predictions = torch.round(torch.sigmoid(predictions)).detach().numpy()
+            y_pred = torch.round(torch.sigmoid(predictions)).detach().cpu().numpy()
+            y_true = batch.label.cpu().numpy()
             #metrics
-            acc = accuracy_score(batch.label, predictions)
-            prec = precision_score(batch.label, predictions, zero_division=0)
-            rec = recall_score(batch.label, predictions, zero_division=0)
-            f1 = f1_score(batch.label, predictions, zero_division=0)
-            macrof1 = f1_score(batch.label, predictions, average='macro', zero_division=0)
-            microf1 = f1_score(batch.label, predictions, average='micro', zero_division=0)
-            wf1 = f1_score(batch.label, predictions, average='weighted', zero_division=0)
+            acc = accuracy_score(y_true, y_pred)
+            prec = precision_score(y_true, y_pred, zero_division=0)
+            rec = recall_score(y_true, y_pred, zero_division=0)
+            f1 = f1_score(y_true, y_pred, zero_division=0)
+            macrof1 = f1_score(y_true, y_pred, average='macro', zero_division=0)
+            microf1 = f1_score(y_true, y_pred, average='micro', zero_division=0)
+            wf1 = f1_score(y_true, y_pred, average='weighted', zero_division=0)
 
             loss.backward()
 
