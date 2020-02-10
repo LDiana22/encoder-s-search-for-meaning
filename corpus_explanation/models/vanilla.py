@@ -71,7 +71,7 @@ class LSTM(am.AbstractModel):
                 
         #hidden = [batch size, hid dim * num directions]
             
-        return self.lin(hidden)
+        return self.lin(hidden).to(self.device)
 
 
     def train_model(self, iterator):
@@ -89,7 +89,7 @@ class LSTM(am.AbstractModel):
         for batch in iterator:
             self.optimizer.zero_grad()
             text, text_lengths = batch.text
-            predictions = self.forward(text, text_lengths).squeeze(1).to(self.device)
+            predictions = self.forward(text, text_lengths).squeeze(1)
             batch.label = batch.label.to(self.device)
             loss = self.criterion(predictions, batch.label)
 
@@ -105,6 +105,7 @@ class LSTM(am.AbstractModel):
             wf1 = f1_score(y_true, y_pred, average='weighted')
 
             loss.backward()
+            optimizer.step()
 
             e_loss += loss.item()
             e_acc += acc
@@ -140,7 +141,7 @@ class LSTM(am.AbstractModel):
         with torch.no_grad():
             for batch in iterator:
                 text, text_lengths = batch.text
-                predictions = self.forward(text, text_lengths).squeeze(1).to(self.device)
+                predictions = self.forward(text, text_lengths).squeeze(1)
                 batch.label = batch.label.to(self.device)
                 loss = self.criterion(predictions, batch.label)
     
