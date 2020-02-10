@@ -40,7 +40,7 @@ class LSTM(am.AbstractModel):
         self.optimizer = optim.Adam(self.parameters())
         self.criterion = nn.BCEWithLogitsLoss().to(self.device)
 
-        self.to(self.device)
+        self = self.to(self.device)
         super().save_model_type(self)
 
     def forward(self, text, text_lengths):

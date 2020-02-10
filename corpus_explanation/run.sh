@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=25:45:00
+#SBATCH --time=6:45:00
 #SBATCH --mail-user=dluca058@uottawa.ca
 #SBATCH --mail-type=END
 #SBATCH --mail-type=BEGIN
@@ -7,7 +7,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=2
 #SBATCH --output=out/%x-%j.out
-#SBATCH --job-name=nodes-read-all
+#SBATCH --job-name=nodes-6h
 
 module load python/3.6
 
