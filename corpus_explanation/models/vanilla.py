@@ -141,7 +141,8 @@ class LSTM(am.AbstractModel):
             for batch in iterator:
                 text, text_lengths = batch.text
                 predictions = self.forward(text, text_lengths).squeeze(1).to(self.device)
-                loss = self.criterion(predictions, batch.label).to(self.device)
+                batch.label = batch.label.to(self.device)
+                loss = self.criterion(predictions, batch.label)
     
                 predictions = torch.round(torch.sigmoid(predictions))
 
