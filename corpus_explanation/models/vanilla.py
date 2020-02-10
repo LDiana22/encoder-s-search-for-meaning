@@ -105,7 +105,7 @@ class LSTM(am.AbstractModel):
             wf1 = f1_score(y_true, y_pred, average='weighted')
 
             loss.backward()
-            optimizer.step()
+            self.optimizer.step()
 
             e_loss += loss.item()
             e_acc += acc
