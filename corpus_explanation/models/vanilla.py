@@ -140,18 +140,21 @@ class LSTM(am.AbstractModel):
         with torch.no_grad():
             for batch in iterator:
                 text, text_lengths = batch.text
-                predictions = self.forward(text, text_lengths).squeeze(1)
-                loss = self.criterion(predictions, batch.label)
+                predictions = self.forward(text, text_lengths).squeeze(1).to(self.device)
+                loss = self.criterion(predictions, batch.label).to(self.device)
     
                 predictions = torch.round(torch.sigmoid(predictions))
 
-                acc = accuracy_score(batch.label, predictions)
-                prec = precision_score(batch.label, predictions)
-                rec = recall_score(batch.label, predictions)
-                f1 = f1_score(batch.label, predictions)
-                macrof1 = f1_score(batch.label, predictions, average='macro')
-                microf1 = f1_score(batch.label, predictions, average='micro')
-                wf1 = f1_score(batch.label, predictions, average='weighted')
+                y_pred = torch.round(torch.sigmoid(predictions)).detach().cpu().numpy()
+                y_true = batch.label.cpu().numpy()
+                
+                acc = accuracy_score(y_true, y_pred)
+                prec = precision_score(y_true, y_pred)
+                rec = recall_score(y_true, y_pred)
+                f1 = f1_score(y_true, y_pred)
+                macrof1 = f1_score(y_true, y_pred, average='macro')
+                microf1 = f1_score(y_true, y_pred, average='micro')
+                wf1 = f1_score(y_true, y_pred, average='weighted')
 
                 e_loss += loss.item()
                 e_acc += acc
