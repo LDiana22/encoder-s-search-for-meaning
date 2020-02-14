@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 
 CONFIG = {
+    "toy_data": False, # load only a small subset
+
     "cuda": False,
 
     "embedding": "glove",
 
     "restore_checkpoint" : False,
+    "checkpoint_file": None,
+    "train": True,
 
     "dropout": 0.05,
     "weight_decay": 5e-06,
@@ -33,7 +37,6 @@ CONFIG = {
     "emb_dim": 300,
     "batch_size": 32,
     "output_dim": 1,
-    "train": True
 }
 
 MODEL_MAPPING = "experiments/models_mappings"

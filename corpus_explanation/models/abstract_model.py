@@ -7,6 +7,7 @@ from contextlib import redirect_stdout
 from torch import nn
 from datetime import datetime
 
+from utils import file_helpers as fh
 
 
 class AbstractModel(nn.Module):
@@ -36,6 +37,7 @@ class AbstractModel(nn.Module):
             self.device='cpu'
         self.model_dir = model_dir = os.path.join(self.args["prefix_dir"], self.id)
         self.__create_directories()
+        # define self.metrics = {}
 
     def override(self, args):
         self.args.update(args)
@@ -45,6 +47,7 @@ class AbstractModel(nn.Module):
         All the directories for a model are placed under the directory 
             prefix_dir / model_id / {dirs}
         """ 
+        self.checkpoint_dir = os.path.join(self.model_dir, self.args["dirs"]["checkpoint"])
         for directory in self.args["dirs"].values():
             m_dir = os.path.join(self.model_dir, directory)
             if not os.path.isdir(m_dir):
@@ -64,33 +67,33 @@ class AbstractModel(nn.Module):
             print(self, file=map_file)
             print(self.delim, file=map_file)
 
-    def checkpoint(self, epoch, metrics ={}):
-        checkpoint_file = os.path.join(self.model_dir, self.args["dirs"]["checkpoint"], 
+    def checkpoint(self, epoch, metrics):
+        checkpoint_file = os.path.join(self.checkpoint_dir, 
             f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}_e{epoch}')
         self.dict_checkpoint = {
             'epoch': epoch,
             'model_state_dict': self.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             }
-        self.dict_checkpoint.update(metrics) 
-        self.metrics = metrics
+        self.metric_keys = list(metrics.keys())
+        self.dict_checkpoint.update(metrics)
         torch.save(self.dict_checkpoint, checkpoint_file)
 
-    def load_checkpoint(self, newest_file=None):
+    def load_checkpoint(self, newest_file_name):
         checkpoint_dir = os.path.join(self.model_dir, self.args["dirs"]["checkpoint"])           
-        if not newest_file:
-            newest_file = max([os.path.join(path, basename) for basename in os.listdir(checkpoint_dir)],
-                                key=os.path.getctime)
 
-        path = os.path.join(checkpoint_dir, newest_file)
+        path = os.path.join(checkpoint_dir, newest_file_name)
+        print(f"Loading checkpoint: {path}") 
+        import ipdb
+        ipdb.set_trace()
         checkpoint = torch.load(path)
         self.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.epoch = checkpoint['epoch']
-        self.loss = checkpoint['loss']
-        self.acc = checkpoint['acc']
-        for key in self.metrics.keys():
-            self[key] = checkpoint[key]
+        self.metrics = {}
+        for key in checkpoint.keys():
+            if key not in ['epoch', 'model_state_dict', 'optimizer_state_dict']:
+                self.metrics[key] = checkpoint[key]
 
     def save_results(self, metrics):
         metrics_path = os.path.join(self.model_dir, self.args["dirs"]["metrics"])

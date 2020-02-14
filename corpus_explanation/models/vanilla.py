@@ -126,6 +126,7 @@ class LSTM(am.AbstractModel):
         metrics["train_macrof1"] = e_macrof1/size
         metrics["train_microf1"] = e_microf1/size
         metrics["train_weightedf1"] = e_wf1/size
+
         return metrics
 
     def evaluate(self, iterator, prefix="test"):
@@ -177,4 +178,5 @@ class LSTM(am.AbstractModel):
         metrics[f"{prefix}_macrof1"] = e_macrof1/size
         metrics[f"{prefix}_microf1"] = e_microf1/size
         metrics[f"{prefix}_weightedf1"] = e_wf1/size
+        self.metrics.update(metrics.keys())
         return metrics

@@ -51,19 +51,22 @@ class IMDBDataset:
     examples = []
     path = os.path.join(path, data_type)
     for label in ['pos', 'neg']:
-        print(f"{os.path.join(path, label, f'{label}.txt')}")
-        fname = os.path.join(path, label, f'{label}.txt')
-        with io.open(fname, 'r', encoding='utf-8', errors='replace') as f:
-            for text in f:
-                if text != '\n':
-                    examples.append(data.Example.fromlist([text, label], fields))
-        print(f'Loaded {len(examples)}')
+      print(f"{os.path.join(path, label, f'{label}.txt')}")
+      fname = os.path.join(path, label, f'{label}.txt')
+      with io.open(fname, 'r', encoding='utf-8', errors='replace') as f:
+        for text in f:
+          if text != '\n':
+            examples.append(data.Example.fromlist([text, label], fields))
+          if self.args["toy_data"] and (len(examples)==10 or len(examples)==20):
+            break
+
+    print(f'Loaded {len(examples)}')
     fields = dict(fields)
     # Unpack field tuples
     for n, f in list(fields.items()):
-        if isinstance(n, tuple):
-            fields.update(zip(n, f))
-            del fields[n]
+      if isinstance(n, tuple):
+        fields.update(zip(n, f))
+        del fields[n]
     return data.Dataset(examples, fields)
 
   def iterators(self):

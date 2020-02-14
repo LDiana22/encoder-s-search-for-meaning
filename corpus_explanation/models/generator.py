@@ -3,7 +3,7 @@ from torchsummary import summary
 from torch import nn
 
 
-class RNN(am.AbstractModel):
+class LSTMGenPlusVanillaLSTM(am.AbstractModel):
     """
     RNN models
     """
