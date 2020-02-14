@@ -37,7 +37,6 @@ class AbstractModel(nn.Module):
             self.device='cpu'
         self.model_dir = model_dir = os.path.join(self.args["prefix_dir"], self.id)
         self.__create_directories()
-        # define self.metrics = {}
 
     def override(self, args):
         self.args.update(args)
@@ -75,7 +74,6 @@ class AbstractModel(nn.Module):
             'model_state_dict': self.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             }
-        self.metric_keys = list(metrics.keys())
         self.dict_checkpoint.update(metrics)
         torch.save(self.dict_checkpoint, checkpoint_file)
 
