@@ -84,8 +84,6 @@ class AbstractModel(nn.Module):
 
         path = os.path.join(checkpoint_dir, newest_file_name)
         print(f"Loading checkpoint: {path}") 
-        import ipdb
-        ipdb.set_trace()
         checkpoint = torch.load(path)
         self.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
