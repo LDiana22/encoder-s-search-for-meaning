@@ -4,6 +4,7 @@ import torch
 import time
 from datetime import datetime
 import os
+from tqdm import tqdm
 
 class Experiment(object):
   """Holds all the experiment parameters and provides helper functions."""
@@ -71,7 +72,7 @@ class Experiment(object):
 
     best_valid_loss = float('inf')
     n_epochs = self.config["epochs"]
-    for epoch in range(n_epochs):
+    for epoch in tqdm(range(n_epochs)):
       start_time = datetime.now()
 
       train_metrics = self.model.train_model(self.train_iterator)

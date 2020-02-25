@@ -20,6 +20,7 @@ class IMDBDataset:
 
   def __init__(self, args, max_length=250):
     self.args = args
+    self.max_sent_len = 800
     TEXT = data.Field(lower=True, 
                       include_lengths=True,
                       tokenize='spacy',
@@ -56,6 +57,9 @@ class IMDBDataset:
       with io.open(fname, 'r', encoding='utf-8', errors='replace') as f:
         for text in f:
           if text != '\n':
+            sent_len = len(text.split())
+            if sent_len > self.max_sent_len:
+              self.max_sent_len = sent_len
             examples.append(data.Example.fromlist([text, label], fields))
           if self.args["toy_data"] and (len(examples)==50 or len(examples)==100):
             break

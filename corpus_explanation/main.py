@@ -45,7 +45,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(dc.CONFIG).override(
 dataset = imdb.IMDBDataset(experiment.config)
 explanations = rake.RakePerClassExplanations("rake-per-class-300", dataset, experiment.config)
 
-model = generator.MLPGen("mlp-gen_vanilla-bi-lstm_mixed-expl", dc.MODEL_MAPPING, experiment.config, dataset.TEXT, explanations)
+model = generator.MLPGen("mlp-gen_vanilla-bi-lstm_mixed-expl", dc.MODEL_MAPPING, experiment.config, dataset, explanations)
 # model = vanilla.LSTM("v-lstm", dc.MODEL_MAPPING, experiment.config, dataset.TEXT)
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 

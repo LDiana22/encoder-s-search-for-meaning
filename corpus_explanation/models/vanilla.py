@@ -55,7 +55,6 @@ class LSTM(am.AbstractModel):
 
         #pack sequence
         packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_lengths)
-        
         packed_output, (hidden, cell) = self.lstm(packed_embedded)
         
         #unpack sequence

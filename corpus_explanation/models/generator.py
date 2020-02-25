@@ -10,7 +10,7 @@ class MLPGen(am.AbstractModel):
     """
     MLP generator - dictionary for all classes (mixed)
     """
-    def __init__(self, id, mapping_file_location, model_args, TEXT, explanations):
+    def __init__(self, id, mapping_file_location, model_args, dataset, explanations):
         """
         id: Model id
         mapping_file_location: directory to store the file "model_id" 
@@ -22,13 +22,14 @@ class MLPGen(am.AbstractModel):
         """
         super().__init__(id, mapping_file_location, model_args)
 
-        self.vanilla = van.LSTM("gen-van-lstm", mapping_file_location, model_args, TEXT)
+        self.vanilla = van.LSTM("gen-van-lstm", mapping_file_location, model_args, dataset.TEXT)
 
-        UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
-        PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
-        self.input_size = len(TEXT.vocab)
+        self.max_sent_len = dataset.max_sent_len
+        UNK_IDX = dataset.TEXT.vocab.stoi[dataset.TEXT.unk_token]
+        PAD_IDX = dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token]
+        self.input_size = len(dataset.TEXT.vocab)
         self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"], padding_idx=PAD_IDX)
-        self.embedding.weight.data.copy_(TEXT.vocab.vectors)
+        self.embedding.weight.data.copy_(dataset.TEXT.vocab.vectors)
         self.embedding.weight.data[UNK_IDX] = torch.zeros(model_args["emb_dim"])
         self.embedding.weight.data[PAD_IDX] = torch.zeros(model_args["emb_dim"])
 
@@ -45,16 +46,18 @@ class MLPGen(am.AbstractModel):
 
         self.dictionaries = explanations.get_dict()
 
-        self.gen_lin, self.gen_softmax, self.explanations = [], [], []
+        self.gen_lin, self.gen_softmax, self.explanations, self.aggregations = [], [], [], []
         for class_label in self.dictionaries.keys():
             dictionary = self.dictionaries[class_label]
             stoi_expl = self.__pad([
-                torch.tensor([TEXT.vocab.stoi[word] for word in phrase.split()]).to(self.device)
+                torch.tensor([dataset.TEXT.vocab.stoi[word] for word in phrase.split()]).to(self.device)
                 for phrase in dictionary.keys()], explanations.max_words)
             
             self.gen_lin.append(nn.Linear(model_args["hidden_dim"], len(stoi_expl)))
             self.gen_softmax.append(nn.Softmax(2))
-            self.explanations.append(stoi_expl)
+            self.explanations.append(stoi_expl)#TODO
+            self.aggregations.append(nn.Conv1d(in_channels=self.max_sent_len, out_channels=1, kernel_size=1))
+
 
         self.dropout = nn.Dropout(model_args["dropout"])
 
@@ -118,13 +121,22 @@ class MLPGen(am.AbstractModel):
             # [batch, sent, dict_size]
             expl_distribution = torch.transpose(expl_dist, 0, 1)
 
-            aggregation = nn.Conv1d(in_channels=expl_distribution.size(1), out_channels=1, kernel_size=1)
-            expl_distribution = aggregation(expl_distribution)
-
-            expl_distributions.append(expl_distribution)
+            # [batch, max_sent, dict_size] (pad right)
+            size1, size2, size3 = expl_distribution.shape[0], expl_distribution.shape[1], expl_distribution.shape[2]
+            if self.max_sent_len>=size2:
+                # 0-padding
+                expl_distribution = torch.cat([expl_distribution, expl_distribution.new(size1, self.max_sent_len-size2, size3).zero_()],1)
+            else:
+                # trimming
+                expl_distribution = expl_distribution[:,:self.max_sent_len,:]
+            # [batch,1,dict_size]
+            expl_distribution = self.aggregations[i](expl_distribution)
 
             # [batch,sent, max_words*emb_dim]
-            expl = torch.bmm(expl_distributions[i], vocab_emb)
+            expl = torch.bmm(expl_distribution, vocab_emb)
+
+            # [batch,dict_size]
+            expl_distributions.append(expl_distribution.squeeze(1))
 
             #[batch,max_words,emb_dim]
             context_vector.append(torch.max(expl, dim=1).values.reshape(batch_size, v_emb.size(1),-1))
