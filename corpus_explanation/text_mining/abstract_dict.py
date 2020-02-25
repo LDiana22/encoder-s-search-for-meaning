@@ -33,7 +33,7 @@ class AbstractDictionary:
     class_avg_w = {}
     word_intersection = None
     for class_label in self.dictionary.keys():
-      instances = self.dictionary[class_label]
+      instances = list(self.dictionary[class_label].keys())
       no_instances = len(instances)
       if word_intersection is None:
         word_intersection = set(instances)
@@ -60,3 +60,9 @@ class AbstractDictionary:
     metrics_path = os.path.join(self.path, "metrics.txt")
     with open(metrics_path, "w", encoding="utf-8") as f:
       f.write(str(self.metrics))
+
+  def get_dict(self):
+    """
+    Abstract method for building the dictionary
+    """
+    pass

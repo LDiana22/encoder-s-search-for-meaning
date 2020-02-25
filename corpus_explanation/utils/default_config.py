@@ -23,8 +23,11 @@ CONFIG = {
 
     "gumbel_decay": 1e-5,
 
-    "prefix_dir" : "experiments",
 
+    "max_words_dict": 5,
+
+
+    "prefix_dir" : "experiments",
     
     "dirs": {
         "metrics": "metrics",

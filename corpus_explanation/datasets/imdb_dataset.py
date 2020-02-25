@@ -57,7 +57,7 @@ class IMDBDataset:
         for text in f:
           if text != '\n':
             examples.append(data.Example.fromlist([text, label], fields))
-          if self.args["toy_data"] and (len(examples)==10 or len(examples)==20):
+          if self.args["toy_data"] and (len(examples)==50 or len(examples)==100):
             break
 
     print(f'Loaded {len(examples)}')

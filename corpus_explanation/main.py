@@ -3,6 +3,7 @@ from datetime import datetime
 
 from datasets import imdb_dataset as imdb
 from experiment_framework import Experiment
+from models import generator
 from models import vanilla
 from utils import constants as ct 
 from utils import default_config as dc
@@ -27,7 +28,7 @@ parser.set_defaults(train=dc.CONFIG["train"])
 parser.add_argument('--restore', dest='restore', action='store_true')
 parser.set_defaults(restore=dc.CONFIG["restore_checkpoint"])
 
-parser.add_argument('-cuda', type=bool, default=dc.CONFIG["cuda"])
+parser.add_argument('--cuda', type=bool, default=dc.CONFIG["cuda"])
 args = parser.parse_args()
 
 experiment = Experiment(f"e-v-{formated_date}").with_config(dc.CONFIG).override({
@@ -42,9 +43,10 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(dc.CONFIG).override(
 	})
 
 dataset = imdb.IMDBDataset(experiment.config)
-dictionary = rake.RakePerClassDictionary("rake-per-class-300", dataset, experiment.config)
+explanations = rake.RakePerClassExplanations("rake-per-class-300", dataset, experiment.config)
 
-model = vanilla.LSTM("m-vanilla-bi-lstm", dc.MODEL_MAPPING, experiment.config, dataset.TEXT)
-experiment.with_data(dataset).with_dictionary(dictionary).with_model(model).run()
+model = generator.MLPGen("mlp-gen_vanilla-bi-lstm_mixed-expl", dc.MODEL_MAPPING, experiment.config, dataset.TEXT, explanations)
+# model = vanilla.LSTM("v-lstm", dc.MODEL_MAPPING, experiment.config, dataset.TEXT)
+experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
 print(f"Time: {str(datetime.now()-start)}")
