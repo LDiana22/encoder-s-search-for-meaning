@@ -9,6 +9,9 @@ from utils import constants as ct
 from utils import default_config as dc
 from text_mining import rake_dict as rake
 
+import torch
+
+torch.manual_seed(0)
 
 start = datetime.now()
 
