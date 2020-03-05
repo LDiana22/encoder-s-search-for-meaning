@@ -252,8 +252,10 @@ class IMDBDataset:
                       preprocessing=remove_br_html_tags)
     LABEL = data.LabelField(dtype = torch.float)
     print("Loading the IMDB dataset...")
-    self.train_data = self._load_data(TEXT, LABEL, "/kaggle/input/aclimdb/aclImdb", "train")
-    self.test_data = self._load_data(TEXT, LABEL, "/kaggle/input/aclimdb/aclImdb", "test")
+    self.train_data = self._load_data(TEXT, LABEL, "../.data/imdb/aclImdb", "train")
+    self.test_data = self._load_data(TEXT, LABEL, "../.data/imdb/aclImdb", "test")
+    # self.train_data = self._load_data(TEXT, LABEL, "/kaggle/input/aclimdb/aclImdb", "train")
+    # self.test_data = self._load_data(TEXT, LABEL, "/kaggle/input/aclimdb/aclImdb", "test")
 #     self.train_data, self.test_data =  datasets.IMDB.splits(TEXT, LABEL)
     self.train_data, self.valid_data = self.train_data.split(random_state=random.seed(0))
     print("IMDB...")
@@ -858,7 +860,7 @@ class MLPGen(AbstractModel):
                 
             # header text,list of classes
             f.write("text," + ", ".join(list(self.dictionaries.keys())))
-            f.write("\n".join([text[idx], "~", text_expl[text[idx]] for idx in len(text)]))
+            f.write("\n".join([f"{text[idx]} ~ {text_expl[text[idx]]}" for idx in len(text)]))
                 
     
     def forward(self, text, text_lengths, expl_file=None):
