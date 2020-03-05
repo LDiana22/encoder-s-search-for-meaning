@@ -401,7 +401,7 @@ class AbstractDictionary:
     pass
 
 # %% [code]
-!pip install rake_nltk
+# !pip install rake_nltk
 
 # %% [code]
 import pickle
@@ -1013,7 +1013,7 @@ dataset = IMDBDataset(experiment.config)
 explanations = RakePerClassExplanations("rake-per-class-300", dataset, experiment.config)
 
 # %% [code]
-pip install ipdb
+# pip install ipdb
 
 # %% [code]
 start = datetime.now()
