@@ -16,7 +16,7 @@ CONFIG = {
     "dropout": 0.05,
     "weight_decay": 5e-06,
 
-    "patience": 5,
+    "patience": 10,
 
     "epochs": 50,
 
@@ -163,6 +163,7 @@ class Experiment(object):
 
         best_valid_loss = float('inf')
         n_epochs = self.config["epochs"]
+        patience, prev_loss = 0, 100
         for epoch in tqdm(range(n_epochs)):
             start_time = datetime.now()
 
@@ -181,6 +182,13 @@ class Experiment(object):
                 metrics = train_metrics
                 metrics.update(valid_metrics)
                 self.model.checkpoint(epoch, metrics)
+            if prev_loss < valid_metrics["valid_loss"]:
+                patience += 1
+                if patience == self.config["patience"]:
+                    print("Patience {patience} break, epoch {ephoch+1}")
+                    return
+            prev_loss = valid_metrics["valid_loss"]
+                    
 
             print(f'Epoch: {epoch+1:02} | Epoch Time: {str(end_time-start_time)}')
             print(f'\tTrain Loss: {train_metrics["train_loss"]:.3f} | Train Acc: {train_metrics["train_acc"]*100:.2f}%')
@@ -1012,8 +1020,7 @@ start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
 model = MLPGen("mlp-gen_vanilla-bi-lstm_mixed-expl", MODEL_MAPPING, experiment.config, dataset, explanations)
-# import ipdb
-# ipdb.set_trace(context=10)
+
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
 print(f"Time: {str(datetime.now()-start)}")
