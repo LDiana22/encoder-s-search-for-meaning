@@ -34,7 +34,8 @@ CONFIG = {
     "dirs": {
         "metrics": "metrics",
         "checkpoint": "snapshot",
-        "dictionary": "dictionaries"
+        "dictionary": "dictionaries",
+        "explanations": "explanations"
         },
 
     "aspect": "palate", # aroma, palate, smell, all
@@ -763,7 +764,7 @@ class MLPGen(AbstractModel):
         explanations: Dictionary of explanations [{phrase: {class:freq}}]
         """
         super().__init__(id, mapping_file_location, model_args)
-        self.explanations_path = os.path.join(self.model_dir, "explanations", "e")
+        self.explanations_path = os.path.join(self.model_dir, model_args["dirs"]["explanations"], "e")
         
         self.vanilla = VLSTM("gen-van-lstm", mapping_file_location, model_args, dataset.TEXT)
         self.TEXT = dataset.TEXT
