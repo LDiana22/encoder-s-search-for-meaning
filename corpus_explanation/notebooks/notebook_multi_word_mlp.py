@@ -1051,7 +1051,7 @@ class MLPGen(AbstractModel):
                 if save:
                     text_expl= self.get_explanations(text)
                     e_list.append("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
-                    distr.append(self.expl_distributions)
+                    distr.append(str(self.expl_distributions))
                 acc = accuracy_score(y_true, y_pred)
                 prec = precision_score(y_true, y_pred)
                 rec = recall_score(y_true, y_pred)
