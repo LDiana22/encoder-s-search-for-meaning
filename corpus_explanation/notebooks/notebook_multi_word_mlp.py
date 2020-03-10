@@ -1074,8 +1074,9 @@ class MLPGen(AbstractModel):
             e_file = f"{self.explanations_path}_test-{self.epoch}_{formated_date}.txt"
             print(f"Saving explanations at {e_file}")
             with open(e_file, "w") as f:
+                f.write(expl)
                 f.write("".join(e_list))
-            with open(f"{self.explanations_path}/distr.txt", "w") as f:
+            with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write("\n**\n".join(distr))
 
         metrics ={}
