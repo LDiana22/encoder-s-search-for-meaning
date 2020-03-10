@@ -341,7 +341,7 @@ class IMDBDataset:
 
 # %% [code]
 # %% [code]
-!pip install rake_nltk
+# !pip install rake_nltk
 
 
 # %% [code]
@@ -1146,7 +1146,7 @@ explanations = RakePerClassExplanations("rake-per-class-300", dataset, experimen
 
 
 # %% [code]
-pip install ipdb
+# pip install ipdb
 
 # %% [code]
 # %% [code]
