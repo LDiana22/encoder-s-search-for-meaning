@@ -1111,7 +1111,7 @@ class MLPGen(AbstractModel):
                 f.write(expl)
                 f.write("".join(e_list))
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
-                f.write("\n**\n".join(distr))
+                f.write("\n**\n".join("\n".join([d for d in distr])))
 
         metrics ={}
         size = len(iterator)
