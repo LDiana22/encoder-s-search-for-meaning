@@ -205,6 +205,14 @@ class Experiment(object):
         print(f'Training acc: {training_acc}')
         print(f'Valid losses: {v_losses}')
         print(f'Valid acc: {v_acc}')
+        metrics = {
+            "training_time":  str(datetime.now()-training_start_time),
+            "training_loss": training_losses,
+            "training_acc": training_acc,
+            "valid_loss": valid_losses,
+            "valid_acc": valid_acc
+         }
+        self.model.save_results(metrics, "train")
 
     def run(self):
         if self.config["restore_checkpoint"]:
@@ -217,7 +225,7 @@ class Experiment(object):
             self.train_model()
         print("Evaluating...")
         metrics = self.model.evaluate(self.test_iterator, "test_f")
-        self.model.save_results(metrics)
+        self.model.save_results(metrics, "test")
 
 # %% [markdown]
 # ## Data
@@ -592,9 +600,9 @@ class AbstractModel(nn.Module):
             if key not in ['epoch', 'model_state_dict', 'optimizer_state_dict']:
                 self.metrics[key] = checkpoint[key]
 
-    def save_results(self, metrics):
+    def save_results(self, metrics, file_suffix=""):
         metrics_path = os.path.join(self.model_dir, self.args["dirs"]["metrics"])
-        results_file = os.path.join(metrics_path, f"results_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+        results_file = os.path.join(metrics_path, f"results_{file_suffix}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
         with open(results_file, "w") as f:
             f.write(str(metrics))
 
