@@ -296,25 +296,25 @@ class IMDBDataset:
     examples = []
     path = os.path.join(path, data_type)
     for label in ['pos', 'neg']:
-      print(f"{os.path.join(path, label, f'{label}.txt')}")
-      fname = os.path.join(path, label, f'{label}.txt')
-      with io.open(fname, 'r', encoding='utf-8', errors='replace') as f:
-        for text in f:
-          if text != '\n':
-            sent_len = len(text.split())
-            if sent_len > self.max_sent_len:
-              self.max_sent_len = sent_len
-            examples.append(data.Example.fromlist([text, label], fields))
-          if self.args["toy_data"] and (len(examples)==50 or len(examples)==100):
-            break
+        print(f"{os.path.join(path, label, f'{label}.txt')}")
+        fname = os.path.join(path, label, f'{label}.txt')
+        with io.open(fname, 'r', encoding='utf-8', errors='replace') as f:
+            for text in f:
+                if text != '\n':
+                    sent_len = len(text.split())
+                    if sent_len > self.max_sent_len:
+                        self.max_sent_len = sent_len
+                    examples.append(data.Example.fromlist([text, label], fields))
+                if self.args["toy_data"] and (len(examples)==50 or len(examples)==100):
+                    break
 
     print(f'Loaded {len(examples)}')
     fields = dict(fields)
     # Unpack field tuples
     for n, f in list(fields.items()):
-      if isinstance(n, tuple):
-        fields.update(zip(n, f))
-        del fields[n]
+        if isinstance(n, tuple):
+            fields.update(zip(n, f))
+            del fields[n]
     return data.Dataset(examples, fields)
 
   def iterators(self):
@@ -378,14 +378,14 @@ class AbstractDictionary:
 
   def _save_dict(self):
     if not os.path.isdir(self.path):
-      os.makedirs(self.path)
+        os.makedirs(self.path)
     file = os.path.join(self.path, "dictionary.h5")
     with open(file, "wb") as f: 
-      f.write(pickle.dumps(self.dictionary))
+        f.write(pickle.dumps(self.dictionary))
 
     file = os.path.join(self.path, "dictionary.txt")
     with open(file, "w", encoding="utf-8") as f:
-      f.write(str(self.dictionary))
+        f.write(str(self.dictionary))
 
     self.print_metrics()
 
@@ -396,19 +396,19 @@ class AbstractDictionary:
     class_avg_w = {}
     word_intersection = None
     for class_label in self.dictionary.keys():
-      instances = list(self.dictionary[class_label].keys())
-      no_instances = len(instances)
-      if word_intersection is None:
-        word_intersection = set(instances)
-      else:
-        word_intersection = set(instances).intersection(word_intersection)
-        overlap = len(word_intersection)
-      sum_number_of_words = sum([len(instance.split(" ")) for instance in instances])
-      class_avg_w[class_label] = sum_number_of_words/no_instances
-      global_avg_w += sum_number_of_words
-      global_count += no_instances
+        instances = list(self.dictionary[class_label].keys())
+        no_instances = len(instances)
+        if word_intersection is None:
+            word_intersection = set(instances)
+        else:
+            word_intersection = set(instances).intersection(word_intersection)
+            overlap = len(word_intersection)
+        sum_number_of_words = sum([len(instance.split(" ")) for instance in instances])
+        class_avg_w[class_label] = sum_number_of_words/no_instances
+        global_avg_w += sum_number_of_words
+        global_count += no_instances
     if global_count:
-      global_avg_w = global_avg_w/global_count
+        global_avg_w = global_avg_w/global_count
     self.metrics = {
       "dictionary_entries": global_count,
       "overlap_count": overlap,
@@ -419,10 +419,10 @@ class AbstractDictionary:
 
   def print_metrics(self):
     if not self.metrics:
-      self._compute_metrics()
+        self._compute_metrics()
     metrics_path = os.path.join(self.path, "metrics.txt")
     with open(metrics_path, "w", encoding="utf-8") as f:
-      f.write(str(self.metrics))
+        f.write(str(self.metrics))
 
   def get_dict(self):
     """
@@ -475,34 +475,28 @@ class RakePerClassExplanations(AbstractDictionary):
     {"pos":{word:freq}, "neg":{word:freq}}
     """
     if hasattr(self, 'dictionary') and not self.dictionary:
-      return self.dictionary
+        return self.dictionary
     dictionary = OrderedDict()
     corpus = self.dataset.get_training_corpus()
 
     max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
     for text_class in corpus.keys():
-      dictionary[text_class] = OrderedDict()
-      class_corpus = " ".join(corpus[text_class])
-      rake = Rake()
-      rake.extract_keywords_from_sentences(corpus[text_class])
-      phrases = rake.get_ranked_phrases()
-      phrases = self.filter_phrases_max_words_by_occurence(phrases, self.max_words, class_corpus, max_per_class)
-      
-      # tok_words = self.tokenizer(class_corpus)
-      # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
-      dictionary[text_class] = phrases # len(re.findall(".*".join(phrase.split()), class_corpus))
+        dictionary[text_class] = OrderedDict()
+        class_corpus = " ".join(corpus[text_class])
+        rake = Rake()
+        rake.extract_keywords_from_sentences(corpus[text_class])
+        phrases = rake.get_ranked_phrases()
+        phrases = self.filter_phrases_max_words_by_occurence(phrases, self.max_words, class_corpus, max_per_class)
+
+        # tok_words = self.tokenizer(class_corpus)
+        # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
+        dictionary[text_class] = phrases # len(re.findall(".*".join(phrase.split()), class_corpus))
 
     return dictionary
 
 # %% [code]
 class TfIdfClassDocuments(AbstractDictionary):
   pass
-    
-
-# %% [markdown]
-# 
-
-# %% [code]
 
 # %% [markdown]
 # ## Models
@@ -1132,8 +1126,6 @@ class MLPGen(AbstractModel):
 # ## Main
 
 # %% [code]
-
-# %% [code]
 import argparse
 from datetime import datetime
 
@@ -1185,7 +1177,7 @@ explanations = RakePerClassExplanations("rake-per-class-300", dataset, experimen
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen("mlp-gen_vanilla-bi-lstm_mixed-expl", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen("mlp-gen_rake_class_cleaned_5", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1201,10 +1193,10 @@ print(f"Time: {str(datetime.now()-start)}")
 
 # %% [code]
 # %% [code]
-start = datetime.now()
+# start = datetime.now()
 
-model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config, dataset.TEXT)
+# model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config, dataset.TEXT)
 
-experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
+# experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
-print(f"Time: {str(datetime.now()-start)}")
+# print(f"Time: {str(datetime.now()-start)}")
