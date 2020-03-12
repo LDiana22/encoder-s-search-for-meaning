@@ -1159,7 +1159,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "restore_checkpoint" : False,
     "train": True,
     "epochs": CONFIG["epochs"],
-    "max_words_dict": 5
+    "max_words_dict": 3
 })
 print(experiment.config)
 
@@ -1171,14 +1171,14 @@ dataset = IMDBDataset(experiment.config)
 # pip install ipdb
 
 # %% [code]
-explanations = RakePerClassExplanations("rake-per-class-300-5", dataset, experiment.config)
+explanations = RakePerClassExplanations("rake-per-class-300-3", dataset, experiment.config)
 
 # %% [code]
 # %% [code]
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen("mlp-gen_rake_class_cleaned_5", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen("mlp-gen_rake_class_cleaned_3", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
