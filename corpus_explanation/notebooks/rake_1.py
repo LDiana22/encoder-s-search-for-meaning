@@ -19,7 +19,7 @@ CONFIG = {
 
     "patience": 10,
 
-    "epochs": 1,
+    "epochs": 50,
 
     "objective": "cross_entropy",
     "init_lr": 0.0001,
@@ -1167,7 +1167,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "restore_checkpoint" : False,
     "train": True,
     "epochs": CONFIG["epochs"],
-    "max_words_dict": 1
+    "max_words_dict": 
 })
 print(experiment.config)
 

@@ -19,7 +19,7 @@ CONFIG = {
 
     "patience": 10,
 
-    "epochs": 1,
+    "epochs": 50,
 
     "objective": "cross_entropy",
     "init_lr": 0.0001,
