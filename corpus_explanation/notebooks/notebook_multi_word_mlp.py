@@ -209,8 +209,8 @@ class Experiment(object):
             "training_time":  str(datetime.now()-training_start_time),
             "training_loss": training_losses,
             "training_acc": training_acc,
-            "valid_loss": valid_losses,
-            "valid_acc": valid_acc
+            "valid_loss": v_losses,
+            "valid_acc": v_acc
          }
         self.model.save_results(metrics, "train")
 
@@ -1110,7 +1110,7 @@ class MLPGen(AbstractModel):
             with open(e_file, "w") as f:
                 f.write(expl)
                 f.write("".join(e_list))
-            with open(f"{self.explanations_path}/distr.txt", "w") as f:
+            with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write("\n**\n".join(distr))
 
         metrics ={}
@@ -1142,7 +1142,10 @@ start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
 
-# parser = argparse.ArgumentParser(description='Config params.')
+parser = argparse.ArgumentParser(description='Config params.')
+parser.add_argument('-d', metavar='max_words_dict', type=int, default=CONFIG["max_words_dict"],
+                    help='Max number of words per phrase in explanations dictionary')
+
 # parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
 #                     help='Number of epochs')
 
@@ -1157,7 +1160,7 @@ formated_date = start.strftime(DATE_FORMAT)
 # parser.set_defaults(restore=CONFIG["restore_checkpoint"])
 
 # parser.add_argument('--cuda', type=bool, default=CONFIG["cuda"])
-# args = parser.parse_args()
+args = parser.parse_args()
 
 experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "hidden_dim": 256,
@@ -1167,7 +1170,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "restore_checkpoint" : False,
     "train": True,
     "epochs": CONFIG["epochs"],
-    "max_words_dict": 5
+    "max_words_dict": args.d
 })
 print(experiment.config)
 
@@ -1179,14 +1182,14 @@ dataset = IMDBDataset(experiment.config)
 # pip install ipdb
 
 # %% [code]
-explanations = RakePerClassExplanations("rake-per-class-300-5", dataset, experiment.config)
+explanations = RakePerClassExplanations(f"rake-per-class-300-{args.d}", dataset, experiment.config)
 
 # %% [code]
 # %% [code]
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen("mlp-gen_rake_class_cleaned_5", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"mlp-gen_rake_class_cleaned_{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
