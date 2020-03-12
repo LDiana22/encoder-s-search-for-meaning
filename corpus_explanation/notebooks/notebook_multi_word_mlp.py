@@ -99,7 +99,6 @@ import torch
 import time
 from datetime import datetime
 import os
-from tqdm import tqdm
 
 class Experiment(object):
     """Holds all the experiment parameters and provides helper functions."""
@@ -168,7 +167,7 @@ class Experiment(object):
         best_valid_loss = float('inf')
         n_epochs = self.config["epochs"]
         patience, prev_loss = 0, 100
-        for epoch in tqdm(range(n_epochs)):
+        for epoch in range(n_epochs):
             self.model.epoch = epoch
             start_time = datetime.now()
 
