@@ -1,48 +1,49 @@
 # %% [code]
+# %% [code]
 # -*- coding: utf-8 -*-
 import torch
 torch.manual_seed(0)
 CONFIG = {
-"toy_data": False, # load only a small subset
+    "toy_data": False, # load only a small subset
 
-"cuda": True,
+    "cuda": True,
 
-"embedding": "glove",
+    "embedding": "glove",
 
-"restore_checkpoint" : False,
-"checkpoint_file": None,
-"train": True,
+    "restore_checkpoint" : False,
+    "checkpoint_file": None,
+    "train": True,
 
-"dropout": 0.05,
-"weight_decay": 5e-06,
+    "dropout": 0.05,
+    "weight_decay": 5e-06,
 
-"patience": 10,
+    "patience": 10,
 
-"epochs": 50,
+    "epochs": 1,
 
-"objective": "cross_entropy",
-"init_lr": 0.0001,
+    "objective": "cross_entropy",
+    "init_lr": 0.0001,
 
-"gumbel_decay": 1e-5,
-
-
-"max_words_dict": 5,
+    "gumbel_decay": 1e-5,
 
 
-"prefix_dir" : "experiments",
+    "max_words_dict": 5,
 
-"dirs": {
-    "metrics": "metrics",
-    "checkpoint": "snapshot",
-    "dictionary": "dictionaries",
-    "explanations": "explanations"
-    },
 
-"aspect": "palate", # aroma, palate, smell, all
-"max_vocab_size": 25000,
-"emb_dim": 300,
-"batch_size": 32,
-"output_dim": 1,
+    "prefix_dir" : "experiments",
+
+    "dirs": {
+        "metrics": "metrics",
+        "checkpoint": "snapshot",
+        "dictionary": "dictionaries",
+        "explanations": "explanations"
+        },
+
+    "aspect": "palate", # aroma, palate, smell, all
+    "max_vocab_size": 25000,
+    "emb_dim": 300,
+    "batch_size": 32,
+    "output_dim": 1,
 }
 
 MODEL_MAPPING = "experiments/models_mappings"
@@ -51,6 +52,7 @@ MODEL_MAPPING = "experiments/models_mappings"
 DATE_FORMAT = '%Y-%m-%d_%H-%M-%S'
 DATE_REGEXP = '[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}'
 
+# %% [code]
 # %% [code]
 import os
 import re
@@ -103,7 +105,7 @@ class Experiment(object):
     """Holds all the experiment parameters and provides helper functions."""
     def __init__(self, e_id):
         self.id = e_id
-      
+
     def restore_model(self):
         if self.config["restore_checkpoint"]:
             checkpoint = self.model.checkpoint_dir
@@ -121,7 +123,7 @@ class Experiment(object):
     def setup(self):
         self.restore_model()
         return self
-              
+
 
   ### DECLARATIVE API ###
 
@@ -145,7 +147,7 @@ class Experiment(object):
         self.model = model
         return self
   #### END API ######
-  
+
     @property
     def experiment_name(self):
         return f'E-{self.id}_M-{self.model.id}'
@@ -191,7 +193,7 @@ class Experiment(object):
                     print("Patience {patience} break, epoch {ephoch+1}")
                     return
             prev_loss = valid_metrics["valid_loss"]
-                    
+
 
             print(f'Epoch: {epoch+1:02} | Epoch Time: {str(end_time-start_time)}')
             print(f'\tTrain Loss: {train_metrics["train_loss"]:.3f} | Train Acc: {train_metrics["train_acc"]*100:.2f}%')
@@ -225,10 +227,22 @@ class Experiment(object):
 from torchtext.data import Pipeline
 import re
 
+import string
+
 def remove_br_tag(token):
     return re.sub(r"br|(/><.*)|(</?(.*)/?>)|(<?(.*)/?>)|(<?/?(.*?)/?>?)", "", token)
 
-remove_br_html_tags = Pipeline(remove_br_tag)
+def remove_non_alpha(token):
+    if token.isalpha():
+        return token
+    return ""
+
+def preprocess(token):
+    token = remove_br_tag(token)
+    token = remove_non_alpha(token)
+    return token
+
+remove_br_html_tags = Pipeline(preprocess)
 
 # %% [code]
 import glob
@@ -256,10 +270,10 @@ class IMDBDataset:
                       preprocessing=remove_br_html_tags)
     LABEL = data.LabelField(dtype = torch.float)
     print("Loading the IMDB dataset...")
-    self.train_data = self._load_data(TEXT, LABEL, "../.data/imdb/aclImdb", "train")
-    self.test_data = self._load_data(TEXT, LABEL, "../.data/imdb/aclImdb", "test")
-    # self.train_data = self._load_data(TEXT, LABEL, "/kaggle/input/aclimdb/aclImdb", "train")
-    # self.test_data = self._load_data(TEXT, LABEL, "/kaggle/input/aclimdb/aclImdb", "test")
+#         self.train_data = self._load_data(TEXT, LABEL, "../.data/imdb/aclImdb", "train")
+#         self.test_data = self._load_data(TEXT, LABEL, "../.data/imdb/aclImdb", "test")
+    self.train_data = self._load_data(TEXT, LABEL, "/kaggle/input/aclimdb/aclImdb", "train")
+    self.test_data = self._load_data(TEXT, LABEL, "/kaggle/input/aclimdb/aclImdb", "test")
 #     self.train_data, self.test_data =  datasets.IMDB.splits(TEXT, LABEL)
     self.train_data, self.valid_data = self.train_data.split(random_state=random.seed(0))
     print("IMDB...")
@@ -268,7 +282,7 @@ class IMDBDataset:
     print(f"Test {len(self.test_data)}")
     TEXT.build_vocab(self.train_data, 
                  max_size = args["max_vocab_size"],
-                 vectors = GloVe(name='6B', dim=args["emb_dim"], cache="../.vector_cache"), 
+                 vectors = GloVe(name='6B', dim=args["emb_dim"]),#, cache="../.vector_cache"), 
                  unk_init = torch.Tensor.normal_)
 
 
@@ -335,14 +349,12 @@ class IMDBDataset:
 
 # %% [markdown]
 
-
 # %% [markdown]
 # ## Dictionary
 
 # %% [code]
-# %% [code]
-# !pip install rake_nltk
-
+    # %% [code]
+#     !pip install rake_nltk
 
 # %% [code]
 # ## Dictionary
@@ -350,6 +362,7 @@ class IMDBDataset:
 # %% [code]
 import os
 import pickle
+import re
 
 class AbstractDictionary:
   def __init__(self, id, dataset, args):
@@ -435,7 +448,26 @@ class RakePerClassExplanations(AbstractDictionary):
     self.dictionary = self.get_dict()
     self.tokenizer = spacy.load("en")
     self._save_dict()
-
+ 
+  def filter_phrases_max_words_by_occurence(self, phrases, max_words, corpus, max_phrases):
+    """
+    phrases: list of phrases
+    max_words: maximum number of words per phrase
+    corpus: used for phrase frequency
+    max_phrases: maximum number of phrases
+    """
+    result = {}
+    count = 0
+    for i in range(len(phrases)):
+      phrase = " ".join(phrases[i].split()[:max_words])
+      freq = corpus.count(phrase)
+      if freq > 0:
+        count += 1
+        if count == max_phrases:
+            return result
+        result.update({phrase:freq})
+    return result
+    
   def get_dict(self):
     """
     Builds a dictionary of keywords for each label.
@@ -451,21 +483,21 @@ class RakePerClassExplanations(AbstractDictionary):
     for text_class in corpus.keys():
       dictionary[text_class] = OrderedDict()
       class_corpus = " ".join(corpus[text_class])
-      self.rake.extract_keywords_from_text(class_corpus)
-      phrases = self.rake.get_ranked_phrases()[:max_per_class]
-      if max_per_class:
-        phrases = phrases[:max_per_class]
-      # get word freq
+      rake = Rake()
+      rake.extract_keywords_from_sentences(corpus[text_class])
+      phrases = rake.get_ranked_phrases()
+      phrases = self.filter_phrases_max_words_by_occurence(phrases, self.max_words, class_corpus, max_per_class)
+      
       # tok_words = self.tokenizer(class_corpus)
       # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
-      # build dict
-      for phrase in phrases:
-        # trim phrase to max words
-        phrase = " ".join(phrase.split()[:self.max_words])
-        dictionary[text_class][phrase] = class_corpus.count(phrase)
+      dictionary[text_class] = phrases # len(re.findall(".*".join(phrase.split()), class_corpus))
 
     return dictionary
 
+# %% [code]
+class TfIdfClassDocuments(AbstractDictionary):
+  pass
+    
 
 # %% [markdown]
 # 
@@ -614,7 +646,7 @@ class AbstractModel(nn.Module):
             e_macrof1 += macrof1
             e_microf1 += microf1
             e_wf1 += wf1
-        
+
         metrics ={}
         size = len(iterator)
         metrics["train_loss"] = e_loss/size
@@ -645,12 +677,12 @@ class AbstractModel(nn.Module):
                 logits = self.forward(text, text_lengths, prefix).squeeze()
                 batch.label = batch.label.to(self.device)
                 loss = self.criterion(logits, batch.label)
-    
+
                 predictions = torch.round(torch.sigmoid(logits))
 
                 y_pred = predictions.detach().cpu().numpy()
                 y_true = batch.label.cpu().numpy()
-                
+
                 acc = accuracy_score(y_true, y_pred)
                 prec = precision_score(y_true, y_pred)
                 rec = recall_score(y_true, y_pred)
@@ -700,7 +732,7 @@ class VLSTM(AbstractModel):
         """
         super().__init__(id, mapping_file_location, model_args)
         self.device = torch.device('cuda' if model_args["cuda"] else 'cpu')
-        
+
         UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
         PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
         self.input_size = len(TEXT.vocab)
@@ -716,7 +748,7 @@ class VLSTM(AbstractModel):
                            dropout=model_args["dropout"])
         self.lin = nn.Linear(2*model_args["hidden_dim"], model_args["output_dim"]).to(self.device)
         self.dropout = nn.Dropout(model_args["dropout"])
-        
+
         self.optimizer = optim.Adam(self.parameters())
         self.criterion = nn.BCEWithLogitsLoss().to(self.device)
 
@@ -727,9 +759,9 @@ class VLSTM(AbstractModel):
         text = text.to(self.device)
         #text = [sent len, batch size]
         embedded = self.dropout(self.embedding(text))
-        
+
         #embedded = [sent len, batch size, emb dim]
-        
+
         return self.raw_forward(embedded, text_lengths)
 
     def raw_forward(self, embedded, text_lengths):
@@ -737,23 +769,23 @@ class VLSTM(AbstractModel):
         #pack sequence
         packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_lengths)
         packed_output, (hidden, cell) = self.lstm(packed_embedded)
-        
+
         #unpack sequence
         output, output_lengths = nn.utils.rnn.pad_packed_sequence(packed_output)
 
         #output = [sent len, batch size, hid dim * num directions]
         #output over padding tokens are zero tensors
-        
+
         #hidden = [num layers * num directions, batch size, hid dim]
         #cell = [num layers * num directions, batch size, hid dim]
-        
+
         #concat the final forward (hidden[-2,:,:]) and backward (hidden[-1,:,:]) hidden layers
         #and apply dropout
-        
+
         hidden = self.dropout(torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1))
-                
+
         #hidden = [batch size, hid dim * num directions]
-            
+
         return self.lin(hidden).to(self.device)
 
 # %% [code]
@@ -783,10 +815,10 @@ class MLPGen(AbstractModel):
         """
         super().__init__(id, mapping_file_location, model_args)
         self.explanations_path = os.path.join(self.model_dir, model_args["dirs"]["explanations"], "e")
-        
+
         self.vanilla = VLSTM("gen-van-lstm", mapping_file_location, model_args, dataset.TEXT)
         self.TEXT = dataset.TEXT
-        
+
         self.max_sent_len = dataset.max_sent_len
         UNK_IDX = dataset.TEXT.vocab.stoi[dataset.TEXT.unk_token]
         PAD_IDX = dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token]
@@ -806,7 +838,7 @@ class MLPGen(AbstractModel):
         self.fc = nn.Linear(model_args["hidden_dim"] * 2, model_args["output_dim"]).to(self.device)
 
         self.lin = nn.Linear(model_args["emb_dim"], model_args["hidden_dim"]).to(self.device)
-        
+
         self.dictionaries = explanations.get_dict()
 
         self.gen_lin, self.gen_softmax, self.gen_softmax2, self.explanations, self.aggregations = [], [], [], [], []
@@ -815,7 +847,7 @@ class MLPGen(AbstractModel):
             stoi_expl = self.__pad([
                 torch.tensor([self.TEXT.vocab.stoi[word] for word in phrase.split()]).to(self.device)
                 for phrase in dictionary.keys()], explanations.max_words)
-            
+
             self.gen_lin.append(nn.Linear(model_args["hidden_dim"], len(dictionary)).to(self.device))
             self.gen_softmax.append(nn.Softmax(len(self.dictionaries.keys()))) # one distribution for each word of the sentence
 
@@ -833,7 +865,7 @@ class MLPGen(AbstractModel):
 
         self = self.to(self.device)
         super().save_model_type(self)
-    
+
     def __pad(self, tensor_list, length):
         """
         0 pad to the right for a list of variable sized tensors
@@ -843,7 +875,7 @@ class MLPGen(AbstractModel):
         return torch.stack([torch.cat([tensor, tensor.new(length-tensor.size(0)).zero_()])
             for tensor in tensor_list]).to(self.device)
 
-    
+
     def _decode_expl_distr(self, distr, dictionary, threshold_expl_score=0.2):
         """
         An expl distribution for a given dict
@@ -869,7 +901,7 @@ class MLPGen(AbstractModel):
         # list of 
         # ordered dict {expl:count} for a given dictionary/class
         return decoded
-    
+
     def get_explanations(self, text, file_name=None):
         text = text.transpose(0,1)
 #             start = datetime.now()
@@ -890,32 +922,32 @@ class MLPGen(AbstractModel):
                 val.append(self.predictions[i])
                 val.append(self.true_labels[i])
                 text_expl[nlp_text] = val
-              
+
             # header text,list of classes
 #                 f.write("text, " + ", ".join(list(self.dictionaries.keys()))+"\n")
 #                 f.write("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
         return text_expl
-    
+
     def forward(self, text, text_lengths, expl_file=None):
-        
+
         batch_size = text.size()[1]
-        
+
         #text = [sent len, batch size]
-        
+
         embedded = self.dropout(self.embedding(text))
-        
+
         #embedded = [sent len, batch size, emb dim]
-        
+
         ##GEN
         # # [sent len, batch, 2*hidden_dim]
         # expl_activ, (_, _) = self.gen(embedded)
         # expl_activ = nn.Dropout(0.4)(expl_activ)
-        
+
         #TODO batch, sent*emb
         # batch, sent*hidden
         # batch, dict
-        
-        
+
+
         # [sent, batch, hidden]
         expl_activ = self.lin(embedded)
         # expl_activ = nn.Dropout(0.4)(expl_activ)
@@ -926,7 +958,7 @@ class MLPGen(AbstractModel):
         # reshape
         # batch, hidden, sent -> batch, hidden, dict
         # batch, 1, dict
-        
+
         context_vector, final_dict, expl_distributions = [], [], []
 
 
@@ -947,7 +979,7 @@ class MLPGen(AbstractModel):
             # expl_activ = nn.Dropout(0.2)(lin_activ)
             # [sent, batch, dict_size]
 #                 expl_dist = self.gen_softmax[i](lin_activ)
-            
+
             # [batch, sent, dict_size]
             expl_distribution = torch.transpose(lin_activ, 0, 1)
 
@@ -1000,22 +1032,22 @@ class MLPGen(AbstractModel):
 
         #[sent_len+1, batch, emb_dim]
         final_input = torch.transpose(concat_input,0,1)
-        
+
         output = self.vanilla.raw_forward(final_input, text_lengths)
-        
+
 
         #output = [sent len, batch size, hid dim * num directions]
         #output over padding tokens are zero tensors
-        
+
         #hidden = [num layers * num directions, batch size, hid dim]
         #cell = [num layers * num directions, batch size, hid dim]
-        
+
         #concat the final forward (hidden[-2,:,:]) and backward (hidden[-1,:,:]) hidden layers
         #and apply dropout
-        
+
         # hidden = self.dropout(torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1))
         #hidden = [batch size, hid dim * num directions]
-        
+
         # (list) class, tensor[batch, dict_size]
         self.expl_distributions = expl_distributions 
 #             if expl_file and "test" in expl_file and expl_file!="test":
@@ -1030,7 +1062,7 @@ class MLPGen(AbstractModel):
             expl = "text, " + ", ".join(list(self.dictionaries.keys())) + ", predictions, true label\n"
             e_list = []
             distr = []
-            
+
         self.eval()
         e_loss = 0
         e_acc, e_prec, e_rec = 0,0,0
@@ -1041,7 +1073,7 @@ class MLPGen(AbstractModel):
                 logits = self.forward(text, text_lengths, prefix).squeeze()
                 batch.label = batch.label.to(self.device)
                 loss = self.criterion(logits, batch.label)
-    
+
                 predictions = torch.round(torch.sigmoid(logits))
 
                 y_pred = predictions.detach().cpu().numpy()
@@ -1051,7 +1083,7 @@ class MLPGen(AbstractModel):
                 if save:
                     text_expl= self.get_explanations(text)
                     e_list.append("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
-                    distr.append(str(self.expl_distributions))
+                    distr.append(self.expl_distributions)
                 acc = accuracy_score(y_true, y_pred)
                 prec = precision_score(y_true, y_pred)
                 rec = recall_score(y_true, y_pred)
@@ -1076,7 +1108,7 @@ class MLPGen(AbstractModel):
             with open(e_file, "w") as f:
                 f.write(expl)
                 f.write("".join(e_list))
-            with open(f"{self.explanations_path}_distr.txt", "w") as f:
+            with open(f"{self.explanations_path}/distr.txt", "w") as f:
                 f.write("\n**\n".join(distr))
 
         metrics ={}
@@ -1091,8 +1123,8 @@ class MLPGen(AbstractModel):
         metrics[f"{prefix}_weightedf1"] = e_wf1/size
         return metrics
 
-            
-            
+
+
 # %% [code]
 # pip install ipdb
 
@@ -1134,32 +1166,30 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "cuda": True,
     "restore_checkpoint" : False,
     "train": True,
-    "toy_data": False,
     "epochs": CONFIG["epochs"]
 })
 print(experiment.config)
 
 # %% [code]
-
 # %% [code]
 dataset = IMDBDataset(experiment.config)
-explanations = RakePerClassExplanations("rake-per-class-300", dataset, experiment.config)
-
 
 # %% [code]
-# pip install ipdb
+pip install ipdb
+
+# %% [code]
+explanations = RakePerClassExplanations("rake-per-class-300", dataset, experiment.config)
 
 # %% [code]
 # %% [code]
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen("mlp-gen_vanilla-bi-lstm_expl", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen("mlp-gen_vanilla-bi-lstm_mixed-expl", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
 print(f"Time: {str(datetime.now()-start)}")
-
 
 # %% [code]
 # import os
@@ -1169,13 +1199,12 @@ print(f"Time: {str(datetime.now()-start)}")
 # for file in  os.listdir('experiments/mlp-gen_vanilla-bi-lstm_mixed-expl/explanations'):
 #     os.remove('experiments/mlp-gen_vanilla-bi-lstm_mixed-expl/explanations/'+file)
 
-
 # %% [code]
 # %% [code]
-# start = datetime.now()
+start = datetime.now()
 
-# model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config, dataset.TEXT)
+model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config, dataset.TEXT)
 
-# experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
+experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
-# print(f"Time: {str(datetime.now()-start)}")
+print(f"Time: {str(datetime.now()-start)}")
