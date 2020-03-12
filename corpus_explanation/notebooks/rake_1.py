@@ -190,7 +190,7 @@ class Experiment(object):
             if prev_loss < valid_metrics["valid_loss"]:
                 patience += 1
                 if patience == self.config["patience"]:
-                    print("Patience {patience} break, epoch {ephoch+1}")
+                    print(f"Patience {patience} break, epoch {ephoch+1}")
                     return
             prev_loss = valid_metrics["valid_loss"]
 
