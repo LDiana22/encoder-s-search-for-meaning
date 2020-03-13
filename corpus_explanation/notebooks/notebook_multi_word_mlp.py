@@ -953,7 +953,7 @@ class MLPGen(AbstractModel):
         # [sent, batch, hidden]
         expl_activ = self.lin(embedded)
         expl_activ = nn.Dropout(0.2)(expl_activ)
-        expl_activ = self.lin2(embedded)
+        expl_activ = self.lin2(expl_activ)
 
 
 
