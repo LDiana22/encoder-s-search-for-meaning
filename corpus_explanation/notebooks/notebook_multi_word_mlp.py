@@ -838,8 +838,8 @@ class MLPGen(AbstractModel):
 
         self.fc = nn.Linear(model_args["hidden_dim"] * 2, model_args["output_dim"]).to(self.device)
 
-        self.lin = nn.Linear(model_args["emb_dim"], model_args["hidden_dim"]).to(self.device)
-        self.lin2 = nn.Linear(model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
+        self.lin = nn.Linear(model_args["emb_dim"], 2*model_args["hidden_dim"]).to(self.device)
+        self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
 
         self.dictionaries = explanations.get_dict()
 
@@ -1190,7 +1190,7 @@ explanations = RakePerClassExplanations(f"rake-per-class-300-{args.d}", dataset,
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"mlp2-gen_rake_class_cleaned_{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"mlp2l2hid-gen_rake_class_cleaned_{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
