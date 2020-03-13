@@ -897,8 +897,8 @@ class MLPGen(AbstractModel):
         # top expl for each instance
         expl_text = np.array(list(dictionary.keys()))[most_important_expl_idx]
         #expl: count in class
-        for text in expl_text:
-            decoded[text]= dictionary[text]
+        for i, text in enumerate(expl_text):
+            decoded[text]= (dictionary[text], distr[most_important_expl_idx[i]])
 #         batch_explanations.append(decoded)
         # list of 
         # ordered dict {expl:count} for a given dictionary/class
@@ -952,8 +952,9 @@ class MLPGen(AbstractModel):
 
         # [sent, batch, hidden]
         expl_activ = self.lin(embedded)
-        expl_activ = nn.Dropout(0.2)(expl_activ)
+        # expl_activ = nn.Dropout(0.2)(expl_activ)
         expl_activ = self.lin2(expl_activ)
+        # expl_activ = nn.Dropout(0.2)(expl_activ)
 
 
 
@@ -1190,7 +1191,7 @@ explanations = RakePerClassExplanations(f"rake-per-class-300-{args.d}", dataset,
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"mlp2l2hid-gen_rake_class_cleaned_{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"mlp2l2hid-no-dropout-gen_rake_class_cleaned_{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
