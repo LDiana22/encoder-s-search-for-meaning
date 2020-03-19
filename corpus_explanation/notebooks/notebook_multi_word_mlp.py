@@ -841,10 +841,12 @@ class MLPGen(AbstractModel):
         self.lin = nn.Linear(model_args["emb_dim"], 2*model_args["hidden_dim"]).to(self.device)
         self.tanhsh = nn.Tanhshrink()
         self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
+        self.selu = nn.SELU(1)  
+        self.softmax = nn.Softmax(1)  
 
         self.dictionaries = explanations.get_dict()
 
-        self.gen_lin, self.gen_softmax, self.gen_softmax2, self.explanations, self.aggregations = [], [], [], [], []
+        self.gen_lin, self.gen_softmax, self.explanations, self.aggregations = [], [], [], []
         for class_label in self.dictionaries.keys():
             dictionary = self.dictionaries[class_label]
             stoi_expl = self.__pad([
@@ -856,7 +858,6 @@ class MLPGen(AbstractModel):
 
             self.explanations.append(stoi_expl)#TODO
             self.aggregations.append(nn.Linear(self.max_sent_len, 1).to(self.device)) # one distribution for the sentence
-            self.gen_softmax2.append(nn.Softmax(1)) # one distribution for each word of the sentence
 
 #                 self.aggregations.append(nn.Conv1d(in_channels=self.max_sent_len, out_channels=1, kernel_size=1).to(self.device))
 
@@ -953,10 +954,10 @@ class MLPGen(AbstractModel):
 
         # [sent, batch, hidden]
         expl_activ = self.lin(embedded)
+        expl_activ = self.selu(expl_activ)
         expl_activ = nn.Dropout(0.2)(expl_activ)
-        expl_activ = self.tanhsh(expl_activ)
         expl_activ = self.lin2(expl_activ)
-        expl_activ = self.tanhsh(expl_activ)
+        expl_activ = self.selu(expl_activ)
         # expl_activ = nn.Dropout(0.2)(expl_activ)
 
 
@@ -1002,7 +1003,7 @@ class MLPGen(AbstractModel):
             e = torch.transpose(expl_distribution,1,2)
             # [batch, dict, 1]
             expl_distribution = self.aggregations[i](e)
-            expl_distribution = self.gen_softmax2[i](expl_distribution)
+            expl_distribution = self.softmax(expl_distribution)
 #                 print(expl_distribution.shape)
 
 #                 expl_distribution = self.aggregations[i](expl_distribution)
@@ -1194,7 +1195,7 @@ explanations = RakePerClassExplanations(f"rake-per-class-300-{args.d}", dataset,
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"mlp2l2hid-tanhsh-dropout-gen_rake_class_cleaned_{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"mlp2l2hid-selu-dropout-gen_rake_class_cleaned_{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
