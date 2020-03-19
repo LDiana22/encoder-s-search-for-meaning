@@ -1194,7 +1194,7 @@ explanations = RakePerClassExplanations(f"rake-per-class-300-{args.d}", dataset,
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"mlp2l2hid-no-dropout-gen_rake_class_cleaned_{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"mlp2l2hid-tanhsh-dropout-gen_rake_class_cleaned_{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
