@@ -843,8 +843,8 @@ class MLPGen(AbstractModel):
                            bidirectional=True,
                            dropout=model_args["dropout"])
 
-        self.fc = nn.Linear(model_args["hidden_dim"] * 2, model_args["output_dim"]).to(self.device)
 
+        self.lin21 = nn.Linear(2*model_args["emb_dim"], model_args["hidden_dim"]).to(self.device)
         self.lin = nn.Linear(model_args["emb_dim"], 2*model_args["hidden_dim"]).to(self.device)
         self.tanhsh = nn.Tanhshrink()
         self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
@@ -960,7 +960,8 @@ class MLPGen(AbstractModel):
 
 
         # [sent, batch, hidden]
-        expl_activ = self.lin(embedded)
+        # expl_activ = self.lin(embedded)
+        expl_activ = self.lin21(embedded)
         expl_activ = self.selu(expl_activ)
         expl_activ = nn.Dropout(0.2)(expl_activ)
         # expl_activ = self.lin2(expl_activ)
