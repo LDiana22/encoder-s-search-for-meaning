@@ -604,6 +604,13 @@ class AbstractModel(nn.Module):
         results_file = os.path.join(metrics_path, f"results_{file_suffix}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
         with open(results_file, "w") as f:
             f.write(str(metrics))
+            f.write("\n\n")
+            f.write("Loss, acc, prec, rec, F1, macroF1, microF1, weightedF1\n")
+            metric_names = ['test_f_loss', 'test_f_acc', 'test_f_prec', 'test_f_rec', 'test_f_f1', 'test_f_macrof1', 'test_f_microf1', 'test_f_weightedf1']
+            res = []
+            for metric in metric_names:
+                res += "{0:.4f}".format(metrics.get(metric, -1)) 
+            f.write(" & ".join(res))
 
     def train_model(self, iterator):
         """
@@ -841,7 +848,7 @@ class MLPGen(AbstractModel):
         self.lin = nn.Linear(model_args["emb_dim"], 2*model_args["hidden_dim"]).to(self.device)
         self.tanhsh = nn.Tanhshrink()
         self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
-        self.selu = nn.SELU(1)  
+        self.selu = nn.SELU() 
         self.softmax = nn.Softmax(1)  
 
         self.dictionaries = explanations.get_dict()
