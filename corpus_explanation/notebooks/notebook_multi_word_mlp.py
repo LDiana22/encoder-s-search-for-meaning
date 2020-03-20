@@ -451,7 +451,7 @@ class RakePerClassExplanations(AbstractDictionary):
     super().__init__(id, dataset, args)
     self.max_dict = args.get("max_dict", None)
     self.max_words = args["max_words_dict"]
-    self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
+    # self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
     self.dictionary = self.get_dict()
     self.tokenizer = spacy.load("en")
     self._save_dict()
@@ -466,7 +466,7 @@ class RakePerClassExplanations(AbstractDictionary):
     result = {}
     count = 0
     for i in range(len(phrases)):
-      phrase = " ".join(phrases[i].split()[:max_words])
+      # phrase = " ".join(phrases[i].split()[:max_words])
       freq = corpus.count(phrase)
       if freq > 0:
         count += 1
@@ -490,10 +490,10 @@ class RakePerClassExplanations(AbstractDictionary):
     for text_class in corpus.keys():
         dictionary[text_class] = OrderedDict()
         class_corpus = " ".join(corpus[text_class])
-        rake = Rake()
+        rake = Rake(max_length=self.max_words)
         rake.extract_keywords_from_sentences(corpus[text_class])
         phrases = rake.get_ranked_phrases()
-        phrases = self.filter_phrases_max_words_by_occurence(phrases, self.max_words, class_corpus, max_per_class)
+        phrases = self.filter_phrases_max_words_by_occurence(phrases, class_corpus, max_per_class)
 
         # tok_words = self.tokenizer(class_corpus)
         # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
