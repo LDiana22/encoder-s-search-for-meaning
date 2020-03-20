@@ -849,6 +849,7 @@ class MLPGen(AbstractModel):
         self.tanhsh = nn.Tanhshrink()
         self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
         self.selu = nn.SELU() 
+        self.relu = nn.ReLU() 
         self.softmax = nn.Softmax(1)  
 
         self.dictionaries = explanations.get_dict()
@@ -962,7 +963,7 @@ class MLPGen(AbstractModel):
         # [sent, batch, hidden]
         # expl_activ = self.lin(embedded)
         expl_activ = self.lin21(embedded)
-        expl_activ = self.selu(expl_activ)
+        expl_activ = self.relu(expl_activ)
         expl_activ = nn.Dropout(0.2)(expl_activ)
         # expl_activ = self.lin2(expl_activ)
         # expl_activ = self.selu(expl_activ)
