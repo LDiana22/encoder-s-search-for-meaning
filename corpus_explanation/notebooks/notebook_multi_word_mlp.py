@@ -467,12 +467,12 @@ class RakePerClassExplanations(AbstractDictionary):
     count = 0
     for i in range(len(phrases)):
       # phrase = " ".join(phrases[i].split()[:max_words])
-      freq = corpus.count(phrase)
+      freq = corpus.count(phrases[i])
       if freq > 0:
         count += 1
         if count == max_phrases:
             return result
-        result.update({phrase:freq})
+        result.update({phrases[i]:freq})
     return result
     
   def get_dict(self):
