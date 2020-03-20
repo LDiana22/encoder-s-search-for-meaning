@@ -844,7 +844,7 @@ class MLPGen(AbstractModel):
                            dropout=model_args["dropout"])
 
 
-        self.lin21 = nn.Linear(2*model_args["emb_dim"], model_args["hidden_dim"]).to(self.device)
+        self.lin21 = nn.Linear(model_args["emb_dim"], model_args["hidden_dim"]).to(self.device)
         self.lin = nn.Linear(model_args["emb_dim"], 2*model_args["hidden_dim"]).to(self.device)
         self.tanhsh = nn.Tanhshrink()
         self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
