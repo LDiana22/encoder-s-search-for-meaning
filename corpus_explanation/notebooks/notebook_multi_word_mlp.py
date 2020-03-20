@@ -1197,14 +1197,14 @@ dataset = IMDBDataset(experiment.config)
 # pip install ipdb
 
 # %% [code]
-explanations = RakePerClassExplanations(f"rake-per-class-300-{args.d}", dataset, experiment.config)
+explanations = RakePerClassExplanations(f"rake-max-words-300-{args.d}", dataset, experiment.config)
 
 # %% [code]
 # %% [code]
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"mlphid-selu-dropout-gen_rake_class_cleaned_{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"mlp-relu-rake-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
