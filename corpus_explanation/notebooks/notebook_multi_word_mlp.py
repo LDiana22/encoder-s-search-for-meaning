@@ -456,7 +456,7 @@ class RakePerClassExplanations(AbstractDictionary):
     self.tokenizer = spacy.load("en")
     self._save_dict()
  
-  def filter_phrases_max_words_by_occurence(self, phrases, max_words, corpus, max_phrases):
+  def filter_phrases_max_words_by_occurence(self, phrases, corpus, max_phrases):
     """
     phrases: list of phrases
     max_words: maximum number of words per phrase
