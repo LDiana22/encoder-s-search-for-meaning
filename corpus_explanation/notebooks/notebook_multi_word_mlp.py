@@ -609,7 +609,7 @@ class AbstractModel(nn.Module):
             metric_names = ['test_f_loss', 'test_f_acc', 'test_f_prec', 'test_f_rec', 'test_f_f1', 'test_f_macrof1', 'test_f_microf1', 'test_f_weightedf1']
             res = []
             for metric in metric_names:
-                res += "{0:.4f}".format(metrics.get(metric, -1)) 
+                res += ["{0:.4f}".format(metrics.get(metric, -1))]
             f.write(" & ".join(res))
 
     def train_model(self, iterator):
