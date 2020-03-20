@@ -963,9 +963,9 @@ class MLPGen(AbstractModel):
         expl_activ = self.lin(embedded)
         expl_activ = self.selu(expl_activ)
         expl_activ = nn.Dropout(0.2)(expl_activ)
-        expl_activ = self.lin2(expl_activ)
-        expl_activ = self.selu(expl_activ)
-        # expl_activ = nn.Dropout(0.2)(expl_activ)
+        # expl_activ = self.lin2(expl_activ)
+        # expl_activ = self.selu(expl_activ)
+        # # expl_activ = nn.Dropout(0.2)(expl_activ)
 
 
 
@@ -1202,7 +1202,7 @@ explanations = RakePerClassExplanations(f"rake-per-class-300-{args.d}", dataset,
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"mlp2l2hid-selu-dropout-gen_rake_class_cleaned_{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"mlphid-selu-dropout-gen_rake_class_cleaned_{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
