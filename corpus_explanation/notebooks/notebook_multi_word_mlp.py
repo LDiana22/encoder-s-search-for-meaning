@@ -382,10 +382,11 @@ class AbstractDictionary:
     self.args = args 
     self.path = os.path.join(self.args["prefix_dir"], self.args["dirs"]["dictionary"], id)
     self.metrics = {}
-
-  def _save_dict(self):
     if not os.path.isdir(self.path):
         os.makedirs(self.path)
+
+  def _save_dict(self):
+
     file = os.path.join(self.path, "dictionary.h5")
     with open(file, "wb") as f: 
         f.write(pickle.dumps(self.dictionary))
