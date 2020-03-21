@@ -477,13 +477,15 @@ class RakePerClassExplanations(AbstractDictionary):
         result.update({phrases[i]:freq})
 
     return result
-    
+  
   def get_dict(self):
     """
     Builds a dictionary of keywords for each label.
     # {"all":{word:freq}} OR
     {"pos":{word:freq}, "neg":{word:freq}}
     """
+#     import ipdb
+#     ipdb.set_trace(context=20)
     if hasattr(self, 'dictionary') and not self.dictionary:
         return self.dictionary
     dictionary = OrderedDict()
@@ -496,14 +498,22 @@ class RakePerClassExplanations(AbstractDictionary):
         rake = Rake(max_length=self.max_words)
         rake.extract_keywords_from_sentences(corpus[text_class])
         phrases = rake.get_ranked_phrases()
-        with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
-            f.write("\n".join(phrases))
-        # phrases = self.filter_phrases_max_words_by_occurence(phrases, class_corpus, max_per_class)
-        phrases = [{phrase:class_corpus.count(phrase)} for phrase in phrases][:max_per_class]
-
+#         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
+#             f.write("\n".join(phrases))
+#         phrases = self.filter_phrases_max_words_by_occurence(phrases, class_corpus, max_per_class)
+        result = []
+        count = 0
+        for phrase in phrases:
+            freq = class_corpus.count(phrase)
+            if freq > 0:
+                result.append({phrase:freq})
+                count+=1
+            if count == max_per_class:
+                break;
+        
         # tok_words = self.tokenizer(class_corpus)
         # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
-        dictionary[text_class] = dict(ChainMap(*phrases)) # len(re.findall(".*".join(phrase.split()), class_corpus))
+        dictionary[text_class] = dict(ChainMap(*result)) # len(re.findall(".*".join(phrase.split()), class_corpus))
 
     return dictionary
 
@@ -1024,7 +1034,7 @@ class MLPGen(AbstractModel):
             # [batch,dict_size, sent]
             e = torch.transpose(expl_distribution,1,2)
             # [batch, dict, 1]
-            expl_distribution = self.aggregations[i](e)
+            expl_distribution = self.aggregations[i](e).squeeze()
             expl_distribution = F.gumbel_softmax(expl_distribution, tau=0.8, hard=True)
 #                 print(expl_distribution.shape)
 
@@ -1036,7 +1046,7 @@ class MLPGen(AbstractModel):
             expl_distributions.append(torch.squeeze(expl_distribution))
 
             # [batch,1, dict]
-            e_dist = torch.transpose(expl_distribution,1,2)
+            e_dist = torch.transpose(expl_distribution.unsqueeze(-1),1,2)
             # batch, 1, dict x batch, dict, emb (max_words*emb_dim)
             expl = torch.bmm(e_dist, vocab_emb)
 
