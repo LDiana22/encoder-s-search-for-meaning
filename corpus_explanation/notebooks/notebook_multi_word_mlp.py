@@ -1206,7 +1206,7 @@ explanations = RakePerClassExplanations(f"rake-max-words-500-{args.d}", dataset,
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"mlp-relu-rake-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"gumbel-mlp-relu-rake500-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
