@@ -222,6 +222,9 @@ class Experiment(object):
         if self.config["train"]:
             print("Training...")
             self.train_model()
+            print("Restoring best checkpoint...")
+            self.model.load_best_model()
+
         print("Evaluating...")
         metrics = self.model.evaluate(self.test_iterator, "test_f")
         self.model.save_results(metrics, "test")
@@ -587,6 +590,11 @@ class AbstractModel(nn.Module):
             }
         self.dict_checkpoint.update(metrics)
         torch.save(self.dict_checkpoint, checkpoint_file)
+
+    def load_best_model(self):
+        newest_checkpoint = get_last_checkpoint_by_date(os.path.join(self.model_dir, self.args["dirs"]["checkpoint"]))
+        print(f"Loading best model from {newest_checkpoint}")
+        self.load_checkpoint(newest_checkpoint)
 
     def load_checkpoint(self, newest_file_name):
         checkpoint_dir = os.path.join(self.model_dir, self.args["dirs"]["checkpoint"])           
