@@ -469,10 +469,8 @@ class RakePerClassExplanations(AbstractDictionary):
       # phrase = " ".join(phrases[i].split()[:max_words])
       freq = corpus.count(phrases[i])
       if freq > 0:
-        count += 1
-        if count == max_phrases:
-            return result
         result.update({phrases[i]:freq})
+
     return result
     
   def get_dict(self):
@@ -493,6 +491,8 @@ class RakePerClassExplanations(AbstractDictionary):
         rake = Rake(max_length=self.max_words)
         rake.extract_keywords_from_sentences(corpus[text_class])
         phrases = rake.get_ranked_phrases()
+        with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join(phrases))
         phrases = self.filter_phrases_max_words_by_occurence(phrases, class_corpus, max_per_class)
 
         # tok_words = self.tokenizer(class_corpus)
@@ -807,6 +807,8 @@ import torch.optim as optim
 from collections import OrderedDict 
 import numpy as np
 
+import torch.nn.functional as F
+
 class MLPGen(AbstractModel):
     """
     MLP generator - dictionary for all classes (mixed)
@@ -1012,7 +1014,7 @@ class MLPGen(AbstractModel):
             e = torch.transpose(expl_distribution,1,2)
             # [batch, dict, 1]
             expl_distribution = self.aggregations[i](e)
-            expl_distribution = self.softmax(expl_distribution)
+            expl_distribution = F.gumbel_softmax(expl_distribution)
 #                 print(expl_distribution.shape)
 
 #                 expl_distribution = self.aggregations[i](expl_distribution)
@@ -1180,7 +1182,7 @@ args = parser.parse_args()
 experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "hidden_dim": 256,
     "n_layers": 2,
-    "max_dict": 300, 
+    "max_dict": 500, 
     "cuda": True,
     "restore_checkpoint" : False,
     "train": True,
@@ -1197,7 +1199,7 @@ dataset = IMDBDataset(experiment.config)
 # pip install ipdb
 
 # %% [code]
-explanations = RakePerClassExplanations(f"rake-max-words-300-{args.d}", dataset, experiment.config)
+explanations = RakePerClassExplanations(f"rake-max-words-500-{args.d}", dataset, experiment.config)
 
 # %% [code]
 # %% [code]
