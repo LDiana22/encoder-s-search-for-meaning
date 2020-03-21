@@ -445,6 +445,7 @@ from rake_nltk import Rake
 from collections import OrderedDict 
 
 import spacy
+from collections import ChainMap
 
 class RakePerClassExplanations(AbstractDictionary):
 
@@ -494,11 +495,12 @@ class RakePerClassExplanations(AbstractDictionary):
         phrases = rake.get_ranked_phrases()
         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join(phrases))
-        phrases = self.filter_phrases_max_words_by_occurence(phrases, class_corpus, max_per_class)
+        # phrases = self.filter_phrases_max_words_by_occurence(phrases, class_corpus, max_per_class)
+        phrases = [{phrase:class_corpus.count(phrase)} for phrase in phrases][:max_per_class]
 
         # tok_words = self.tokenizer(class_corpus)
         # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
-        dictionary[text_class] = phrases # len(re.findall(".*".join(phrase.split()), class_corpus))
+        dictionary[text_class] = dict(ChainMap(*phrases)) # len(re.findall(".*".join(phrase.split()), class_corpus))
 
     return dictionary
 
@@ -1183,7 +1185,7 @@ args = parser.parse_args()
 experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "hidden_dim": 256,
     "n_layers": 2,
-    "max_dict": 500, 
+    "max_dict": 300, 
     "cuda": True,
     "restore_checkpoint" : False,
     "train": True,
@@ -1200,7 +1202,7 @@ dataset = IMDBDataset(experiment.config)
 # pip install ipdb
 
 # %% [code]
-explanations = RakePerClassExplanations(f"rake-max-words-500-{args.d}", dataset, experiment.config)
+explanations = RakePerClassExplanations(f"rake-max-words-300-{args.d}", dataset, experiment.config)
 
 # %% [code]
 # %% [code]
