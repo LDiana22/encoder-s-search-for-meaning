@@ -931,7 +931,7 @@ class MLPGen(AbstractModel):
         expl_text = np.array(list(dictionary.keys()))[most_important_expl_idx]
         #expl: count in class
         for i, text in enumerate(expl_text):
-            decoded[text]= (dictionary[text], distr[most_important_expl_idx[i]])
+            decoded[text]= (dictionary[text], distr[most_important_expl_idx[i]].cpu().numpy())
 #         batch_explanations.append(decoded)
         # list of 
         # ordered dict {expl:count} for a given dictionary/class
@@ -1150,7 +1150,7 @@ class MLPGen(AbstractModel):
                 f.write("".join(e_list))
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(str(distr))
-                f.write("\t".join([sum(d) for d in distr]))
+                f.write("\t".join([str(sum(d).cpu().numpy()) for d in distr]))
 
         metrics ={}
         size = len(iterator)
