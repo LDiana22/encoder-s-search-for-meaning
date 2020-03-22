@@ -984,12 +984,12 @@ class MLPGen(AbstractModel):
 
 
         # [sent, batch, hidden]
-        # expl_activ = self.lin(embedded)
-        expl_activ = self.lin21(embedded)
+        expl_activ = self.lin(embedded)
+        # expl_activ = self.lin21(embedded)
         expl_activ = self.relu(expl_activ)
         expl_activ = nn.Dropout(0.2)(expl_activ)
-        # expl_activ = self.lin2(expl_activ)
-        # expl_activ = self.selu(expl_activ)
+        expl_activ = self.lin2(expl_activ)
+        expl_activ = self.relu(expl_activ)
         # # expl_activ = nn.Dropout(0.2)(expl_activ)
 
 
@@ -1150,6 +1150,7 @@ class MLPGen(AbstractModel):
                 f.write("".join(e_list))
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(str(distr))
+                f.write("\t".join([sum(d) for d in distr]))
 
         metrics ={}
         size = len(iterator)
@@ -1227,7 +1228,7 @@ explanations = RakePerClassExplanations(f"rake-max-words-300-{args.d}", dataset,
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"gumbel1-mlp-relu-rake300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"gumbel1-mlp2-relu-rake300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
