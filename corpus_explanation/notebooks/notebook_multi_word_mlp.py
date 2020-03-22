@@ -1035,7 +1035,7 @@ class MLPGen(AbstractModel):
             e = torch.transpose(expl_distribution,1,2)
             # [batch, dict, 1]
             expl_distribution = self.aggregations[i](e).squeeze()
-            expl_distribution = F.gumbel_softmax(expl_distribution, tau=0.8, hard=True)
+            expl_distribution = F.gumbel_softmax(expl_distribution, hard=True)
 #                 print(expl_distribution.shape)
 
 #                 expl_distribution = self.aggregations[i](expl_distribution)
@@ -1227,7 +1227,7 @@ explanations = RakePerClassExplanations(f"rake-max-words-300-{args.d}", dataset,
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"gumbel0.8-mlp-relu-rake300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"gumbel1-mlp-relu-rake300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
