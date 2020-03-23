@@ -929,9 +929,9 @@ class MLPGen(AbstractModel):
             most_important_expl_idx = [idx for idx in top_rated_expl_index if distr[idx]==max_val]
         # top expl for each instance
         expl_text = np.array(list(dictionary.keys()))[most_important_expl_idx]
-        #expl: count in class
+        #expl: (count in class, distr value)
         for i, text in enumerate(expl_text):
-            decoded[text]= (dictionary[text], distr[most_important_expl_idx[i]].cpu().numpy())
+            decoded[text]= (dictionary[text], distr[most_important_expl_idx[i]].data[0])
 #         batch_explanations.append(decoded)
         # list of 
         # ordered dict {expl:count} for a given dictionary/class
@@ -1009,7 +1009,7 @@ class MLPGen(AbstractModel):
             # [dict_size, max_words, emb_dim]
             v_emb = self.embedding(self.explanations[i])
 
-            #[batch,dict_size, max_words, emd_dim]
+            #[batch,dict_size, max_words, emd_dim
             vocab_emb = v_emb.repeat(batch_size,1,1,1)
             #[batch,dict_size, max_words* emd_dim]
             vocab_emb = vocab_emb.reshape(vocab_emb.size(0),vocab_emb.size(1),-1)
@@ -1035,7 +1035,8 @@ class MLPGen(AbstractModel):
             e = torch.transpose(expl_distribution,1,2)
             # [batch, dict, 1]
             expl_distribution = self.aggregations[i](e).squeeze()
-            expl_distribution = F.gumbel_softmax(expl_distribution, hard=True)
+            expl_distribution = self.gen_softmax[i](expl_distribution)
+            # expl_distribution = F.gumbel_softmax(expl_distribution, hard=True)
 #                 print(expl_distribution.shape)
 
 #                 expl_distribution = self.aggregations[i](expl_distribution)
@@ -1150,6 +1151,7 @@ class MLPGen(AbstractModel):
                 f.write("".join(e_list))
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(str(distr))
+                f.write("SUMs")
                 f.write("\t".join([str(sum(d).cpu().numpy()) for d in distr]))
 
         metrics ={}
@@ -1228,7 +1230,7 @@ explanations = RakePerClassExplanations(f"rake-max-words-300-{args.d}", dataset,
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"gumbel1-mlp2-relu-rake300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"softmax-mlp2-relu-rake300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
