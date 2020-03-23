@@ -1037,7 +1037,7 @@ class MLPGen(AbstractModel):
             # [batch, dict, 1]
             expl_distribution = self.aggregations[i](e).squeeze()
             expl_distribution = self.sigmoid(expl_distribution) # on dim 1
-            
+
             # expl_distribution = self.softmax(expl_distribution) # on dim 1
             # expl_distribution = F.gumbel_softmax(expl_distribution, hard=True)
 #                 print(expl_distribution.shape)
@@ -1154,8 +1154,8 @@ class MLPGen(AbstractModel):
                 f.write("".join(e_list))
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(str(distr))
-                f.write("SUMs")
-                f.write("\t".join([str(sum(d).cpu().numpy()) for d in distr]))
+                f.write("\nSUMs\n")
+                f.write(str(torch.sum(distr, dim=2)))
 
         metrics ={}
         size = len(iterator)
