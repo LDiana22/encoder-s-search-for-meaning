@@ -1037,8 +1037,6 @@ class MLPGen(AbstractModel):
             # [batch, dict, 1]
             expl_distribution = self.aggregations[i](e).squeeze()
             expl_distribution = self.sigmoid(expl_distribution) # on dim 1
-            
-            # expl_distribution = self.softmax(expl_distribution) # on dim 1
             # expl_distribution = F.gumbel_softmax(expl_distribution, hard=True)
 #                 print(expl_distribution.shape)
 
@@ -1051,7 +1049,7 @@ class MLPGen(AbstractModel):
 
             # [batch,1, dict]
             e_dist = torch.transpose(expl_distribution.unsqueeze(-1),1,2)
-            # batch, 1, dict x batch, dict, emb (max_words*emb_dim)
+            # [batch, 1, dict] x [batch, dict, emb] (max_words*emb_dim)
             expl = torch.bmm(e_dist, vocab_emb)
 
 
