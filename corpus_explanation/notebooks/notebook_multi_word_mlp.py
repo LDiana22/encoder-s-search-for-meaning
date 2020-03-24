@@ -391,7 +391,12 @@ class AbstractDictionary:
 
     file = os.path.join(self.path, "dictionary.txt")
     with open(file, "w", encoding="utf-8") as f:
-        f.write(str(self.dictionary))
+        for text_class, e_dict in self.dictionary.items():
+            f.write("**************\n")
+            f.write(f"{text_class}\n")
+            f.write("**************\n")
+            for expl, freq in e_dict.items():
+                f.write(f"{expl}: {freq}\n")
 
     self.print_metrics()
 
@@ -429,6 +434,8 @@ class AbstractDictionary:
     metrics_path = os.path.join(self.path, "metrics.txt")
     with open(metrics_path, "w", encoding="utf-8") as f:
         f.write(str(self.metrics))
+        f.write("\nOverlapping words:\n")
+        f.write("\n".join(self.metrics["overlap_words"]))
 
   def get_dict(self):
     """
@@ -436,7 +443,6 @@ class AbstractDictionary:
     """
     pass
 
-# %% [code]
 import pickle
 import os
 from rake_nltk import Rake
@@ -444,6 +450,8 @@ from collections import OrderedDict
 
 import spacy
 from collections import ChainMap
+
+#################################### RAKE ################################
 
 class RakePerClassExplanations(AbstractDictionary):
 
@@ -487,7 +495,7 @@ class RakePerClassExplanations(AbstractDictionary):
     max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
     for text_class in corpus.keys():
         dictionary[text_class] = OrderedDict()
-        class_corpus = " ".join(corpus[text_class])
+        class_corpus = ".\n".join(corpus[text_class])
         rake = Rake()
         rake.extract_keywords_from_sentences(corpus[text_class])
         phrases = rake.get_ranked_phrases()
@@ -500,6 +508,46 @@ class RakePerClassExplanations(AbstractDictionary):
 
     return dictionary
 
+class RakeMaxWordsPerInstanceExplanations(AbstractDictionary):
+  """ Rake max words per instance"""
+  def __init__(self, id, dataset, args): 
+    super().__init__(id, dataset, args)
+    self.max_dict = args.get("max_dict", None)
+    self.max_words = args["max_words_dict"]
+    # self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
+    self.dictionary = self.get_dict()
+    self.tokenizer = spacy.load("en")
+    self._save_dict()
+
+  def get_dict(self):
+    """
+    Builds a dictionary of keywords for each label.
+    # {"all":{word:freq}} OR
+    {"pos":{word:freq}, "neg":{word:freq}}
+    """
+    if hasattr(self, 'dictionary') and not self.dictionary:
+        return self.dictionary
+    dictionary = OrderedDict()
+    corpus = self.dataset.get_training_corpus()
+
+    max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
+    res_phrases = []
+    for text_class in corpus.keys():
+        phrases = []
+        dictionary[text_class] = OrderedDict()
+        for review in corpus[text_class]:
+            rake = Rake(max_length=self.max_words)
+            rake.extract_keywords_from_text(review)
+            phrases += rake.get_ranked_phrases_with_scores()
+        phrases = list(set(phrases))
+        phrases.sort(reverse=True)
+        if max_per_class:
+            phrases = phrases[:max_per_class]
+        dictionary[text_class] = dict(ChainMap(*[{ph[1]:" ".join(corpus[text_class]).count(ph[1])} for ph in phrases]))
+        with open(os.path.join(self.path, f"phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join([str(ph) for ph in phrases]))
+    return dictionary
+
 class RakeMaxWordsExplanations(AbstractDictionary):
 
   def __init__(self, id, dataset, args): 
@@ -510,24 +558,7 @@ class RakeMaxWordsExplanations(AbstractDictionary):
     self.dictionary = self.get_dict()
     self.tokenizer = spacy.load("en")
     self._save_dict()
- 
-  def filter_phrases_max_words_by_occurence(self, phrases, corpus, max_phrases):
-    """
-    phrases: list of phrases
-    max_words: maximum number of words per phrase
-    corpus: used for phrase frequency
-    max_phrases: maximum number of phrases
-    """
-    result = {}
-    count = 0
-    for i in range(len(phrases)):
-      # phrase = " ".join(phrases[i].split()[:max_words])
-      freq = corpus.count(phrases[i])
-      if freq > 0:
-        result.update({phrases[i]:freq})
 
-    return result
-  
   def get_dict(self):
     """
     Builds a dictionary of keywords for each label.
@@ -544,13 +575,12 @@ class RakeMaxWordsExplanations(AbstractDictionary):
     max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
     for text_class in corpus.keys():
         dictionary[text_class] = OrderedDict()
-        class_corpus = " ".join(corpus[text_class])
+        class_corpus = ".\n".join(corpus[text_class])
         rake = Rake(max_length=self.max_words)
         rake.extract_keywords_from_sentences(corpus[text_class])
         phrases = rake.get_ranked_phrases()
 #         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
 #             f.write("\n".join(phrases))
-#         phrases = self.filter_phrases_max_words_by_occurence(phrases, class_corpus, max_per_class)
         result = []
         count = 0
         for phrase in phrases:
@@ -567,6 +597,7 @@ class RakeMaxWordsExplanations(AbstractDictionary):
 
     return dictionary
 
+#################################### RAKE ################################
 # %% [code]
 class TfIdfClassDocuments(AbstractDictionary):
   pass
@@ -1279,13 +1310,14 @@ dataset = IMDBDataset(experiment.config)
 # pip install ipdb
 
 # %% [code]
-explanations = RakePerClassExplanations(f"rake-per-class-words-300-{args.d}", dataset, experiment.config)
+# explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.d}", dataset, experiment.config)
+explanations = RakeMaxWordsExplanations(f"rake-max-dot-300-{args.d}", dataset, experiment.config)
 
 # %% [code]
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"sigmoid-mlp2-relu-rake-per-class-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"sigmoid-mlp2-relu-rake-dot-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
