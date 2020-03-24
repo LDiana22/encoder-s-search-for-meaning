@@ -466,7 +466,7 @@ class RakePerClassExplanations(AbstractDictionary):
     result = {}
     count = 0
     for i in range(len(phrases)):
-      phrase = " ".join(phrases[i].split()[:max_words])
+      phrase = " ".join(phrases[i].split()[:self.max_words])
       freq = corpus.count(phrase)
       if freq > 0:
         result.update({phrase:freq})
@@ -493,20 +493,10 @@ class RakePerClassExplanations(AbstractDictionary):
         phrases = rake.get_ranked_phrases()
 #         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
 #             f.write("\n".join(phrases))
-#         phrases = self.filter_phrases_max_words_by_occurence(phrases, class_corpus, max_per_class)
-        result = []
-        count = 0
-        for phrase in phrases:
-            freq = class_corpus.count(phrase)
-            if freq > 0:
-                result.append({phrase:freq})
-                count+=1
-            if count == max_per_class:
-                break;
-        
+        phrases = self.filter_phrases_max_words_by_occurence(phrases, class_corpus, max_per_class)
         # tok_words = self.tokenizer(class_corpus)
         # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
-        dictionary[text_class] = dict(ChainMap(*result)) # len(re.findall(".*".join(phrase.split()), class_corpus))
+        dictionary[text_class] = phrases # len(re.findall(".*".join(phrase.split()), class_corpus))
 
     return dictionary
 
