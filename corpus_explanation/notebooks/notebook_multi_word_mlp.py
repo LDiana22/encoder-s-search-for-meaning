@@ -1310,14 +1310,14 @@ dataset = IMDBDataset(experiment.config)
 # pip install ipdb
 
 # %% [code]
-# explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.d}", dataset, experiment.config)
-explanations = RakeMaxWordsExplanations(f"rake-max-dot-300-{args.d}", dataset, experiment.config)
+explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.d}", dataset, experiment.config)
+# explanations = RakeMaxWordsExplanations(f"rake-max-dot-300-{args.d}", dataset, experiment.config)
 
 # %% [code]
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"sigmoid-mlp2-relu-rake-dot-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"sigmoid-mlp2-relu-rake-inst-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
