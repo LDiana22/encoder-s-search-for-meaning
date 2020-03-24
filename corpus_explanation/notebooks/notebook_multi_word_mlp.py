@@ -1,5 +1,4 @@
 # %% [code]
-# %% [code]
 # -*- coding: utf-8 -*-
 import torch
 torch.manual_seed(0)
@@ -92,7 +91,6 @@ def get_last_checkpoint_by_date(path):
 # %% [markdown]
 # ## Experiment
 
-# %% [code]
 # %% [code]
 # -*- coding: utf-8 -*-
 import torch
@@ -233,7 +231,6 @@ class Experiment(object):
 # ## Data
 
 # %% [code]
-# %% [code]
 from torchtext.data import Pipeline
 import re
 
@@ -355,7 +352,7 @@ class IMDBDataset:
 
   def override(self, args):
     self.args.update(args)
-    return selfi
+    return self
 
 # %% [markdown]
 
@@ -363,10 +360,8 @@ class IMDBDataset:
 # ## Dictionary
 
 # %% [code]
-    # %% [code]
 #     !pip install rake_nltk
 
-# %% [code]
 # ## Dictionary
 
 # %% [code]
@@ -817,7 +812,6 @@ class VLSTM(AbstractModel):
 
         return self.lin(hidden).to(self.device)
 
-# %% [code]
 
 
 # %% [code]
@@ -912,7 +906,7 @@ class MLPGen(AbstractModel):
             for tensor in tensor_list]).to(self.device)
 
 
-    def _decode_expl_distr(self, distr, dictionary, threshold_expl_score=0.2):
+    def _decode_expl_distr(self, distr, dictionary, threshold_expl_score=0.5):
         """
         An expl distribution for a given dict
         dictionary - the dict corresponding to the class of the distribution
@@ -1037,6 +1031,9 @@ class MLPGen(AbstractModel):
             # [batch, dict, 1]
             expl_distribution = self.aggregations[i](e).squeeze()
             expl_distribution = self.sigmoid(expl_distribution) # on dim 1
+            #[batch, dict]
+            expl_distributions.append(torch.squeeze(expl_distribution))
+
             expl_distribution = torch.where(expl_distribution>0.5, torch.ones(expl_distribution.shape).to(self.device), torch.zeros(expl_distribution.shape).to(self.device))
 
             # expl_distribution = self.softmax(expl_distribution) # on dim 1
@@ -1047,8 +1044,6 @@ class MLPGen(AbstractModel):
 #                 expl_distribution = self.gen_softmax2[i](expl_distribution)
 
             #                         [batch,dict_size]
-            #[batch, dict]
-            expl_distributions.append(torch.squeeze(expl_distribution))
 
             # [batch,1, dict]
             e_dist = torch.transpose(expl_distribution.unsqueeze(-1),1,2)
@@ -1106,7 +1101,7 @@ class MLPGen(AbstractModel):
             save = True
             expl = "text, " + ", ".join(list(self.dictionaries.keys())) + ", predictions, true label\n"
             e_list = []
-            distr = []
+            distr = [torch.tensor([]).to(self.device) for i in range(len(self.dictionaries.keys()))]
 
         self.eval()
         e_loss = 0
@@ -1128,7 +1123,8 @@ class MLPGen(AbstractModel):
                 if save:
                     text_expl= self.get_explanations(text)
                     e_list.append("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
-                    distr.append(self.expl_distributions)
+                    for class_idx in range(len(distr)):
+                        distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
                 acc = accuracy_score(y_true, y_pred)
                 prec = precision_score(y_true, y_pred)
                 rec = recall_score(y_true, y_pred)
@@ -1156,9 +1152,9 @@ class MLPGen(AbstractModel):
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(str(distr))
                 f.write("\nSUMs\n")
-                f.write(str(sum(torch.tensor(distr), dim=2)))
-                f.write("\nmax\n")
-                f.write(str(torch.max(torch.tensor(distr), dim=2)))
+                f.write(str([torch.sum(torch.tensor(d), dim=1) for d in distr]))
+                f.write("\nHard sums\n")
+                f.write(str([torch.sum(torch.where(d>0.5, torch.ones(d.shape).to(self.device), torch.zeros(d.shape).to(self.device)), dim=1) for d in distr]))
 
         metrics ={}
         size = len(iterator)
@@ -1222,7 +1218,6 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
 print(experiment.config)
 
 # %% [code]
-# %% [code]
 dataset = IMDBDataset(experiment.config)
 
 # %% [code]
@@ -1231,7 +1226,6 @@ dataset = IMDBDataset(experiment.config)
 # %% [code]
 explanations = RakePerClassExplanations(f"rake-max-words-300-{args.d}", dataset, experiment.config)
 
-# %% [code]
 # %% [code]
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
@@ -1250,7 +1244,6 @@ print(f"Time: {str(datetime.now()-start)}")
 # for file in  os.listdir('experiments/mlp-gen_vanilla-bi-lstm_mixed-expl/explanations'):
 #     os.remove('experiments/mlp-gen_vanilla-bi-lstm_mixed-expl/explanations/'+file)
 
-# %% [code]
 # %% [code]
 # start = datetime.now()
 
