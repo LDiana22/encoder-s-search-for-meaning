@@ -1156,9 +1156,9 @@ class MLPGen(AbstractModel):
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(str(distr))
                 f.write("\nSUMs\n")
-                f.write(str(torch.sum(distr, dim=2)))
+                f.write(str(sum(torch.tensor(distr), dim=2)))
                 f.write("\nmax\n")
-                f.write(str(torch.max(distr, dim=2)))
+                f.write(str(torch.max(torch.tensor(distr), dim=2)))
 
         metrics ={}
         size = len(iterator)
