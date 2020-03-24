@@ -1037,7 +1037,7 @@ class MLPGen(AbstractModel):
             # [batch, dict, 1]
             expl_distribution = self.aggregations[i](e).squeeze()
             expl_distribution = self.sigmoid(expl_distribution) # on dim 1
-            expl_distribution = torch.where(expl_distribution>0.5, torch.ones(expl_distribution.shape), torch.zeros(expl_distribution.shape))
+            expl_distribution = torch.where(expl_distribution>0.5, torch.ones(expl_distribution.shape).to(self.device), torch.zeros(expl_distribution.shape).to(self.device))
 
             # expl_distribution = self.softmax(expl_distribution) # on dim 1
             # expl_distribution = F.gumbel_softmax(expl_distribution, hard=True)
