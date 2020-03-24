@@ -466,6 +466,71 @@ class RakePerClassExplanations(AbstractDictionary):
     result = {}
     count = 0
     for i in range(len(phrases)):
+      phrase = " ".join(phrases[i].split()[:max_words])
+      freq = corpus.count(phrase)
+      if freq > 0:
+        result.update({phrase:freq})
+
+    return result
+  
+  def get_dict(self):
+    """
+    Builds a dictionary of keywords for each label.
+    # {"all":{word:freq}} OR
+    {"pos":{word:freq}, "neg":{word:freq}}
+    """
+    if hasattr(self, 'dictionary') and not self.dictionary:
+        return self.dictionary
+    dictionary = OrderedDict()
+    corpus = self.dataset.get_training_corpus()
+
+    max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
+    for text_class in corpus.keys():
+        dictionary[text_class] = OrderedDict()
+        class_corpus = " ".join(corpus[text_class])
+        rake = Rake()
+        rake.extract_keywords_from_sentences(corpus[text_class])
+        phrases = rake.get_ranked_phrases()
+#         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
+#             f.write("\n".join(phrases))
+#         phrases = self.filter_phrases_max_words_by_occurence(phrases, class_corpus, max_per_class)
+        result = []
+        count = 0
+        for phrase in phrases:
+            freq = class_corpus.count(phrase)
+            if freq > 0:
+                result.append({phrase:freq})
+                count+=1
+            if count == max_per_class:
+                break;
+        
+        # tok_words = self.tokenizer(class_corpus)
+        # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
+        dictionary[text_class] = dict(ChainMap(*result)) # len(re.findall(".*".join(phrase.split()), class_corpus))
+
+    return dictionary
+
+class RakeMaxWordsExplanations(AbstractDictionary):
+
+  def __init__(self, id, dataset, args): 
+    super().__init__(id, dataset, args)
+    self.max_dict = args.get("max_dict", None)
+    self.max_words = args["max_words_dict"]
+    # self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
+    self.dictionary = self.get_dict()
+    self.tokenizer = spacy.load("en")
+    self._save_dict()
+ 
+  def filter_phrases_max_words_by_occurence(self, phrases, corpus, max_phrases):
+    """
+    phrases: list of phrases
+    max_words: maximum number of words per phrase
+    corpus: used for phrase frequency
+    max_phrases: maximum number of phrases
+    """
+    result = {}
+    count = 0
+    for i in range(len(phrases)):
       # phrase = " ".join(phrases[i].split()[:max_words])
       freq = corpus.count(phrases[i])
       if freq > 0:
@@ -1224,13 +1289,13 @@ dataset = IMDBDataset(experiment.config)
 # pip install ipdb
 
 # %% [code]
-explanations = RakePerClassExplanations(f"rake-max-words-300-{args.d}", dataset, experiment.config)
+explanations = RakePerClassExplanations(f"rake-per-class-words-300-{args.d}", dataset, experiment.config)
 
 # %% [code]
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"sigmoid-mlp2-relu-rake300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"sigmoid-mlp2-relu-rake-per-class-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
