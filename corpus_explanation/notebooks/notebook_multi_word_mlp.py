@@ -947,14 +947,15 @@ class MLPGen(AbstractModel):
                            dropout=model_args["dropout"])
 
 
-        self.lin21 = nn.Linear(model_args["emb_dim"], model_args["hidden_dim"]).to(self.device)
-        self.lin = nn.Linear(model_args["emb_dim"], 2*model_args["hidden_dim"]).to(self.device)
-        self.tanhsh = nn.Tanhshrink()
-        self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
-        self.selu = nn.SELU() 
+        self.lin = nn.Linear(model_args["emb_dim"], model_args["hidden_dim"]).to(self.device)
+        # self.lin12 = nn.Linear(model_args["emb_dim"], 2*model_args["hidden_dim"]).to(self.device)
+        # self.tanhsh = nn.Tanhshrink()
+        # self.lin21 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
+        # self.selu = nn.SELU() 
         self.relu = nn.ReLU() 
-        self.softmax = nn.Softmax(1)  
-        self.sigmoid = nn.Sigmoid()
+        self.dropout = nn.Dropout(0.2)
+        # self.softmax = nn.Softmax(1)  
+        # self.sigmoid = nn.Sigmoid()
 
         self.dictionaries = explanations.get_dict()
 
@@ -1068,9 +1069,9 @@ class MLPGen(AbstractModel):
         expl_activ = self.lin(embedded)
         # expl_activ = self.lin21(embedded)
         expl_activ = self.relu(expl_activ)
-        expl_activ = nn.Dropout(0.2)(expl_activ)
-        expl_activ = self.lin2(expl_activ)
-        expl_activ = self.relu(expl_activ)
+        expl_activ = self.dropout(expl_activ)
+        # expl_activ = self.lin2(expl_activ)
+        # expl_activ = self.relu(expl_activ)
         # # expl_activ = nn.Dropout(0.2)(expl_activ)
 
 
@@ -1116,14 +1117,15 @@ class MLPGen(AbstractModel):
             e = torch.transpose(expl_distribution,1,2)
             # [batch, dict, 1]
             expl_distribution = self.aggregations[i](e).squeeze()
-            expl_distribution = self.sigmoid(expl_distribution) # on dim 1
+            # expl_distribution = self.sigmoid(expl_distribution) # on dim 1
+            expl_distribution = F.gumbel_softmax(expl_distribution, hard=True)
+
             #[batch, dict]
             expl_distributions.append(torch.squeeze(expl_distribution))
 
-            expl_distribution = torch.where(expl_distribution>0.5, torch.ones(expl_distribution.shape).to(self.device), torch.zeros(expl_distribution.shape).to(self.device))
+            # expl_distribution = torch.where(expl_distribution>0.5, torch.ones(expl_distribution.shape).to(self.device), torch.zeros(expl_distribution.shape).to(self.device))
 
             # expl_distribution = self.softmax(expl_distribution) # on dim 1
-            # expl_distribution = F.gumbel_softmax(expl_distribution, hard=True)
 #                 print(expl_distribution.shape)
 
 #                 expl_distribution = self.aggregations[i](expl_distribution)
@@ -1254,9 +1256,6 @@ class MLPGen(AbstractModel):
         metrics[f"{prefix}_weightedf1"] = e_wf1/size
         return metrics
 
-
-
-# %% [code]
 # pip install ipdb
 
 # %% [markdown]
@@ -1310,14 +1309,14 @@ dataset = IMDBDataset(experiment.config)
 # pip install ipdb
 
 # %% [code]
-# explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.d}", dataset, experiment.config)
-explanations = RakeMaxWordsExplanations(f"rake-max-dot-300-{args.d}", dataset, experiment.config)
+explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.d}", dataset, experiment.config)
+# explanations = RakeMaxWordsExplanations(f"rake-max-dot-300-{args.d}", dataset, experiment.config)
 
 # %% [code]
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"sigmoid-mlp2-relu-rake-dot-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"lin-relu-dr-gumb-rake-inst-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
