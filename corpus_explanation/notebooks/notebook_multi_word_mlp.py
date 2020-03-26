@@ -1005,7 +1005,7 @@ class MLPGen(AbstractModel):
         self.explanations = []
         for class_label in self.dictionaries.keys():
             dictionary = self.dictionaries[class_label]
-            stoi_e  xpl = self.__pad([
+            stoi_expl = self.__pad([
                 torch.tensor([self.TEXT.vocab.stoi[word] for word in phrase.split()]).to(self.device)
                 for phrase in dictionary.keys()], explanations.max_words)
             self.explanations.append(stoi_expl)
