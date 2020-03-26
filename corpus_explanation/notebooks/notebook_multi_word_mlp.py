@@ -1317,6 +1317,7 @@ start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
 model = MLPGen(f"lin-relu-dr-gumb-rake-inst-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+# model = MLPGen(f"sigmoid-mlp2-relu-rake-inst-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
