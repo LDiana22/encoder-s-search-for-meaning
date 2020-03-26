@@ -476,7 +476,8 @@ class TextRank(AbstractDictionary):
         phrases.sort(reverse=True, key=lambda x: x[1])
         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join([str(ph) for ph in phrases]))
-        dictionary[text_class] = [ph[i][0] for i in range(min(max_per_class,len(phrases)))]
+        phrases = list(set([ph[0] for ph in phrases]))
+        dictionary[text_class] = [phrases[i] for i in range(min(max_per_class,len(phrases)))]
     return dictionary
 
 #################################### END TEXTRANK ################################
