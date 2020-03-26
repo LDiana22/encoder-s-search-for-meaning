@@ -59,7 +59,7 @@ import re
 from datetime import datetime
 
 def _extract_date(f):
-    date_string = re.search(f"^{DATE_REGEXP}",f)[0]
+    date_string = re.search(f"{DATE_REGEXP}",f)[0]
     return datetime.strptime(date_string, DATE_FORMAT)
 
 def get_max_index_checkpoint(path):
