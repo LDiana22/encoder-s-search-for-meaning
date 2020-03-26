@@ -940,11 +940,11 @@ class MLPGen(AbstractModel):
         self.embedding.weight.data[PAD_IDX] = torch.zeros(model_args["emb_dim"])
 
         self.emb_dim = model_args["emb_dim"]
-        self.gen = nn.LSTM(model_args["emb_dim"], 
-                           model_args["hidden_dim"], 
-                           num_layers=model_args["n_layers"], 
-                           bidirectional=True,
-                           dropout=model_args["dropout"])
+        # self.gen = nn.LSTM(model_args["emb_dim"], 
+        #                    model_args["hidden_dim"], 
+        #                    num_layers=model_args["n_layers"], 
+        #                    bidirectional=True,
+        #                    dropout=model_args["dropout"])
 
 
         self.lin = nn.Linear(model_args["emb_dim"], model_args["hidden_dim"]).to(self.device)
@@ -953,27 +953,23 @@ class MLPGen(AbstractModel):
         # self.lin21 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
         # self.selu = nn.SELU() 
         self.relu = nn.ReLU() 
-        self.dropout = nn.Dropout(0.2)
         # self.softmax = nn.Softmax(1)  
         # self.sigmoid = nn.Sigmoid()
 
         self.dictionaries = explanations.get_dict()
+        self.lin_pos = nn.Linear(model_args["hidden_dim"], len(self.dictionaries["pos"])).to(self.device)
+        self.lin_neg = nn.Linear(model_args["hidden_dim"], len(self.dictionaries["neg"])).to(self.device)
+        self.aggregation_pos = nn.Linear(self.max_sent_len, 1).to(self.device)
+        self.aggregation_neg = nn.Linear(self.max_sent_len, 1).to(self.device)
 
-        self.gen_lin, self.gen_softmax, self.explanations, self.aggregations = [], [], [], []
+
+        self.explanations = []
         for class_label in self.dictionaries.keys():
             dictionary = self.dictionaries[class_label]
             stoi_expl = self.__pad([
                 torch.tensor([self.TEXT.vocab.stoi[word] for word in phrase.split()]).to(self.device)
                 for phrase in dictionary.keys()], explanations.max_words)
-
-            self.gen_lin.append(nn.Linear(model_args["hidden_dim"], len(dictionary)).to(self.device))
-            self.gen_softmax.append(nn.Softmax(len(self.dictionaries.keys()))) # one distribution for each word of the sentence
-
-            self.explanations.append(stoi_expl)#TODO
-            self.aggregations.append(nn.Linear(self.max_sent_len, 1).to(self.device)) # one distribution for the sentence
-
-#                 self.aggregations.append(nn.Conv1d(in_channels=self.max_sent_len, out_channels=1, kernel_size=1).to(self.device))
-
+            self.explanations.append(stoi_expl)
 
         self.dropout = nn.Dropout(model_args["dropout"])
 
@@ -1045,6 +1041,76 @@ class MLPGen(AbstractModel):
 #                 f.write("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
         return text_expl
 
+    def gen(self, activ, batch_size):
+        context_vector, final_dict, expl_distributions = [], [], []
+        # [dict_size, max_words, emb_dim]
+        # explanations[i] -> [dict_size, max_words, emb_dim]
+        v_emb_pos = self.embedding(self.explanations[0])
+        v_emb_neg = self.embedding(self.explanations[1])
+        #[batch,dict_size, max_words, emd_dim
+        vocab_emb_pos = v_emb_pos.repeat(batch_size,1,1,1)
+        vocab_emb_neg = v_emb_neg.repeat(batch_size,1,1,1)
+
+        #[batch,dict_size, max_words* emd_dim]
+        vocab_emb_pos = vocab_emb_pos.reshape(vocab_emb_pos.size(0),vocab_emb_pos.size(1),-1)
+        vocab_emb_neg = vocab_emb_neg.reshape(vocab_emb_neg.size(0),vocab_emb_neg.size(1),-1)
+
+        # [sent, batch, dict_size]
+        expl_activ_pos = self.lin_pos(activ)
+        expl_activ_neg = self.lin_neg(activ)
+
+        # [batch, sent, dict_size]
+        expl_distribution_pos = torch.transpose(expl_activ_pos, 0, 1)
+        expl_distribution_neg = torch.transpose(expl_activ_neg, 0, 1)
+        
+        # [batch, max_sent, dict_size] (pad right)
+        size1, size2, size3 = expl_distribution_pos.shape[0], expl_distribution_pos.shape[1], expl_distribution_pos.shape[2]
+        if self.max_sent_len>=size2:
+            # 0-padding
+            expl_distribution_pos = torch.cat([expl_distribution_pos, expl_distribution_pos.new(size1, self.max_sent_len-size2, size3).zero_()],1).to(self.device)
+            expl_distribution_neg = torch.cat([expl_distribution_neg, expl_distribution_neg.new(size1, self.max_sent_len-size2, size3).zero_()],1).to(self.device)
+        else:
+            # trimming
+            expl_distribution_pos = expl_distribution_pos[:,:self.max_sent_len,:]
+            expl_distribution_neg = expl_distribution_neg[:,:self.max_sent_len,:]
+        
+
+
+        # [batch,dict_size, sent]
+        e_pos = torch.transpose(expl_distribution_pos,1,2)
+        e_neg = torch.transpose(expl_distribution_neg,1,2)
+        # [batch, dict, 1]
+        expl_distribution_pos = self.aggregation_pos(e_pos).squeeze()
+        expl_distribution_neg = self.aggregation_neg(e_neg).squeeze()
+        # expl_distribution = self.sigmoid(expl_distribution) # on dim 1
+        expl_distribution_pos = F.gumbel_softmax(expl_distribution_pos, hard=True)
+        expl_distribution_neg = F.gumbel_softmax(expl_distribution_neg, hard=True)
+
+        #[batch, dict]
+        expl_distributions.append(torch.squeeze(expl_distribution_pos))
+        expl_distributions.append(torch.squeeze(expl_distribution_neg))
+
+        # [batch,1, dict]
+        e_dist_pos = torch.transpose(expl_distribution_pos.unsqueeze(-1),1,2)
+        e_dist_neg = torch.transpose(expl_distribution_neg.unsqueeze(-1),1,2)
+        # batch, 1, dict x batch, dict, emb (max_words*emb_dim)
+        expl_pos = torch.bmm(e_dist_pos, vocab_emb_pos)
+        expl_neg = torch.bmm(e_dist_neg, vocab_emb_neg)
+
+        #[batch,max_words,emb_dim]
+        context_vector.append(torch.max(expl_pos, dim=1).values.reshape(batch_size, v_emb_pos.size(1),-1))
+        context_vector.append(torch.max(expl_neg, dim=1).values.reshape(batch_size, v_emb_neg.size(1),-1))
+
+
+        sep = torch.zeros((batch_size,1,self.emb_dim), device=self.device)
+        # [batch, 1+1, emb_dim]
+        final_dict.append(torch.cat((sep, context_vector[0]), 1))
+        final_dict.append(torch.cat((sep, context_vector[1]), 1))
+
+        return final_dict, expl_distributions
+
+
+
     def forward(self, text, text_lengths, expl_file=None):
 
         batch_size = text.size()[1]
@@ -1074,80 +1140,13 @@ class MLPGen(AbstractModel):
         # expl_activ = self.relu(expl_activ)
         # # expl_activ = nn.Dropout(0.2)(expl_activ)
 
+        final_dict, expl_distributions = self.gen(expl_activ, batch_size)
 
 
         # new TODO
         # reshape
         # batch, hidden, sent -> batch, hidden, dict
         # batch, 1, dict
-
-        context_vector, final_dict, expl_distributions = [], [], []
-
-
-
-        for i in range(len(self.dictionaries.keys())):
-            # explanations[i] -> [dict_size, max_words, emb_dim]
-
-            # [dict_size, max_words, emb_dim]
-            v_emb = self.embedding(self.explanations[i])
-
-            #[batch,dict_size, max_words, emd_dim
-            vocab_emb = v_emb.repeat(batch_size,1,1,1)
-            #[batch,dict_size, max_words* emd_dim]
-            vocab_emb = vocab_emb.reshape(vocab_emb.size(0),vocab_emb.size(1),-1)
-
-            # [sent, batch, dict_size]
-            lin_activ = self.gen_lin[i](expl_activ)
-            # expl_activ = nn.Dropout(0.2)(lin_activ)
-            # [sent, batch, dict_size]
-#                 expl_dist = self.gen_softmax[i](lin_activ)
-
-            # [batch, sent, dict_size]
-            expl_distribution = torch.transpose(lin_activ, 0, 1)
-
-            # [batch, max_sent, dict_size] (pad right)
-            size1, size2, size3 = expl_distribution.shape[0], expl_distribution.shape[1], expl_distribution.shape[2]
-            if self.max_sent_len>=size2:
-                # 0-padding
-                expl_distribution = torch.cat([expl_distribution, expl_distribution.new(size1, self.max_sent_len-size2, size3).zero_()],1).to(self.device)
-            else:
-                # trimming
-                expl_distribution = expl_distribution[:,:self.max_sent_len,:]
-            # [batch,dict_size, sent]
-            e = torch.transpose(expl_distribution,1,2)
-            # [batch, dict, 1]
-            expl_distribution = self.aggregations[i](e).squeeze()
-            # expl_distribution = self.sigmoid(expl_distribution) # on dim 1
-            expl_distribution = F.gumbel_softmax(expl_distribution, hard=True)
-
-            #[batch, dict]
-            expl_distributions.append(torch.squeeze(expl_distribution))
-
-            # expl_distribution = torch.where(expl_distribution>0.5, torch.ones(expl_distribution.shape).to(self.device), torch.zeros(expl_distribution.shape).to(self.device))
-
-            # expl_distribution = self.softmax(expl_distribution) # on dim 1
-#                 print(expl_distribution.shape)
-
-#                 expl_distribution = self.aggregations[i](expl_distribution)
-#                 expl_distribution = self.gen_softmax2[i](expl_distribution)
-
-            #                         [batch,dict_size]
-
-            # [batch,1, dict]
-            e_dist = torch.transpose(expl_distribution.unsqueeze(-1),1,2)
-            # batch, 1, dict x batch, dict, emb (max_words*emb_dim)
-            expl = torch.bmm(e_dist, vocab_emb)
-
-
-            #[batch,max_words,emb_dim]
-            context_vector.append(torch.max(expl, dim=1).values.reshape(batch_size, v_emb.size(1),-1))
-
-
-            sep = torch.rand((batch_size,1,self.emb_dim), device=self.device)
-            # [batch, 1+1, emb_dim]
-            final_dict.append(torch.cat((sep, context_vector[i]), 1))
-
-
         final_expl = final_dict[0]
         for i in range(1, len(final_dict)):
             final_expl = torch.cat((final_expl, final_dict[i]), 1)
@@ -1243,6 +1242,8 @@ class MLPGen(AbstractModel):
                 f.write(str([torch.sum(torch.tensor(d), dim=1) for d in distr]))
                 f.write("\nHard sums\n")
                 f.write(str([torch.sum(torch.where(d>0.5, torch.ones(d.shape).to(self.device), torch.zeros(d.shape).to(self.device)), dim=1) for d in distr]))
+                f.write("\nIndices\n")
+                f.write(str([d.nonzero() for d in distr]))
 
         metrics ={}
         size = len(iterator)
@@ -1255,6 +1256,7 @@ class MLPGen(AbstractModel):
         metrics[f"{prefix}_microf1"] = e_microf1/size
         metrics[f"{prefix}_weightedf1"] = e_wf1/size
         return metrics
+
 
 # pip install ipdb
 
@@ -1316,7 +1318,7 @@ explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"lin-relu-dr-gumb-rake-inst-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"lin-sep-relu-dr-gumb-rake-inst-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 # model = MLPGen(f"sigmoid-mlp2-relu-rake-inst-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
