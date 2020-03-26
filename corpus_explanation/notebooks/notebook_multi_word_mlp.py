@@ -470,7 +470,7 @@ class TextRank(AbstractDictionary):
     max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
     for text_class in corpus.keys():
         dictionary[text_class] = OrderedDict()
-        phrases = [keywords.keywords(review, scores=True) for review in corpus[text_class]]
+        phrases = [keywords.keywords(review, scores=True, words=self.max_words) for review in corpus[text_class]]
         phrases = list(itertools.chain.from_iterable(phrases))
         phrases.sort(reverse=True, key=lambda x: x[1])
         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
@@ -1005,7 +1005,7 @@ class MLPGen(AbstractModel):
         self.explanations = []
         for class_label in self.dictionaries.keys():
             dictionary = self.dictionaries[class_label]
-            stoi_expl = self.__pad([
+            stoi_e  xpl = self.__pad([
                 torch.tensor([self.TEXT.vocab.stoi[word] for word in phrase.split()]).to(self.device)
                 for phrase in dictionary.keys()], explanations.max_words)
             self.explanations.append(stoi_expl)
@@ -1352,7 +1352,7 @@ dataset = IMDBDataset(experiment.config)
 # %% [code]
 # explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.d}", dataset, experiment.config)
 # explanations = RakeMaxWordsExplanations(f"rake-max-dot-300-{args.d}", dataset, experiment.config)
-explanations = TextRank(f"textrank-300-5", dataset, experiment.config)
+explanations = TextRank(f"textrank-300-{args.d}", dataset, experiment.config)
 # %% [code]
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
