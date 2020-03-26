@@ -445,8 +445,8 @@ class AbstractDictionary:
 
 
 #################################### TEXTRANK ################################
-
 from summa import keywords
+import itertools
 class TextRank(AbstractDictionary):
 
   def __init__(self, id, dataset, args): 
@@ -471,16 +471,16 @@ class TextRank(AbstractDictionary):
     max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
     for text_class in corpus.keys():
         dictionary[text_class] = OrderedDict()
-        class_corpus = "\n".join(corpus[text_class])
-        import ipdb
-        ipdb.set_trace(context=10)
-        phrases = keywords.keywords(class_corpus)
-        print(len(phrases))
+        phrases = [keywords.keywords(review, scores=True) for review in corpus[text_class]]
+        phrases = list(itertools.chain.from_iterable(phrases))
+        phrases.sort(reverse=True, key=lambda x: x[1])
         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join(phrases))
-        phrases = self.filter_phrases_max_words_by_occurence(phrases, class_corpus, max_per_class)
+        phrases = self.filter_phrases_max_words_by_occurence([ph[0] for ph in phrases], corpus[text_class], max_per_class)
         dictionary[text_class] = phrases
     return dictionary
+#################################### END TEXTRANK ################################
+
 
 import pickle
 import os
