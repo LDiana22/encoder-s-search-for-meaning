@@ -443,6 +443,45 @@ class AbstractDictionary:
     """
     pass
 
+
+#################################### TEXTRANK ################################
+
+from summa import keywords
+class TextRank(AbstractDictionary):
+
+  def __init__(self, id, dataset, args): 
+    super().__init__(id, dataset, args)
+    self.max_dict = args.get("max_dict", None)
+    self.max_words = args["max_words_dict"]
+    self.dictionary = self.get_dict()
+    self.tokenizer = spacy.load("en")
+    self._save_dict()
+  
+  def get_dict(self):
+    """
+    Builds a dictionary of keywords for each label.
+    # {"all":{word:freq}} OR
+    {"pos":{word:freq}, "neg":{word:freq}}
+    """
+    if hasattr(self, 'dictionary') and not self.dictionary:
+        return self.dictionary
+    dictionary = OrderedDict()
+    corpus = self.dataset.get_training_corpus()
+
+    max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
+    for text_class in corpus.keys():
+        dictionary[text_class] = OrderedDict()
+        class_corpus = "\n".join(corpus[text_class])
+        import ipdb
+        ipdb.set_trace(context=10)
+        phrases = keywords.keywords(class_corpus)
+        print(len(phrases))
+        with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join(phrases))
+        phrases = self.filter_phrases_max_words_by_occurence(phrases, class_corpus, max_per_class)
+        dictionary[text_class] = phrases
+    return dictionary
+
 import pickle
 import os
 from rake_nltk import Rake
@@ -1311,14 +1350,14 @@ dataset = IMDBDataset(experiment.config)
 # pip install ipdb
 
 # %% [code]
-explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.d}", dataset, experiment.config)
+# explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.d}", dataset, experiment.config)
 # explanations = RakeMaxWordsExplanations(f"rake-max-dot-300-{args.d}", dataset, experiment.config)
-
+explanations = TextRank(f"textrank-300-5", dataset, experiment.config)
 # %% [code]
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"lin-sep-relu-dr-gumb-rake-inst-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"lin-sep-relu-dr-gumb-textrank-inst-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 # model = MLPGen(f"sigmoid-mlp2-relu-rake-inst-300-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
