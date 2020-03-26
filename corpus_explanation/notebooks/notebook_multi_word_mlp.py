@@ -475,10 +475,10 @@ class TextRank(AbstractDictionary):
         phrases = list(itertools.chain.from_iterable(phrases))
         phrases.sort(reverse=True, key=lambda x: x[1])
         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
-            f.write("\n".join(phrases))
-        phrases = self.filter_phrases_max_words_by_occurence([ph[0] for ph in phrases], corpus[text_class], max_per_class)
-        dictionary[text_class] = phrases
+            f.write("\n".join([str(ph) for ph in phrases]))
+        dictionary[text_class] = [ph[i][0] for i in range(min(max_per_class,len(phrases)))]
     return dictionary
+
 #################################### END TEXTRANK ################################
 
 

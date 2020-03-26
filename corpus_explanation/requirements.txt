@@ -9,3 +9,4 @@ bs4==0.0.1
 tqdm==4.40.2
 sklearn==0.22.1
 # python -m spacy download en
+summa==1.2.0
