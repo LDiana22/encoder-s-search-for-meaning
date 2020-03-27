@@ -475,7 +475,7 @@ class TextRank(AbstractDictionary):
         phrases.sort(reverse=True, key=lambda x: x[1])
         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join([str(ph) for ph in phrases]))
-        phrases = list(set([ph[0] for ph in phrases]))
+        phrases = list(set([" ".join(ph[0].split()[:self.max_words_dict]) for ph in phrases]))
         dictionary[text_class] = dict(ChainMap(*[{phrases[i]:" ".join(corpus[text_class]).count(phrases[i])} for i in range(min(max_per_class,len(phrases)))]))
     return dictionary
 
