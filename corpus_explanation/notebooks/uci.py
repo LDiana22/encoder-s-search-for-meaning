@@ -1212,7 +1212,7 @@ class MLPGen(AbstractModel):
         # self.lin21 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
         # self.selu = nn.SELU() 
         self.relu = nn.ReLU() 
-        # self.softmax = nn.Softmax()  
+        self.softmax = nn.Softmax()  
         # self.sigmoid = nn.Sigmoid()
 
         self.dictionaries = explanations.get_dict()
@@ -1342,8 +1342,10 @@ class MLPGen(AbstractModel):
         expl_distribution_pos = self.aggregation_pos(e_pos).squeeze()
         expl_distribution_neg = self.aggregation_neg(e_neg).squeeze()
         # expl_distribution = self.sigmoid(expl_distribution) # on dim 1
-        expl_distribution_pos = F.gumbel_softmax(expl_distribution_pos, hard=True)
-        expl_distribution_neg = F.gumbel_softmax(expl_distribution_neg, hard=True)
+        # expl_distribution_pos = F.gumbel_softmax(expl_distribution_pos, hard=True)
+        # expl_distribution_neg = F.gumbel_softmax(expl_distribution_neg, hard=True)
+        expl_distribution_pos = self.softmax(expl_distribution_pos)
+        expl_distribution_neg = self.softmax(expl_distribution_neg)
 
         #[batch, dict]
         expl_distributions.append(torch.squeeze(expl_distribution_pos))
@@ -1575,7 +1577,7 @@ explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"gumbel-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"softmax-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
