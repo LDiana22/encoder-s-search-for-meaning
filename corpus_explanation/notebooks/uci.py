@@ -40,7 +40,8 @@ CONFIG = {
     "max_words_dict": 5,
 
 
-    "prefix_dir" : "drive/My Drive/encoder/experiments",
+    "prefix_dir" : "experiments",
+    # "prefix_dir" : "drive/My Drive/encoder/experiments",
 
     "dirs": {
         "metrics": "metrics",
@@ -1550,7 +1551,7 @@ print(experiment.config)
 
 # dataset.get_training_corpus()
 
-dataset = UCIDataset(experiment.config)
+dataset = IMDBDataset(experiment.config)
 
 """## Dict"""
 
