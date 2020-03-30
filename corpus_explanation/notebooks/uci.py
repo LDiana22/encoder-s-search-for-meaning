@@ -476,9 +476,6 @@ class UCIDataset:
     self.args.update(args)
     return self
 
-from google.colab import drive
-drive.mount('/content/drive')
-
 """# Dictionary
 
 ## Abstract
@@ -1214,7 +1211,7 @@ class MLPGen(AbstractModel):
         # self.lin21 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
         # self.selu = nn.SELU() 
         self.relu = nn.ReLU() 
-        # self.softmax = nn.Softmax(1)  
+        # self.softmax = nn.Softmax()  
         # self.sigmoid = nn.Sigmoid()
 
         self.dictionaries = explanations.get_dict()
