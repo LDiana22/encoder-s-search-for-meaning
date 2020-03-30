@@ -40,7 +40,7 @@ CONFIG = {
     "max_words_dict": 5,
 
 
-    "prefix_dir" : "experiments",
+    "prefix_dir" : "experiments/uci",
     # "prefix_dir" : "drive/My Drive/encoder/experiments",
 
     "dirs": {
@@ -57,7 +57,7 @@ CONFIG = {
     "output_dim": 1,
 }
 
-MODEL_MAPPING = "drive/My Drive/encoder/experiments/models_mappings"
+MODEL_MAPPING = "experiments/models_mappings/uci"
 
 # %% [code]
 DATE_FORMAT = '%Y-%m-%d_%H-%M-%S'
@@ -1551,7 +1551,8 @@ print(experiment.config)
 
 # dataset.get_training_corpus()
 
-dataset = IMDBDataset(experiment.config)
+dataset = UCIDataset(experiment.config)
+# dataset = IMDBDataset(experiment.config)
 
 """## Dict"""
 
