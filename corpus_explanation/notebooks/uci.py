@@ -701,8 +701,6 @@ class RakeMaxWordsExplanations(AbstractDictionary):
     # {"all":{word:freq}} OR
     {"pos":{word:freq}, "neg":{word:freq}}
     """
-#     import ipdb
-#     ipdb.set_trace(context=20)
     if hasattr(self, 'dictionary') and not self.dictionary:
         return self.dictionary
     dictionary = OrderedDict()
@@ -962,7 +960,7 @@ class AbstractModel(nn.Module):
 
     def save_results(self, metrics, file_suffix=""):
         metrics_path = os.path.join(self.model_dir, self.args["dirs"]["metrics"])
-        results_file = os.path.join(metrics_path, f"results_{file_suffix}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+        results_file = os.path.join(metrics_path, f"results_{file_suffix}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt")
         with open(results_file, "w") as f:
             f.write(str(metrics))
             f.write("\n\n")
