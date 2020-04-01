@@ -588,7 +588,7 @@ class AbstractDictionary:
 
 """## Rake"""
 
-!pip install rake_nltk
+# !pip install rake_nltk
 
 import pickle
 import os
@@ -748,7 +748,7 @@ a
 
 """## TextRank"""
 
-pip install summa
+# pip install summa
 
 from summa import keywords
 import itertools
@@ -833,7 +833,7 @@ class TFIDF(AbstractDictionary):
 
 """## YAKE"""
 
-pip install git+https://github.com/LIAAD/yake
+# pip install git+https://github.com/LIAAD/yake
 
 import yake
 import itertools
