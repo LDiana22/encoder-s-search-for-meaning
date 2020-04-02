@@ -1573,7 +1573,7 @@ print(experiment.config)
 
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
-model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config, dataset.TEXT)
+model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config)
 experiment.with_data(dataset).with_model(model).run()
 
 print(f"Time: {str(datetime.now()-start)}")
