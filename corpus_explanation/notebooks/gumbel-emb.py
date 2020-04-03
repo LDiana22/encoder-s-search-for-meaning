@@ -1103,7 +1103,7 @@ class VLSTM(AbstractModel):
         # PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
         self.input_size = model_args["max_vocab_size"]
         self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"])
-        self.embedding.weight.data.uniform_(-1, 1)
+        nn.init.uniform_(self.embedding.weight.data,-1,1)
 
         self.lstm = nn.LSTM(model_args["emb_dim"], 
                            model_args["hidden_dim"], 
