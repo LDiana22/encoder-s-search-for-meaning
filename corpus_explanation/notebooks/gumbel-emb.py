@@ -21,7 +21,7 @@ MODEL_MAPPING = "experiments/model_mappings/emb-imdb-gumbel"
 CONFIG = {
     "toy_data": False, # load only a small subset
 
-    "cuda": False,
+    "cuda": True,
 
     "embedding": "glove",
 
@@ -1612,7 +1612,6 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "hidden_dim": 256,
     "n_layers": 2,
     "max_dict": 300, 
-    "cuda": True,
     "restore_checkpoint" : False,
     "train": True,
     # "epochs": 1,
