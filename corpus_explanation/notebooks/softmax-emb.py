@@ -60,6 +60,8 @@ IMDB_PATH = "../.data/imdb/aclImdb"
 PREFIX_DIR = "experiments/emb-imdb-softmax"
 MODEL_MAPPING = "experiments/model_mappings/emb-imdb-softmax"
 
+MODEL_NAME = "imdb-softmax"
+
 CONFIG = {
     "toy_data": False, # load only a small subset
 
@@ -1578,7 +1580,7 @@ print(f"Time yake expl: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 #-{experiment.config['max_words_dict']}
-model = MLPGen(f"gumbel-yake", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-yake", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1607,7 +1609,7 @@ print(f"Time textrank expl: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 #-{experiment.config['max_words_dict']}
-model = MLPGen(f"gumbel-textrank", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-textrank", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1636,7 +1638,7 @@ print(f"Time TFIDF expl: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 #-{experiment.config['max_words_dict']}
-model = MLPGen(f"gumbel-tfidf", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-tfidf", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1665,7 +1667,7 @@ for i in range(1,6):
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
 
-    model = MLPGen(f"gumbel-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1694,7 +1696,7 @@ for i in range(1,6):
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
 
-    model = MLPGen(f"gumbel-inst-rake-corpus-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPGen(f"{MODEL_NAME}-inst-rake-corpus-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1712,7 +1714,7 @@ for i in range(1,6):
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"imdb-gumbel-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1749,7 +1751,7 @@ print(f"Time explanations: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"imdb-gumbel-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1777,7 +1779,7 @@ print(f"Time explanations: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"imdb-gumbel-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1805,7 +1807,7 @@ print(f"Time explanations: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"imdb-gumbel-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 

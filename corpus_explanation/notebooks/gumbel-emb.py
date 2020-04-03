@@ -4,19 +4,63 @@
 
 # %% [code]
 # -*- coding: utf-8 -*-
+from abc import ABC
+from collections import OrderedDict 
+from collections import ChainMap
+from contextlib import redirect_stdout
+import glob
+import io
+import itertools
+import os
+import os.path
+import pickle
+import random
+import re
+import spacy
+import string
+import time
+
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+from datetime import datetime
+
 import torch
-torch.manual_seed(0)
-torch.cuda.manual_seed(0)
-torch.backends.cudnn.deterministic=True
-torch.backends.cudnn.benchmark=False
+
+from torch import nn
+from torch.utils import data as utils
+
+import torch.nn.functional as F
+
+import torch.optim as optim
+
+from torchtext import datasets
+from torchtext import data as data
+from torchtext.vocab import GloVe
+from torchtext.data import Pipeline
+
 import numpy as np
+
+import yake
+from summa import keywords
+from rake_nltk import Rake
+
+
+torch.manual_seed(0)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark=False
+
+torch.cuda.manual_seed(0)
 np.random.seed(0)
+
 
 VECTOR_CACHE = "../.vector_cache"
 UCI_PATH = "../.data/uci"
 IMDB_PATH = "../.data/imdb/aclImdb"
 PREFIX_DIR = "experiments/emb-imdb-gumbel"
 MODEL_MAPPING = "experiments/model_mappings/emb-imdb-gumbel"
+
+MODEL_NAME = "imdb-gumbel"
 
 CONFIG = {
     "toy_data": False, # load only a small subset
@@ -55,7 +99,7 @@ CONFIG = {
         },
 
     "aspect": "palate", # aroma, palate, smell, all
-    "max_vocab_size": 25000,
+    "max_vocab_size": 400000,
     "emb_dim": 300,
     "batch_size": 32,
     "output_dim": 1,
@@ -68,19 +112,11 @@ DATE_REGEXP = '[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}'
 
 """# Helpers"""
 
-import os
-import re
 
-from datetime import datetime
 
 def _extract_date(f):
     date_string = re.search(f"^{DATE_REGEXP}",f)[0]
     return datetime.strptime(date_string, DATE_FORMAT)
-
-import os
-import re
-
-from datetime import datetime
 
 def _extract_date(f):
     date_string = re.search(f"^{DATE_REGEXP}",f)[0]
@@ -113,10 +149,6 @@ def get_last_checkpoint_by_date(path):
   else:
     return None
 
-from torchtext.data import Pipeline
-import re
-
-import string
 
 def remove_br_tag(token):
     return re.sub(r"br|(/><.*)|(</?(.*)/?>)|(<?(.*)/?>)|(<?/?(.*?)/?>?)", "", token)
@@ -135,10 +167,7 @@ preprocess_pipeline = Pipeline(preprocess)
 
 """# Experiment"""
 
-import torch
-import time
-from datetime import datetime
-import os
+
 
 class Experiment(object):
     """Holds all the experiment parameters and provides helper functions."""
@@ -274,19 +303,6 @@ class Experiment(object):
 ### IMDB
 """
 
-import glob
-import os
-import io
-import random
-import re
-import spacy
-from torchtext import datasets
-from torchtext import data as data
-from torchtext.vocab import GloVe
-import torch
-
-torch.manual_seed(0)
-torch.backends.cudnn.deterministic = True
 
 class IMDBDataset:
 
@@ -376,8 +392,7 @@ class IMDBDataset:
 
 """### UCI"""
 
-from torch.utils import data as utils
-import numpy as np
+
 class UCIDataset:
   
   def __init__(self, args, max_length=250):
@@ -478,9 +493,7 @@ class UCIDataset:
 ## Abstract
 """
 
-import os
-import pickle
-import re
+
 
 class AbstractDictionary:
   def __init__(self, id, dataset, args):
@@ -577,13 +590,6 @@ class AbstractDictionary:
 
 # !pip install rake_nltk
 
-import pickle
-import os
-from rake_nltk import Rake
-from collections import OrderedDict 
-
-import spacy
-from collections import ChainMap
 
 class RakePerClassExplanations(AbstractDictionary):
 
@@ -737,8 +743,7 @@ a
 
 # pip install summa
 
-from summa import keywords
-import itertools
+
 class TextRank(AbstractDictionary):
 
   def __init__(self, id, dataset, args): 
@@ -774,8 +779,6 @@ class TextRank(AbstractDictionary):
 
 """## TF-IDF"""
 
-import itertools
-from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 class TFIDF(AbstractDictionary):
 
   def __init__(self, id, dataset, args): 
@@ -822,8 +825,7 @@ class TFIDF(AbstractDictionary):
 
 # pip install git+https://github.com/LIAAD/yake
 
-import yake
-import itertools
+
 class DefaultYAKE(AbstractDictionary):
   def __init__(self, id, dataset, args): 
     super().__init__(id, dataset, args)
@@ -861,16 +863,7 @@ class DefaultYAKE(AbstractDictionary):
 ## Abstract
 """
 
-from abc import ABC
-import os.path
-from datetime import datetime
-import torch
-from contextlib import redirect_stdout
-from torch import nn
-from datetime import datetime
 
-
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 class AbstractModel(nn.Module):
     """
@@ -1079,10 +1072,6 @@ class AbstractModel(nn.Module):
 
 """## Vanilla"""
 
-import torch
-from torch import nn
-import torch.optim as optim
-
 class VLSTM(AbstractModel):
     """
     Baseline - no generator model
@@ -1153,14 +1142,6 @@ class VLSTM(AbstractModel):
 
 """## MLP"""
 
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-import torch
-from torch import nn
-import torch.optim as optim
-from collections import OrderedDict 
-import numpy as np
-
-import torch.nn.functional as F
 
 class MLPGen(AbstractModel):
     """
@@ -1187,9 +1168,9 @@ class MLPGen(AbstractModel):
         PAD_IDX = dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token]
         self.input_size = len(dataset.TEXT.vocab)
         self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"], padding_idx=PAD_IDX)
-
-        nn.init.uniform_(self.embedding.weight.data,-1,1)
         
+        nn.init.uniform_(self.embedding.weight.data,-1,1)
+
         self.emb_dim = model_args["emb_dim"]
         # self.gen = nn.LSTM(model_args["emb_dim"], 
         #                    model_args["hidden_dim"], 
@@ -1512,7 +1493,6 @@ class MLPGen(AbstractModel):
 
 """# Main"""
 
-from datetime import datetime
 
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
@@ -1520,6 +1500,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "hidden_dim": 256,
     "n_layers": 2,
     "max_dict": 300, 
+    "cuda": True,
     "restore_checkpoint" : False,
     "train": True,
     # "epochs": 1,
@@ -1562,6 +1543,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "hidden_dim": 256,
     "n_layers": 2,
     "max_dict": 300, 
+    "cuda": True,
     "restore_checkpoint" : False,
     "train": True,
     # "max_words_dict": i,
@@ -1584,6 +1566,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "hidden_dim": 256,
     "n_layers": 2,
     "max_dict": 300, 
+    "cuda": True,
     "restore_checkpoint" : False,
     "train": True,
     # "epochs": 1,
@@ -1597,7 +1580,7 @@ print(f"Time yake expl: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 #-{experiment.config['max_words_dict']}
-model = MLPGen(f"gumbel-yake", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-yake", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1612,6 +1595,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "hidden_dim": 256,
     "n_layers": 2,
     "max_dict": 300, 
+    "cuda": True,
     "restore_checkpoint" : False,
     "train": True,
     # "epochs": 1,
@@ -1625,7 +1609,7 @@ print(f"Time textrank expl: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 #-{experiment.config['max_words_dict']}
-model = MLPGen(f"gumbel-textrank", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-textrank", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1640,6 +1624,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "hidden_dim": 256,
     "n_layers": 2,
     "max_dict": 300, 
+    "cuda": True,
     "restore_checkpoint" : False,
     "train": True,
     # "epochs": 1,
@@ -1653,7 +1638,7 @@ print(f"Time TFIDF expl: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 #-{experiment.config['max_words_dict']}
-model = MLPGen(f"gumbel-tfidf", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-tfidf", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1668,6 +1653,7 @@ for i in range(1,6):
       "hidden_dim": 256,
       "n_layers": 2,
       "max_dict": 300, 
+      "cuda": True,
       "restore_checkpoint" : False,
       "train": True,
       # "epochs": 1,
@@ -1681,7 +1667,7 @@ for i in range(1,6):
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
 
-    model = MLPGen(f"gumbel-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1696,6 +1682,7 @@ for i in range(1,6):
       "hidden_dim": 256,
       "n_layers": 2,
       "max_dict": 300, 
+      "cuda": True,
       "restore_checkpoint" : False,
       "train": True,
       # "epochs": 1,
@@ -1709,7 +1696,7 @@ for i in range(1,6):
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
 
-    model = MLPGen(f"gumbel-inst-rake-corpus-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPGen(f"{MODEL_NAME}-inst-rake-corpus-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1727,7 +1714,7 @@ for i in range(1,6):
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"imdb-gumbel-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1742,7 +1729,6 @@ print(f"Time: {str(datetime.now()-start)}")
 
 # print(f"Time: {str(datetime.now()-start)}")
 
-from datetime import datetime
 
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
@@ -1751,6 +1737,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "hidden_dim": 256,
     "n_layers": 2,
     "max_dict": 300, 
+    "cuda": True,
     "restore_checkpoint" : False,
     "train": True,
     # "epochs": 1,
@@ -1764,13 +1751,12 @@ print(f"Time explanations: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"imdb-gumbel-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
 print(f"Time: {str(datetime.now()-start)}")
 
-from datetime import datetime
 
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
@@ -1779,6 +1765,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "hidden_dim": 256,
     "n_layers": 2,
     "max_dict": 300, 
+    "cuda": True,
     "restore_checkpoint" : False,
     "train": True,
     # "epochs": 1,
@@ -1792,13 +1779,12 @@ print(f"Time explanations: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"imdb-gumbel-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
 print(f"Time: {str(datetime.now()-start)}")
 
-from datetime import datetime
 
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
@@ -1807,6 +1793,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "hidden_dim": 256,
     "n_layers": 2,
     "max_dict": 300, 
+    "cuda": True,
     "restore_checkpoint" : False,
     "train": True,
     # "epochs": 1,
@@ -1820,7 +1807,7 @@ print(f"Time explanations: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"imdb-gumbel-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
