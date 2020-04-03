@@ -1187,9 +1187,8 @@ class MLPGen(AbstractModel):
         PAD_IDX = dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token]
         self.input_size = len(dataset.TEXT.vocab)
         self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"], padding_idx=PAD_IDX)
-        self.embedding.weight.data.uniform_(-1, 1)
-        self.embedding.weight.data[UNK_IDX] = torch.zeros(model_args["emb_dim"])
-        self.embedding.weight.data[PAD_IDX] = torch.zeros(model_args["emb_dim"])
+        
+        nn.init.uniform_(self.embedding.weight.data,-1,1)
 
         self.emb_dim = model_args["emb_dim"]
         # self.gen = nn.LSTM(model_args["emb_dim"], 
