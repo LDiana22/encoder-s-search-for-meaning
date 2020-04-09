@@ -99,7 +99,7 @@ CONFIG = {
         },
 
     "aspect": "palate", # aroma, palate, smell, all
-    "max_vocab_size": 400000,
+    "max_vocab_size": 100000,
     "emb_dim": 300,
     "batch_size": 32,
     "output_dim": 1,
