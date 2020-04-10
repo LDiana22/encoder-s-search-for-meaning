@@ -61,8 +61,8 @@ random.seed(0)
 VECTOR_CACHE = "../.vector_cache"
 UCI_PATH = "../.data/uci"
 IMDB_PATH = "../.data/imdb/aclImdb"
-PREFIX_DIR = "experiments/softmax-seed"
-MODEL_MAPPING = "experiments/model_mappings/softmax-seed"
+PREFIX_DIR = "experiments/softmax-seed-true"
+MODEL_MAPPING = "experiments/model_mappings/softmax-seed-true"
 
 MODEL_NAME = "imdb-softmax-seed"
 
