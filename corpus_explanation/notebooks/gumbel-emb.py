@@ -325,7 +325,7 @@ class IMDBDataset:
     self.train_data = self._load_data(TEXT, LABEL, IMDB_PATH, "train")
     self.test_data = self._load_data(TEXT, LABEL, IMDB_PATH, "test")
 #     self.train_data, self.test_data =  datasets.IMDB.splits(TEXT, LABEL)
-    self.train_data, self.valid_data = self.train_data.split(random_state=np.random.seed(0))
+    self.train_data, self.valid_data = self.train_data.split(random_state=random.getstate())
     print("IMDB...")
     print(f"Train {len(self.train_data)}")
     print(f"Valid {len(self.valid_data)}")
