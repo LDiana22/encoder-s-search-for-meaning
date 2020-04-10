@@ -61,10 +61,10 @@ random.seed(0)
 VECTOR_CACHE = "../.vector_cache"
 UCI_PATH = "../.data/uci"
 IMDB_PATH = "../.data/imdb/aclImdb"
-PREFIX_DIR = "experiments/seed-test-2"
-MODEL_MAPPING = "experiments/model_mappings/seed-test-6"
+PREFIX_DIR = "experiments/softmax-seed"
+MODEL_MAPPING = "experiments/model_mappings/softmax-seed"
 
-MODEL_NAME = "imdb-softmax-seed2"
+MODEL_NAME = "imdb-softmax-seed"
 
 CONFIG = {
     "toy_data": False, # load only a small subset
@@ -1671,7 +1671,7 @@ for i in range(1,6):
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
 
-    model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPGen(f"{MODEL_NAME}-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1700,7 +1700,7 @@ for i in range(1,6):
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
 
-    model = MLPGen(f"{MODEL_NAME}-inst-rake-corpus-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPGen(f"{MODEL_NAME}-rake-corpus-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1718,7 +1718,7 @@ for i in range(1,6):
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1755,7 +1755,7 @@ print(f"Time explanations: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1783,7 +1783,7 @@ print(f"Time explanations: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
@@ -1811,7 +1811,7 @@ print(f"Time explanations: {str(datetime.now()-start)}")
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
-model = MLPGen(f"{MODEL_NAME}-inst-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPGen(f"{MODEL_NAME}-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
