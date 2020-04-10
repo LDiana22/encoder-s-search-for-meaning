@@ -58,7 +58,7 @@ VECTOR_CACHE = "../.vector_cache"
 UCI_PATH = "../.data/uci"
 IMDB_PATH = "../.data/imdb/aclImdb"
 PREFIX_DIR = "experiments/seed-test-1"
-MODEL_MAPPING = "experiments/model_mappings/seed-test-1"
+MODEL_MAPPING = "experiments/model_mappings/seed-test-3"
 
 MODEL_NAME = "imdb-gumbel-seed1"
 

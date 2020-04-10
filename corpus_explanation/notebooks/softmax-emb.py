@@ -58,7 +58,7 @@ VECTOR_CACHE = "../.vector_cache"
 UCI_PATH = "../.data/uci"
 IMDB_PATH = "../.data/imdb/aclImdb"
 PREFIX_DIR = "experiments/seed-test-2"
-MODEL_MAPPING = "experiments/model_mappings/seed-test-2"
+MODEL_MAPPING = "experiments/model_mappings/seed-test-4"
 
 MODEL_NAME = "imdb-softmax-seed2"
 
