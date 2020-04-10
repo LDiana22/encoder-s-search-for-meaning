@@ -14,7 +14,6 @@ import itertools
 import os
 import os.path
 import pickle
-import random
 import re
 import spacy
 import string
@@ -58,7 +57,7 @@ VECTOR_CACHE = "../.vector_cache"
 UCI_PATH = "../.data/uci"
 IMDB_PATH = "../.data/imdb/aclImdb"
 PREFIX_DIR = "experiments/seed-test-2"
-MODEL_MAPPING = "experiments/model_mappings/seed-test-4"
+MODEL_MAPPING = "experiments/model_mappings/seed-test-6"
 
 MODEL_NAME = "imdb-softmax-seed2"
 
@@ -322,7 +321,7 @@ class IMDBDataset:
     self.train_data = self._load_data(TEXT, LABEL, IMDB_PATH, "train")
     self.test_data = self._load_data(TEXT, LABEL, IMDB_PATH, "test")
 #     self.train_data, self.test_data =  datasets.IMDB.splits(TEXT, LABEL)
-    self.train_data, self.valid_data = self.train_data.split(random_state=random.seed(0))
+    self.train_data, self.valid_data = self.train_data.split(random_state=np.random.seed(0))
     print("IMDB...")
     print(f"Train {len(self.train_data)}")
     print(f"Valid {len(self.valid_data)}")
