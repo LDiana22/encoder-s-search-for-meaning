@@ -332,7 +332,9 @@ class IMDBDataset:
     print(f"Valid {len(self.valid_data)}")
     print(f"Test {len(self.test_data)}")
     TEXT.build_vocab(self.train_data,
-                 max_size = args["max_vocab_size"])
+                 max_size = args["max_vocab_size"],
+                 vectors = GloVe(name='6B', dim=args["emb_dim"], cache="../.vector_cache"), 
+                 unk_init = torch.Tensor.normal_)
     LABEL.build_vocab(self.train_data)
 
     self.TEXT = TEXT
