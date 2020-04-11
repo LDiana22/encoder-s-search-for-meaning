@@ -1096,7 +1096,7 @@ class VLSTM(AbstractModel):
 
         # UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
         # PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
-        self.input_size = model_args["max_vocab_size"]
+        self.input_size = len(TEXT.vocab)
         self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"])
         self.embedding.weight.data.copy_(TEXT.vocab.vectors)
         self.embedding.weight.data[UNK_IDX] = torch.zeros(model_args["emb_dim"])
