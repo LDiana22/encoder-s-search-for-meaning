@@ -1079,7 +1079,7 @@ class VLSTM(AbstractModel):
     """
     Baseline - no generator model
     """
-    def __init__(self, id, mapping_file_location, model_args):
+    def __init__(self, id, mapping_file_location, model_args, TEXT):
         """
         id: Model id
         mapping_file_location: directory to store the file "model_id" 
@@ -1165,7 +1165,7 @@ class MLPGen(AbstractModel):
         super().__init__(id, mapping_file_location, model_args)
         self.explanations_path = os.path.join(self.model_dir, model_args["dirs"]["explanations"], "e")
 
-        self.vanilla = VLSTM("gen-van-lstm", mapping_file_location, model_args)
+        self.vanilla = VLSTM("gen-van-lstm", mapping_file_location, model_args,, dataset.TEXT)
         self.TEXT = dataset.TEXT
 
         self.max_sent_len = dataset.max_sent_len
@@ -1558,7 +1558,7 @@ print(experiment.config)
 
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
-model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config)
+model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config, dataset.TEXT)
 experiment.with_data(dataset).with_model(model).run()
 
 print(f"Time: {str(datetime.now()-start)}")
