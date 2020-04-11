@@ -1165,7 +1165,7 @@ class MLPGen(AbstractModel):
         super().__init__(id, mapping_file_location, model_args)
         self.explanations_path = os.path.join(self.model_dir, model_args["dirs"]["explanations"], "e")
 
-        self.vanilla = VLSTM("gen-van-lstm", mapping_file_location, model_args,, dataset.TEXT)
+        self.vanilla = VLSTM("gen-van-lstm", mapping_file_location, model_args, dataset.TEXT)
         self.TEXT = dataset.TEXT
 
         self.max_sent_len = dataset.max_sent_len
