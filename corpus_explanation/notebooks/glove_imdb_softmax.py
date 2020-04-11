@@ -1082,7 +1082,7 @@ class VLSTM(AbstractModel):
     """
     Baseline - no generator model
     """
-    def __init__(self, id, mapping_file_location, model_args):
+    def __init__(self, id, mapping_file_location, model_args, TEXT):
         """
         id: Model id
         mapping_file_location: directory to store the file "model_id" 
@@ -1094,9 +1094,10 @@ class VLSTM(AbstractModel):
         super().__init__(id, mapping_file_location, model_args)
         self.device = torch.device('cuda' if model_args["cuda"] else 'cpu')
 
-        # UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
-        # PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
         self.input_size = len(TEXT.vocab)
+
+        UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
+        PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
         self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"])
         self.embedding.weight.data.copy_(TEXT.vocab.vectors)
         self.embedding.weight.data[UNK_IDX] = torch.zeros(model_args["emb_dim"])
