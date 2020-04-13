@@ -60,8 +60,8 @@ random.seed(0)
 VECTOR_CACHE = "../.vector_cache"
 UCI_PATH = "../.data/uci"
 IMDB_PATH = "../.data/imdb/aclImdb"
-PREFIX_DIR = "experiments/gumbel-emb-texlen"
-MODEL_MAPPING = "experiments/model_mappings/gumbel-emb-texlen"
+PREFIX_DIR = "experiments/gumbel-seed-true"
+MODEL_MAPPING = "experiments/model_mappings/gumbel-seed-true"
 
 MODEL_NAME = "m"
 
@@ -1391,13 +1391,13 @@ class MLPGen(AbstractModel):
         #[batch, sent, emb]
         x = torch.transpose(embedded,0,1)
 
-        # [batch, sent_len+2*len(final_dict), emb_dim]
+        # [batch, sent_len+2, emb_dim]
         concat_input = torch.cat((x,final_expl),1) 
 
-        #[sent_len+len(final_dict), batch, emb_dim]
+        #[sent_len+1, batch, emb_dim]
         final_input = torch.transpose(concat_input,0,1)
 
-        output = self.vanilla.raw_forward(final_input, text_lengths+2*len(final_dict))
+        output = self.vanilla.raw_forward(final_input, text_lengths)
 
 
         #output = [sent len, batch size, hid dim * num directions]
@@ -1539,146 +1539,146 @@ dataset = IMDBDataset(experiment.config)
 
 """## Experim"""
 
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
+# start = datetime.now()
+# formated_date = start.strftime(DATE_FORMAT)
 
-experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-    "hidden_dim": 256,
-    "n_layers": 2,
-    "max_dict": 300, 
-    "cuda": True,
-    "restore_checkpoint" : False,
-    "train": True,
-    # "max_words_dict": i,
-})
-print(experiment.config)
+# experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
+#     "hidden_dim": 256,
+#     "n_layers": 2,
+#     "max_dict": 300, 
+#     "cuda": True,
+#     "restore_checkpoint" : False,
+#     "train": True,
+#     # "max_words_dict": i,
+# })
+# print(experiment.config)
 
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
-model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config)
-experiment.with_data(dataset).with_model(model).run()
+# start = datetime.now()
+# formated_date = start.strftime(DATE_FORMAT)
+# model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config)
+# experiment.with_data(dataset).with_model(model).run()
 
-print(f"Time: {str(datetime.now()-start)}")
+# print(f"Time: {str(datetime.now()-start)}")
 
-# """### Yake"""
+# # """### Yake"""
 
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
+# start = datetime.now()
+# formated_date = start.strftime(DATE_FORMAT)
 
-experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-    "hidden_dim": 256,
-    "n_layers": 2,
-    "max_dict": 300, 
-    "cuda": True,
-    "restore_checkpoint" : False,
-    "train": True,
-    # "epochs": 1,
-    # "max_words_dict": i,
-    # "toy_data": True
-})
-print(experiment.config)
-explanations = DefaultYAKE("default-yake", dataset, experiment.config)
-print(f"Time yake expl: {str(datetime.now()-start)}")
+# experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
+#     "hidden_dim": 256,
+#     "n_layers": 2,
+#     "max_dict": 300, 
+#     "cuda": True,
+#     "restore_checkpoint" : False,
+#     "train": True,
+#     # "epochs": 1,
+#     # "max_words_dict": i,
+#     # "toy_data": True
+# })
+# print(experiment.config)
+# explanations = DefaultYAKE("default-yake", dataset, experiment.config)
+# print(f"Time yake expl: {str(datetime.now()-start)}")
 
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
-#-{experiment.config['max_words_dict']}
-model = MLPGen(f"{MODEL_NAME}-yake", MODEL_MAPPING, experiment.config, dataset, explanations)
+# start = datetime.now()
+# formated_date = start.strftime(DATE_FORMAT)
+# #-{experiment.config['max_words_dict']}
+# model = MLPGen(f"{MODEL_NAME}-yake", MODEL_MAPPING, experiment.config, dataset, explanations)
 
-experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
+# experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
-print(f"Time yake trian: {str(datetime.now()-start)}")
+# print(f"Time yake trian: {str(datetime.now()-start)}")
 
-"""###TextRank"""
+# """###TextRank"""
 
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
+# start = datetime.now()
+# formated_date = start.strftime(DATE_FORMAT)
 
-experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-    "hidden_dim": 256,
-    "n_layers": 2,
-    "max_dict": 300, 
-    "cuda": True,
-    "restore_checkpoint" : False,
-    "train": True,
-    # "epochs": 1,
-    # "max_words_dict": i,
-    # "toy_data": True
-})
-print(experiment.config)
-explanations = TextRank(f"textrank-300-5", dataset, experiment.config)
-print(f"Time textrank expl: {str(datetime.now()-start)}")
+# experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
+#     "hidden_dim": 256,
+#     "n_layers": 2,
+#     "max_dict": 300, 
+#     "cuda": True,
+#     "restore_checkpoint" : False,
+#     "train": True,
+#     # "epochs": 1,
+#     # "max_words_dict": i,
+#     # "toy_data": True
+# })
+# print(experiment.config)
+# explanations = TextRank(f"textrank-300-5", dataset, experiment.config)
+# print(f"Time textrank expl: {str(datetime.now()-start)}")
 
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
-#-{experiment.config['max_words_dict']}
-model = MLPGen(f"{MODEL_NAME}-textrank", MODEL_MAPPING, experiment.config, dataset, explanations)
+# start = datetime.now()
+# formated_date = start.strftime(DATE_FORMAT)
+# #-{experiment.config['max_words_dict']}
+# model = MLPGen(f"{MODEL_NAME}-textrank", MODEL_MAPPING, experiment.config, dataset, explanations)
 
-experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
+# experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
-print(f"Time TextRank train: {str(datetime.now()-start)}")
+# print(f"Time TextRank train: {str(datetime.now()-start)}")
 
-"""### TF-IDF"""
+# """### TF-IDF"""
 
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
+# start = datetime.now()
+# formated_date = start.strftime(DATE_FORMAT)
 
-experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-    "hidden_dim": 256,
-    "n_layers": 2,
-    "max_dict": 300, 
-    "cuda": True,
-    "restore_checkpoint" : False,
-    "train": True,
-    # "epochs": 1,
-    # "max_words_dict": i,
-    # "toy_data": True
-})
-print(experiment.config)
-explanations = TFIDF("tfidf", dataset, experiment.config)
-print(f"Time TFIDF expl: {str(datetime.now()-start)}")
+# experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
+#     "hidden_dim": 256,
+#     "n_layers": 2,
+#     "max_dict": 300, 
+#     "cuda": True,
+#     "restore_checkpoint" : False,
+#     "train": True,
+#     # "epochs": 1,
+#     # "max_words_dict": i,
+#     # "toy_data": True
+# })
+# print(experiment.config)
+# explanations = TFIDF("tfidf", dataset, experiment.config)
+# print(f"Time TFIDF expl: {str(datetime.now()-start)}")
 
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
-#-{experiment.config['max_words_dict']}
-model = MLPGen(f"{MODEL_NAME}-tfidf", MODEL_MAPPING, experiment.config, dataset, explanations)
+# start = datetime.now()
+# formated_date = start.strftime(DATE_FORMAT)
+# #-{experiment.config['max_words_dict']}
+# model = MLPGen(f"{MODEL_NAME}-tfidf", MODEL_MAPPING, experiment.config, dataset, explanations)
 
-experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
+# experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
-print(f"Time TFIDF train: {str(datetime.now()-start)}")
+# print(f"Time TFIDF train: {str(datetime.now()-start)}")
 
-"""### Rake instance"""
+# """### Rake instance"""
 
-for i in range(1,6):
-    start = datetime.now()
-    formated_date = start.strftime(DATE_FORMAT)
-    experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-      "hidden_dim": 256,
-      "n_layers": 2,
-      "max_dict": 300, 
-      "cuda": True,
-      "restore_checkpoint" : False,
-      "train": True,
-      # "epochs": 1,
-      "max_words_dict": i,
-      # "toy_data": True
-    })
-    print(experiment.config)
-    explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{experiment.config['max_words_dict']}", dataset, experiment.config)
-    print(f"Time rake explanations: {str(datetime.now()-start)}")
+# for i in range(1,6):
+#     start = datetime.now()
+#     formated_date = start.strftime(DATE_FORMAT)
+#     experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
+#       "hidden_dim": 256,
+#       "n_layers": 2,
+#       "max_dict": 300, 
+#       "cuda": True,
+#       "restore_checkpoint" : False,
+#       "train": True,
+#       # "epochs": 1,
+#       "max_words_dict": i,
+#       # "toy_data": True
+#     })
+#     print(experiment.config)
+#     explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{experiment.config['max_words_dict']}", dataset, experiment.config)
+#     print(f"Time rake explanations: {str(datetime.now()-start)}")
 
-    start = datetime.now()
-    formated_date = start.strftime(DATE_FORMAT)
+#     start = datetime.now()
+#     formated_date = start.strftime(DATE_FORMAT)
 
-    model = MLPGen(f"{MODEL_NAME}-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
+#     model = MLPGen(f"{MODEL_NAME}-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
-    experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
+#     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
-    print(f"Time rake train: {str(datetime.now()-start)}")
+#     print(f"Time rake train: {str(datetime.now()-start)}")
 
 """### Rake"""
 
-for i in range(1,6):
+for i in range(3,6):
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
     experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
