@@ -60,8 +60,8 @@ random.seed(0)
 VECTOR_CACHE = "../.vector_cache"
 UCI_PATH = "../.data/uci"
 IMDB_PATH = "../.data/imdb/aclImdb"
-PREFIX_DIR = "experiments/gumbel-seed-true"
-MODEL_MAPPING = "experiments/model_mappings/gumbel-seed-true"
+PREFIX_DIR = "experiments/gumbel-emb-texlen"
+MODEL_MAPPING = "experiments/model_mappings/gumbel-emb-texlen"
 
 MODEL_NAME = "m"
 
@@ -1391,13 +1391,13 @@ class MLPGen(AbstractModel):
         #[batch, sent, emb]
         x = torch.transpose(embedded,0,1)
 
-        # [batch, sent_len+2, emb_dim]
+        # [batch, sent_len+2*len(final_dict), emb_dim]
         concat_input = torch.cat((x,final_expl),1) 
 
-        #[sent_len+1, batch, emb_dim]
+        #[sent_len+len(final_dict), batch, emb_dim]
         final_input = torch.transpose(concat_input,0,1)
 
-        output = self.vanilla.raw_forward(final_input, text_lengths)
+        output = self.vanilla.raw_forward(final_input, text_lengths+2*len(final_dict))
 
 
         #output = [sent len, batch size, hid dim * num directions]
