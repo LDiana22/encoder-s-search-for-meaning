@@ -8,6 +8,7 @@ from abc import ABC
 from collections import OrderedDict 
 from collections import ChainMap
 from contextlib import redirect_stdout
+import copy
 import glob
 import io
 import itertools
