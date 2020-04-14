@@ -1936,7 +1936,7 @@ class MLPIndependentOneDict(AbstractModel):
         save = False # save explanations
         if prefix=="test_f":
             save = True
-            expl = "text, " + ", ".join(list(self.dictionaries.keys())) + ", predictions, true label\n"
+            expl = "text, explanation, prediction, true label\n"
             e_list = []
             distr = [torch.tensor([]).to(self.device) for i in range(len(self.dictionaries.keys()))]
 
