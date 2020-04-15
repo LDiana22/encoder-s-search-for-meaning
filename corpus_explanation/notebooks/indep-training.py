@@ -1624,6 +1624,7 @@ class FrozenVLSTM(AbstractModel):
         return metrics
 
 
+
 class MLPIndependentOneDict(AbstractModel):
     """
     MLP + pretrained bi-LSTM
@@ -1751,7 +1752,7 @@ class MLPIndependentOneDict(AbstractModel):
         # label = list(self.dictionary.keys())
         # dictionary = self.dictionaries[label]
         for i in range(len(self.expl_distributions)):
-            nlp_expl_dict = self._decode_expl_distr(class_batch_dict[i], self.dictionary)
+            nlp_expl_dict = self._decode_expl_distr(self.expl_distributions[i], self.dictionary)
             nlp_text = " ".join([self.TEXT.vocab.itos[idx] for idx in (text[i])])
             val = text_expl.get(nlp_text,[])
             val.append(nlp_expl_dict)
@@ -1938,8 +1939,8 @@ class MLPIndependentOneDict(AbstractModel):
             save = True
             expl = "text, explanation, prediction, true label\n"
             e_list = []
-            distr = [torch.tensor([]).to(self.device) for i in range(len(self.dictionaries.keys()))]
-
+            # distr = [torch.tensor([]).to(self.device) for i in range(len(self.dictionaries.keys()))]
+            distr = torch.tensor([]).to(self.device)
         self.eval()
         e_loss = 0
         e_acc, e_prec, e_rec = 0,0,0
@@ -1960,8 +1961,9 @@ class MLPIndependentOneDict(AbstractModel):
                 if save:
                     text_expl= self.get_explanations(text)
                     e_list.append("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
-                    for class_idx in range(len(distr)):
-                        distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
+                    # for class_idx in range(len(distr)):
+                    #     distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
+                    distr = torch.cat((distr, self.expl_distributions))
                 acc = accuracy_score(y_true, y_pred)
                 prec = precision_score(y_true, y_pred)
                 rec = recall_score(y_true, y_pred)
@@ -1987,13 +1989,14 @@ class MLPIndependentOneDict(AbstractModel):
                 f.write(expl)
                 f.write("".join(e_list))
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
+                f.write(f"{torch.tensor(distr).shape}\n")
                 f.write(str(distr))
                 f.write("\nSUMs\n")
-                f.write(str([torch.sum(torch.tensor(d), dim=1) for d in distr]))
+                f.write(str(torch.sum(torch.tensor(distr), dim=1)))
                 f.write("\nHard sums\n")
-                f.write(str([torch.sum(torch.where(d>0.5, torch.ones(d.shape).to(self.device), torch.zeros(d.shape).to(self.device)), dim=1) for d in distr]))
+                f.write(str([torch.sum(torch.where(d>0.5, torch.ones(d.shape).to(self.device), torch.zeros(d.shape).to(self.device))) for d in distr]))
                 f.write("\nIndices\n")
-                f.write(str([d.nonzero() for d in distr]))
+                f.write(str(distr.nonzero().data[:,1]))
 
         metrics ={}
         size = len(iterator)
@@ -2007,12 +2010,41 @@ class MLPIndependentOneDict(AbstractModel):
         metrics[f"{prefix}_weightedf1"] = e_wf1/size
         return metrics
 
+
 ##########################################################################################################
 ############################################End of Independent training ##################################
 ##########################################################################################################
 
+import argparse
+from datetime import datetime
 
 
+start = datetime.now()
+formated_date = start.strftime(DATE_FORMAT)
+
+
+parser = argparse.ArgumentParser(description='Config params.')
+parser.add_argument('-p', metavar='max_words_dict', type=int, default=CONFIG["max_words_dict"],
+                    help='Max number of words per phrase in explanations dictionary')
+
+parser.add_argument('-d', metavar='dictionary_type', type=int,
+                    help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
+
+# parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
+#                     help='Number of epochs')
+
+# parser.add_argument('--td', type=bool, default=CONFIG["toy_data"],
+#                     help='Toy data (load just a small data subset)')
+
+# parser.add_argument('--train', dest='train', action='store_true')
+# parser.add_argument('--no_train', dest='train', action='store_false')
+# parser.set_defaults(train=CONFIG["train"])
+
+# parser.add_argument('--restore', dest='restore', action='store_true')
+# parser.set_defaults(restore=CONFIG["restore_checkpoint"])
+
+# parser.add_argument('--cuda', type=bool, default=CONFIG["cuda"])
+args = parser.parse_args()
 
 
 """# Main"""
@@ -2027,202 +2059,36 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "cuda": True,
     "restore_checkpoint" : False,
     "train": True,
-    # "epochs": 1,
-    # "max_words_dict": 2,
-    # "toy_data": True
+    "max_words_dict": args.d
 })
+print(experiment.config)
 
-"""## Data"""
+start = datetime.now()
 
-# pip install ipdb
+if args.d=="tfidf":
+    explanations = TFIDF("tfidf", dataset, experiment.config)
+elif args.d=="yake":
+    explanations = DefaultYAKE("default-yake", dataset, experiment.config)
+elif args.d=="textrank":
+    explanations = TextRank(f"textrank-300-5", dataset, experiment.config)
+elif args.d == "rake-inst":
+    explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.p}", dataset, experiment.config)
+elif args.d == "rake-corpus":
+    explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, experiment.config)
 
-# dataset.get_training_corpus()
+print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()-start)}")
 
-# dataset = UCIDataset(experiment.config)
-
+start = datetime.now()
 dataset = IMDBDataset(experiment.config)
+print(f"Time data load: {str(datetime.now()-start)}")
 
-"""## Dict"""
 
-# pip install torch==1.2.0
-
-# explanations = RakeMaxWordsPerInstanceExplanations(f"imdb-rake-max-words-instance-300-{experiment.config['max_words_dict']}", dataset, experiment.config)
-
-# explanations = RakeMaxWordsExplanations(f"rake-dot-300-3", dataset, experiment.config)
-
-# explanations = RakeMaxWordsExplanations(f"rake-corpus-max-{experiment.config['max_words_dict']}")
-
-# explanations = TextRank(f"textrank-300-5", dataset, experiment.config)
-
-# explanations = TFIDF("tfidf", dataset, experiment.config)
-
-# explanations = DefaultYAKE("default-yake", dataset, experiment.config)
-
-"""## Experim"""
-
-# start = datetime.now()
-# formated_date = start.strftime(DATE_FORMAT)
-
-# experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-#     "hidden_dim": 256,
-#     "n_layers": 2,
-#     "max_dict": 300, 
-#     "cuda": True,
-#     "restore_checkpoint" : False,
-#     "train": True,
-#     # "max_words_dict": i,
-# })
-# print(experiment.config)
-
+start = datetime.now()
+model = MLPIndependentOneDict(f"{MODEL_NAME}-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
 # formated_date = start.strftime(DATE_FORMAT)
 # model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config)
 # experiment.with_data(dataset).with_model(model).run()
 
 # print(f"Time: {str(datetime.now()-start)}")
-
-# """### Yake"""
-
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
-
-experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-    "hidden_dim": 256,
-    "n_layers": 2,
-    "max_dict": 300, 
-    "cuda": True,
-    "restore_checkpoint" : False,
-    "train": True,
-    # "epochs": 1,
-    # "max_words_dict": i,
-    # "toy_data": True
-})
-print(experiment.config)
-explanations = DefaultYAKE("default-yake", dataset, experiment.config)
-print(f"Time yake expl: {str(datetime.now()-start)}")
-
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
-#-{experiment.config['max_words_dict']}
-model = MLPIndependentOneDict(f"{MODEL_NAME}-yake", MODEL_MAPPING, experiment.config, dataset, explanations)
-
-experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
-
-print(f"Time yake trian: {str(datetime.now()-start)}")
-
-"""###TextRank"""
-
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
-
-experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-    "hidden_dim": 256,
-    "n_layers": 2,
-    "max_dict": 300, 
-    "cuda": True,
-    "restore_checkpoint" : False,
-    "train": True,
-    # "epochs": 1,
-    # "max_words_dict": i,
-    # "toy_data": True
-})
-print(experiment.config)
-explanations = TextRank(f"textrank-300-5", dataset, experiment.config)
-print(f"Time textrank expl: {str(datetime.now()-start)}")
-
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
-#-{experiment.config['max_words_dict']}
-model = MLPIndependentOneDict(f"{MODEL_NAME}-textrank", MODEL_MAPPING, experiment.config, dataset, explanations)
-
-experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
-
-print(f"Time TextRank train: {str(datetime.now()-start)}")
-
-"""### TF-IDF"""
-
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
-
-experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-    "hidden_dim": 256,
-    "n_layers": 2,
-    "max_dict": 300, 
-    "cuda": True,
-    "restore_checkpoint" : False,
-    "train": True,
-    # "epochs": 1,
-    # "max_words_dict": i,
-    # "toy_data": True
-})
-print(experiment.config)
-explanations = TFIDF("tfidf", dataset, experiment.config)
-print(f"Time TFIDF expl: {str(datetime.now()-start)}")
-
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
-#-{experiment.config['max_words_dict']}
-model = MLPIndependentOneDict(f"{MODEL_NAME}-tfidf", MODEL_MAPPING, experiment.config, dataset, explanations)
-
-experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
-
-print(f"Time TFIDF train: {str(datetime.now()-start)}")
-
-"""### Rake instance"""
-
-for i in range(1,6):
-    start = datetime.now()
-    formated_date = start.strftime(DATE_FORMAT)
-    experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-      "hidden_dim": 256,
-      "n_layers": 2,
-      "max_dict": 300, 
-      "cuda": True,
-      "restore_checkpoint" : False,
-      "train": True,
-      # "epochs": 1,
-      "max_words_dict": i,
-      # "toy_data": True
-    })
-    print(experiment.config)
-    explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{experiment.config['max_words_dict']}", dataset, experiment.config)
-    print(f"Time rake explanations: {str(datetime.now()-start)}")
-
-    start = datetime.now()
-    formated_date = start.strftime(DATE_FORMAT)
-
-    model = MLPIndependentOneDict(f"{MODEL_NAME}-rake-inst-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
-
-    experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
-
-    print(f"Time rake train: {str(datetime.now()-start)}")
-
-"""### Rake"""
-
-for i in range(1,6):
-    start = datetime.now()
-    formated_date = start.strftime(DATE_FORMAT)
-    experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-      "hidden_dim": 256,
-      "n_layers": 2,
-      "max_dict": 300, 
-      "cuda": True,
-      "restore_checkpoint" : False,
-      "train": True,
-      # "epochs": 1,
-      "max_words_dict": i,
-      # "toy_data": True
-    })
-    print(experiment.config)
-    explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{experiment.config['max_words_dict']}", dataset, experiment.config)
-    print(f"Time rake corpus explanations: {str(datetime.now()-start)}")
-
-    start = datetime.now()
-    formated_date = start.strftime(DATE_FORMAT)
-
-    model = MLPIndependentOneDict(f"{MODEL_NAME}-rake-corpus-max-{experiment.config['max_words_dict']}", MODEL_MAPPING, experiment.config, dataset, explanations)
-
-    experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
-
-    print(f"Time rake corpus train: {str(datetime.now()-start)}")
-
