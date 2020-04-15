@@ -2064,6 +2064,10 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
 print(experiment.config)
 
 start = datetime.now()
+dataset = IMDBDataset(experiment.config)
+print(f"Time data load: {str(datetime.now()-start)}")
+
+start = datetime.now()
 
 if args.d=="tfidf":
     explanations = TFIDF("tfidf", dataset, experiment.config)
@@ -2077,10 +2081,6 @@ elif args.d == "rake-corpus":
     explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, experiment.config)
 
 print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()-start)}")
-
-start = datetime.now()
-dataset = IMDBDataset(experiment.config)
-print(f"Time data load: {str(datetime.now()-start)}")
 
 
 start = datetime.now()
