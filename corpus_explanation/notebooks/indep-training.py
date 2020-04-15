@@ -2027,7 +2027,7 @@ parser = argparse.ArgumentParser(description='Config params.')
 parser.add_argument('-p', metavar='max_words_dict', type=int, default=CONFIG["max_words_dict"],
                     help='Max number of words per phrase in explanations dictionary')
 
-parser.add_argument('-d', metavar='dictionary_type', type=int,
+parser.add_argument('-d', metavar='dictionary_type', type=str,
                     help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
 
 # parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
