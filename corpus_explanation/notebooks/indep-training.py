@@ -2085,6 +2085,7 @@ print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()
 
 start = datetime.now()
 model = MLPIndependentOneDict(f"{MODEL_NAME}-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
+experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
 # formated_date = start.strftime(DATE_FORMAT)
