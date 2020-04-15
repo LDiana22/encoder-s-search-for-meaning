@@ -2084,7 +2084,7 @@ print(f"Time data load: {str(datetime.now()-start)}")
 
 
 start = datetime.now()
-model = MLPIndependentOneDict(f"{MODEL_NAME}-{args.d}", MODEL_MAPPING, experiment.config, dataset, explanations)
+model = MLPIndependentOneDict(f"{MODEL_NAME}-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
 print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
 # formated_date = start.strftime(DATE_FORMAT)
