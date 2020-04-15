@@ -2059,7 +2059,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "cuda": True,
     "restore_checkpoint" : False,
     "train": True,
-    "max_words_dict": args.d
+    "max_words_dict": args.p
 })
 print(experiment.config)
 
