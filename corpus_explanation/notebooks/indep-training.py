@@ -64,7 +64,7 @@ IMDB_PATH = "../.data/imdb/aclImdb"
 PREFIX_DIR = "experiments/independent"
 MODEL_MAPPING = "experiments/model_mappings/independent"
 
-MODEL_NAME = "gumb-emb-one-dict"
+MODEL_NAME = "gumb-emb-one-dict-long"
 
 CONFIG = {
     "toy_data": False, # load only a small subset
