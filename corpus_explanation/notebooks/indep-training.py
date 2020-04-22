@@ -12,6 +12,7 @@ import copy
 import glob
 import io
 import itertools
+import matplotlib.pyplot as plt
 import os
 import os.path
 import pickle
@@ -99,7 +100,8 @@ CONFIG = {
         "metrics": "metrics",
         "checkpoint": "snapshot",
         "dictionary": "dictionaries",
-        "explanations": "explanations"
+        "explanations": "explanations",
+        "plots": "plots"
         },
 
     "aspect": "palate", # aroma, palate, smell, all
@@ -116,7 +118,20 @@ DATE_REGEXP = '[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}'
 
 """# Helpers"""
 
+def plot_training_metrics(plot_path, train_loss, valid_loss, training_acc, valid_acc):
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    ax1.plot(train_loss, 'r', label='Train')
+    ax1.plot(valid_loss, 'b', label="Validation")
+    ax1.set_title('Loss curve')
+    ax1.legend()
 
+    ax2.plot(training_acc, 'r', label='Train')
+    ax2.plot(valid_acc, 'b', label="Valid")
+    ax2.set_title('Accuracy curve')
+    ax2.legend()
+
+    fig.savefig(plot_path)
+        
 
 def _extract_date(f):
     date_string = re.search(f"^{DATE_REGEXP}",f)[0]
@@ -284,6 +299,8 @@ class Experiment(object):
             "valid_loss": v_losses,
             "valid_acc": v_acc
          }
+        plot_path = self.model.get_plot_path("train_plot")
+        plot_training_metrics(plot_path, training_losses, v_losses, training_acc, v_acc)
         self.model.save_results(metrics, "train")
 
     def run(self):
@@ -683,11 +700,11 @@ class RakeMaxWordsPerInstanceExplanations(AbstractDictionary):
             phrases += rake.get_ranked_phrases_with_scores()
         phrases = list(set(phrases))
         phrases.sort(reverse=True)
+        with open(os.path.join(self.path, f"phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join([str(ph) for ph in phrases]))
         if max_per_class:
             phrases = phrases[:max_per_class]
         dictionary[text_class] = dict(ChainMap(*[{ph[1]:" ".join(corpus[text_class]).count(ph[1])} for ph in phrases]))
-        with open(os.path.join(self.path, f"phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
-            f.write("\n".join([str(ph) for ph in phrases]))
     return dictionary
 
 class RakeMaxWordsExplanations(AbstractDictionary):
@@ -819,7 +836,7 @@ class TFIDF(AbstractDictionary):
         max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
 
         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
-            f.write("\n".join(sorted_keywords))
+            f.write("\n".join([f"{kw}: {word2tfidf.get(kw)}" for kw in sorted_keywords]))
         phrases = list(set(sorted_keywords))
         # dictionary[text_class] = [phrases[i] for i in range(min(max_per_class,len(phrases)))]
         dictionary[text_class] = dict(ChainMap(*[{sorted_keywords[i]:" ".join(corpus[text_class]).count(sorted_keywords[i])} for i in range(min(max_per_class,len(sorted_keywords)))]))
@@ -936,13 +953,12 @@ class AbstractModel(nn.Module):
 
     def load_best_model(self):
         newest_checkpoint = get_last_checkpoint_by_date(os.path.join(self.model_dir, self.args["dirs"]["checkpoint"]))
+        checkpoint_dir = os.path.join(self.model_dir, self.args["dirs"]["checkpoint"])           
+        newest_checkpoint = os.path.join(checkpoint_dir, newest_checkpoint)
         print(f"Loading best model from {newest_checkpoint}")
         self.load_checkpoint(newest_checkpoint)
 
-    def load_checkpoint(self, newest_file_name):
-        checkpoint_dir = os.path.join(self.model_dir, self.args["dirs"]["checkpoint"])           
-
-        path = os.path.join(checkpoint_dir, newest_file_name)
+    def load_checkpoint(self, path):
         print(f"Loading checkpoint: {path}") 
         checkpoint = torch.load(path)
         self.load_state_dict(checkpoint['model_state_dict'])
@@ -952,6 +968,10 @@ class AbstractModel(nn.Module):
         for key in checkpoint.keys():
             if key not in ['epoch', 'model_state_dict', 'optimizer_state_dict']:
                 self.metrics[key] = checkpoint[key]
+
+    def get_plot_path(self, file_suffix ):
+        dir_path = os.path.join(self.model_dir, self.args["dirs"]["plots"])
+        return os.path.join(dir_path, f"{file_suffix}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png")
 
     def save_results(self, metrics, file_suffix=""):
         metrics_path = os.path.join(self.model_dir, self.args["dirs"]["metrics"])
@@ -1335,7 +1355,7 @@ class MLPGen(AbstractModel):
         expl_pos = torch.bmm(e_dist_pos, vocab_emb_pos)
         expl_neg = torch.bmm(e_dist_neg, vocab_emb_neg)
 
-        #[batch,max_words,emb_dim]
+        # #[batch,max_words,emb_dim]
         context_vector.append(torch.max(expl_pos, dim=1).values.reshape(batch_size, v_emb_pos.size(1),-1))
         context_vector.append(torch.max(expl_neg, dim=1).values.reshape(batch_size, v_emb_neg.size(1),-1))
 
@@ -1642,16 +1662,17 @@ class MLPIndependentOneDict(AbstractModel):
         super().__init__(id, mapping_file_location, model_args)
         self.explanations_path = os.path.join(self.model_dir, model_args["dirs"]["explanations"], "e")
 
-        vanilla_args = copy.deepcopy(model_args)
-        vanilla_args["restore_checkpoint"] = True
 
-        self.vanilla = FrozenVLSTM("frozen-bi-lstm", mapping_file_location, vanilla_args)
-        if model_args["restore_checkpoint"]:
-          self.vanilla.load_checkpoint(model_args["checkpoint_file"])
-          for param in self.vanilla.parameters():
-            param.requires_grad=False
-          self.vanilla.optimizer = self.vanilla.optimizer([])
-
+        if model_args["restore_v_checkpoint"]:
+            vanilla_args = copy.deepcopy(model_args)
+            vanilla_args["restore_checkpoint"] = True
+            self.vanilla = FrozenVLSTM("frozen-bi-lstm", mapping_file_location, vanilla_args)
+            print(model_args["checkpoint_v_file"])
+            self.vanilla.load_checkpoint(model_args["checkpoint_v_file"])
+            for param in self.vanilla.parameters():
+                param.requires_grad=False
+        else:
+            self.vanilla = FrozenVLSTM("bi-lstm", mapping_file_location, model_args)
 
 
         self.TEXT = dataset.TEXT
@@ -2057,7 +2078,8 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "n_layers": 2,
     "max_dict": 300, 
     "cuda": True,
-    "restore_checkpoint" : False,
+    "restore_v_checkpoint" : True,
+    "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
     "train": True,
     "max_words_dict": args.p
 })
