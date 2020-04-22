@@ -300,6 +300,7 @@ class Experiment(object):
             "valid_acc": v_acc
          }
         plot_path = self.model.get_plot_path("train_plot")
+        print(f"Plotting at {plot_path}")
         plot_training_metrics(plot_path, training_losses, v_losses, training_acc, v_acc)
         self.model.save_results(metrics, "train")
 
@@ -2143,7 +2144,8 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "restore_v_checkpoint" : True,
     "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
     "train": True,
-    "max_words_dict": args.p
+    "max_words_dict": args.p,
+    "patience":20
 })
 print(experiment.config)
 
@@ -2168,12 +2170,12 @@ print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()
 
 if args.m == "frozen_mlp_bilstm":
     start = datetime.now()
-    model = MLPBefore(f"{args.m}-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPBefore(f"{args.m}-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
 elif args.m =="frozen_bilstm_mlp":
     start = datetime.now()
-    model = MLPIndependentOneDict(f"{args.m}-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPIndependentOneDict(f"{args.m}-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
