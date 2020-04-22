@@ -65,7 +65,7 @@ IMDB_PATH = "../.data/imdb/aclImdb"
 PREFIX_DIR = "experiments/independent"
 MODEL_MAPPING = "experiments/model_mappings/independent"
 
-MODEL_NAME = "gumb-emb-one-dict-long"
+MODEL_NAME = "mlp+frozen_bilstm_gumb-emb-one-dict-long"
 
 CONFIG = {
     "toy_data": False, # load only a small subset
@@ -1645,9 +1645,10 @@ class FrozenVLSTM(AbstractModel):
 
 
 
+
 class MLPIndependentOneDict(AbstractModel):
     """
-    MLP + pretrained bi-LSTM
+    pretrained bi-LSTM + MLP
     """
     def __init__(self, id, mapping_file_location, model_args, dataset, explanations):
         """
@@ -1873,72 +1874,17 @@ class MLPIndependentOneDict(AbstractModel):
 
         #embedded = [sent len, batch size, emb dim]
 
-        ##GEN
-        # # [sent len, batch, 2*hidden_dim]
-        # expl_activ, (_, _) = self.gen(embedded)
-        # expl_activ = nn.Dropout(0.4)(expl_activ)
-
-        #TODO batch, sent*emb
-        # batch, sent*hidden
-        # batch, dict
-
-
-        # # [sent, batch, hidden]
-        # expl_activ = self.lin(embedded)
-        # # expl_activ = self.lin21(embedded)
-        # expl_activ = self.relu(expl_activ)
-        # expl_activ = self.dropout(expl_activ)
-        # # expl_activ = self.lin2(expl_activ)
-        # # expl_activ = self.relu(expl_activ)
-        # # # expl_activ = nn.Dropout(0.2)(expl_activ)
-
-
-
-        # new TODO
-        # reshape
-        # batch, hidden, sent -> batch, hidden, dict
-        # batch, 1, dict
-        # final_expl = final_dict[0]
-        # for i in range(1, len(final_dict)):
-        #     final_expl = torch.cat((final_expl, final_dict[i]), 1)
-
-        #[batch, sent, emb]
-        # x = torch.transpose(embedded,0,1)
-
-        # [batch, sent_len+2, emb_dim]
-        # concat_input = torch.cat((x,final_expl),1) 
-
-        #[sent_len+1, batch, emb_dim]
-        # final_input = torch.transpose(concat_input,0,1)
-
         output, hidden = self.vanilla.raw_forward(embedded, text_lengths)
-        # final_dict, expl_distributions = self.gen(hidden, batch_size)
-
         #output = [sent len, batch size, hid dim * num directions]
         #output over padding tokens are zero tensors
 
         #hidden = [num layers * num directions, batch size, hid dim]
         #cell = [num layers * num directions, batch size, hid dim]
 
-        #concat the final forward (hidden[-2,:,:]) and backward (hidden[-1,:,:]) hidden layers
-        #and apply dropout
-
-        # hidden = self.dropout(torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1))
-        #hidden = [batch size, hid dim * num directions]
-
-        # (list) class, tensor[batch, dict_size]
-        # self.expl_distributions = expl_distributions 
-#             if expl_file and "test" in expl_file and expl_file!="test":
-#                 self.save_explanations(text, expl_file)
-        # import ipdb
-        # ipdb.set_trace(context=10)
         final_dict, expl_distributions = self.gen(hidden, batch_size)
         self.expl_distributions = expl_distributions
 
-
         final_expl = final_dict[0]
-        # for i in range(1, len(final_dict)):
-        #     final_expl = torch.cat((final_expl, final_dict[i]), 1)
 
         #[batch, sent, emb]
         x = torch.transpose(embedded,0,1)
@@ -1949,8 +1895,6 @@ class MLPIndependentOneDict(AbstractModel):
         #[sent_len+1, batch, emb_dim]
         final_input = torch.transpose(concat_input,0,1)
         output, hidden = self.vanilla.raw_forward(final_input, text_lengths + 2)
-
-
         return output
 
 
@@ -2032,9 +1976,65 @@ class MLPIndependentOneDict(AbstractModel):
         return metrics
 
 
+
 ##########################################################################################################
 ############################################End of Independent training ##################################
 ##########################################################################################################
+
+##########################################################################################################
+############################################ MLP before frozen bi-LSTM ##################################
+##########################################################################################################
+
+class MLPBefore(MLPIndependentOneDict):
+  """
+  MLP + pretrained bi-LSTM
+  """
+  
+  def forward(self, text, text_lengths, expl_file=None):
+
+    batch_size = text.size()[1]
+
+    #text = [sent len, batch size]
+
+    embedded = self.dropout(self.embedding(text))
+
+    #embedded = [sent len, batch size, emb dim]
+    expl_activ = self.lin(embedded)
+    # expl_activ = self.lin21(embedded)
+    expl_activ = self.relu(expl_activ)
+    expl_activ = self.dropout(expl_activ)
+    # expl_activ = self.lin2(expl_activ)
+    # expl_activ = self.relu(expl_activ)
+    # # expl_activ = nn.Dropout(0.2)(expl_activ)
+
+    final_dict, expl_distributions = self.gen(expl_activ, batch_size)
+    final_expl = final_dict[0]
+
+    x = torch.transpose(embedded,0,1)
+    # [batch, sent_len+2*len(final_dict), emb_dim]
+    concat_input = torch.cat((x,final_dict),1)
+    #[sent_len+len(final_dict), batch, emb_dim]
+    final_input = torch.transpose(concat_input,0,1)
+
+
+    output, hidden = self.vanilla.raw_forward(final_input, text_lengths+2)
+    #output = [sent len, batch size, hid dim * num directions]
+    #output over padding tokens are zero tensors
+
+    #hidden = [num layers * num directions, batch size, hid dim]
+    #cell = [num layers * num directions, batch size, hid dim]
+
+    self.expl_distributions = expl_distributions
+
+    return output
+
+
+
+##########################################################################################################
+############################################End of MLP before training ##################################
+##########################################################################################################
+
+
 
 import argparse
 from datetime import datetime
@@ -2050,6 +2050,9 @@ parser.add_argument('-p', metavar='max_words_dict', type=int, default=CONFIG["ma
 
 parser.add_argument('-d', metavar='dictionary_type', type=str,
                     help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
+
+parser.add_argument('-m', metavar='model_type', type=str,
+                    help='frozen_mlp_bilstm, frozen_bilstm_mlp')
 
 # parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
 #                     help='Number of epochs')
@@ -2104,11 +2107,16 @@ elif args.d == "rake-corpus":
 
 print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()-start)}")
 
-
-start = datetime.now()
-model = MLPIndependentOneDict(f"{MODEL_NAME}-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
-experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
-print(f"Time model training: {str(datetime.now()-start)}")
+if args.m == "frozen_mlp_bilstm":
+    start = datetime.now()
+    model = MLPBefore(f"{args.m}-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
+    print(f"Time model training: {str(datetime.now()-start)}")
+elif args.m =="frozen_bilstm_mlp":
+    start = datetime.now()
+    model = MLPIndependentOneDict(f"{args.m}-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
+    print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
 # formated_date = start.strftime(DATE_FORMAT)
 # model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config)
