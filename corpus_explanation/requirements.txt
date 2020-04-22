@@ -12,5 +12,7 @@ sklearn==0.22.1
 # python -m spacy download en
 summa==1.2.0
 
+matplotlib==3.2.1
+
 # cc: module load python/3.6
 # python -m pip install <pkg> --user
