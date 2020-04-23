@@ -2155,9 +2155,9 @@ dataset = IMDBDataset(experiment.config)
 print(f"Time data load: {str(datetime.now()-start)}")
 
 start = datetime.now()
-explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-1-300-{args.p}", dataset, experiment.config)
+explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-3-300-{args.p}", dataset, experiment.config)
 print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()-start)}")
 
 start = datetime.now()
-explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-2-300-{args.p}", dataset, experiment.config)
+explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-4-300-{args.p}", dataset, experiment.config)
 print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()-start)}")
