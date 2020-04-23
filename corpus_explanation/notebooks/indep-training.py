@@ -278,7 +278,7 @@ class Experiment(object):
                 patience += 1
                 if patience == self.config["patience"]:
                     print(f"Patience {patience} break, epoch {epoch+1}")
-                    return
+                    break
             prev_loss = valid_metrics["valid_loss"]
 
 
@@ -2145,7 +2145,8 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
     "train": True,
     "max_words_dict": args.p,
-    "patience":20
+    "patience":300,
+    "epochs":300
 })
 print(experiment.config)
 
