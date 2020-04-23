@@ -273,7 +273,7 @@ class Experiment(object):
                 best_valid_loss = valid_metrics["valid_loss"]
                 metrics = train_metrics
                 metrics.update(valid_metrics)
-                self.model.checkpoint(epoch, metrics)
+                self.model.checkpoint(epoch+1, metrics)
             if prev_loss < valid_metrics["valid_loss"]:
                 patience += 1
                 if patience == self.config["patience"]:
