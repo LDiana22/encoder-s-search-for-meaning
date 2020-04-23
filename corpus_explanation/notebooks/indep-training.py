@@ -2171,12 +2171,12 @@ print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()
 
 if args.m == "frozen_mlp_bilstm":
     start = datetime.now()
-    model = MLPBefore(f"{args.m}-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPBefore(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
 elif args.m =="frozen_bilstm_mlp":
     start = datetime.now()
-    model = MLPIndependentOneDict(f"{args.m}-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPIndependentOneDict(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
