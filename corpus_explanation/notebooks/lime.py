@@ -764,6 +764,8 @@ start = datetime.now()
 
 with open(LIME_LIST, "w") as pos:
   for i,example in enumerate(test_instances.examples):
+    if i == 500:
+      break
     explanations = explainer.explain_instance(" ".join(example.text), predict_sentiment, labels=[0,1])
     neg_expl = explanations.as_list(0)
     pos_expl = explanations.as_list(1)
