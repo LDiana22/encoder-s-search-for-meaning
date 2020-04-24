@@ -715,7 +715,6 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "restore_v_checkpoint" : True,
     "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
     "train": True,
-    "max_words_dict": args.p,
     "patience":300,
     "epochs":300
 })
