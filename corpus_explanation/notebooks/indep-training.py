@@ -699,13 +699,13 @@ class RakeMaxWordsPerInstanceExplanations(AbstractDictionary):
             rake = Rake(max_length=self.max_words)
             rake.extract_keywords_from_text(review)
             phrases += rake.get_ranked_phrases_with_scores()
-        phrases = list(set(phrases))
+        # phrases = list(set(phrases))
         phrases.sort(reverse=True)
         with open(os.path.join(self.path, f"phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join([str(ph) for ph in phrases]))
         if max_per_class:
             phrases = phrases[:max_per_class]
-        dictionary[text_class] = dict(ChainMap(*[{ph[1]:" ".join(corpus[text_class]).count(ph[1])} for ph in phrases]))
+        dictionary[text_class] = OrderedDict(ChainMap(*[{ph[1]:" ".join(corpus[text_class]).count(ph[1])} for ph in phrases]))
     return dictionary
 
 class RakeMaxWordsExplanations(AbstractDictionary):
@@ -753,13 +753,9 @@ class RakeMaxWordsExplanations(AbstractDictionary):
         
         # tok_words = self.tokenizer(class_corpus)
         # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
-        dictionary[text_class] = dict(ChainMap(*result)) # len(re.findall(".*".join(phrase.split()), class_corpus))
+        dictionary[text_class] = OrderedDict(ChainMap(*result)) # len(re.findall(".*".join(phrase.split()), class_corpus))
 
     return dictionary
-
-a=[("As",0), ("Z",12), ("b",4)]
-a.sort(reverse=True, key=lambda x: x[1])
-a
 
 """## TextRank"""
 
@@ -796,7 +792,7 @@ class TextRank(AbstractDictionary):
         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join([str(ph) for ph in phrases]))
         phrases = list(set([" ".join(ph[0].split()[:self.max_words]) for ph in phrases]))
-        dictionary[text_class] = dict(ChainMap(*[{phrases[i]:" ".join(corpus[text_class]).count(phrases[i])} for i in range(min(max_per_class,len(phrases)))]))
+        dictionary[text_class] = OrderedDict(ChainMap(*[{phrases[i]:" ".join(corpus[text_class]).count(phrases[i])} for i in range(min(max_per_class,len(phrases)))]))
     return dictionary
 
 """## TF-IDF"""
@@ -838,9 +834,9 @@ class TFIDF(AbstractDictionary):
 
         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join([f"{kw}: {word2tfidf.get(kw)}" for kw in sorted_keywords]))
-        phrases = list(set(sorted_keywords))
+        # phrases = list(set(sorted_keywords))
         # dictionary[text_class] = [phrases[i] for i in range(min(max_per_class,len(phrases)))]
-        dictionary[text_class] = dict(ChainMap(*[{sorted_keywords[i]:" ".join(corpus[text_class]).count(sorted_keywords[i])} for i in range(min(max_per_class,len(sorted_keywords)))]))
+        dictionary[text_class] = OrderedDict(ChainMap(*[{sorted_keywords[i]:" ".join(corpus[text_class]).count(sorted_keywords[i])} for i in range(min(max_per_class,len(sorted_keywords)))]))
     return dictionary
 
 """## YAKE"""
@@ -877,7 +873,7 @@ class DefaultYAKE(AbstractDictionary):
         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join([str(ph) for ph in phrases]))
         phrases = list(set([" ".join(ph[0].split()[:self.max_words]) for ph in phrases]))
-        dictionary[text_class] = dict(ChainMap(*[{phrases[i]:" ".join(corpus[text_class]).count(phrases[i])} for i in range(min(max_per_class,len(phrases)))]))
+        dictionary[text_class] = OrderedDict(ChainMap(*[{phrases[i]:" ".join(corpus[text_class]).count(phrases[i])} for i in range(min(max_per_class,len(phrases)))]))
     return dictionary
 
 """# Models
