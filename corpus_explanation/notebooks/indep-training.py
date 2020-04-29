@@ -81,6 +81,8 @@ CONFIG = {
     "dropout": 0.05,
     "weight_decay": 5e-06,
 
+    "alpha": 0.5,
+
     "patience": 10,
 
     "epochs": 200,
