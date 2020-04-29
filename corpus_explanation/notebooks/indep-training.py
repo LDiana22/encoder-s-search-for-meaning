@@ -2119,6 +2119,8 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             self.vanilla.load_checkpoint(model_args["checkpoint_v_file"])
             for param in self.vanilla.parameters():
                 param.requires_grad=False
+            self.vanilla.eval()
+            print("Vanilla frozen")
         else:
             self.vanilla = FrozenVLSTM("bi-lstm", mapping_file_location, model_args)
 
@@ -2135,13 +2137,14 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
         self.emb_dim = model_args["emb_dim"]
 
-        self.relu = nn.ReLU() 
 
         dictionaries = explanations.get_dict()
         self.dictionary = copy.deepcopy(dictionaries['pos'])
         self.dictionary.update(dictionaries['neg'])
         print("Dict size", len(self.dictionary.keys()))
-        self.lin_pos = nn.Linear(2*model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
+        self.lin1 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
+        self.relu = nn.ReLU() 
+        self.lin2 = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
 
         self.explanations = self.__pad([
                 torch.tensor([self.TEXT.vocab.stoi[word] for word in phrase.split()]).to(self.device)
@@ -2232,8 +2235,13 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         # vocab_emb_neg = vocab_emb_neg.reshape(vocab_emb_neg.size(0),vocab_emb_neg.size(1),-1)
 
         # [sent, batch, dict_size]
+        # activ = self.dropout(activ)
+        activ = self.lin1(activ)
+        activ = self.relu(activ)
+        activ = self.dropout(activ)
+        activ = self.lin2(activ)
         expl_distribution_pos = self.dropout(activ)
-        expl_distribution_pos = self.lin_pos(expl_distribution_pos)
+
         
         # expl_activ_neg = self.lin_neg(activ)
 
