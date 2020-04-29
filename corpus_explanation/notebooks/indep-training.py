@@ -2478,7 +2478,7 @@ parser = argparse.ArgumentParser(description='Config params.')
 parser.add_argument('-p', metavar='max_words_dict', type=int, default=CONFIG["max_words_dict"],
                     help='Max number of words per phrase in explanations dictionary')
 
-parser.add_argument('-a', metavar='alpha', type=int, default=CONFIG["alpha"],
+parser.add_argument('-a', metavar='alpha', type=float, default=CONFIG["alpha"],
                     help='Similarity cost hyperparameter')
 
 parser.add_argument('-d', metavar='dictionary_type', type=str,
