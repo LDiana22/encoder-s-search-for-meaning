@@ -2085,6 +2085,378 @@ class MLPBefore(MLPIndependentOneDict):
 
 
 
+##########################################################################################################
+############################################biLSTM  + MLP  + similarity ##################################
+##########################################################################################################
+
+from math import log
+
+class MLPAfterIndependentOneDictSimilarity(AbstractModel):
+    """
+    pretrained bi-LSTM + MLP
+    """
+    def __init__(self, id, mapping_file_location, model_args, dataset, explanations):
+        """
+        id: Model id
+        mapping_file_location: directory to store the file "model_id" 
+                               that containes the hyperparameters values and 
+                               the model summary
+        logs_location: directory for the logs location of the model
+        model_args: hyperparameters of the model
+        explanations: Dictionary of explanations [{phrase: {class:freq}}]
+        """
+        super().__init__(id, mapping_file_location, model_args)
+        self.alpha=model_args['alpha']
+        self.explanations_path = os.path.join(self.model_dir, model_args["dirs"]["explanations"], "e")
+
+        if model_args["restore_v_checkpoint"]:
+            vanilla_args = copy.deepcopy(model_args)
+            vanilla_args["restore_checkpoint"] = True
+            self.vanilla = FrozenVLSTM("frozen-bi-lstm", mapping_file_location, vanilla_args)
+            print(model_args["checkpoint_v_file"])
+            self.vanilla.load_checkpoint(model_args["checkpoint_v_file"])
+            for param in self.vanilla.parameters():
+                param.requires_grad=False
+        else:
+            self.vanilla = FrozenVLSTM("bi-lstm", mapping_file_location, model_args)
+
+
+        self.TEXT = dataset.TEXT
+
+        self.max_sent_len = dataset.max_sent_len
+        # UNK_IDX = dataset.TEXT.vocab.stoi[dataset.TEXT.unk_token]
+        PAD_IDX = dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token]
+        self.input_size = len(dataset.TEXT.vocab)
+        self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"], padding_idx=PAD_IDX)
+        
+        nn.init.uniform_(self.embedding.weight.data,-1,1)
+
+        self.emb_dim = model_args["emb_dim"]
+
+        self.relu = nn.ReLU() 
+
+        dictionaries = explanations.get_dict()
+        self.dictionary = copy.deepcopy(dictionaries['pos'])
+        self.dictionary.update(dictionaries['neg'])
+        print("Dict size", len(self.dictionary.keys()))
+        self.lin_pos = nn.Linear(2*model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
+
+        self.explanations = self.__pad([
+                torch.tensor([self.TEXT.vocab.stoi[word] for word in phrase.split()]).to(self.device)
+                for phrase in self.dictionary.keys()], explanations.max_words)
+
+        self.dropout = nn.Dropout(model_args["dropout"])
+
+        self.optimizer = optim.Adam(list(set(self.parameters()) - set(self.vanilla.parameters())))
+        self.criterion = self.similarity_loss
+
+        self = self.to(self.device)
+        super().save_model_type(self)
+
+    def __pad(self, tensor_list, length):
+        """
+        0 pad to the right for a list of variable sized tensors
+        e.g. [torch.tensor([1,2]), torch.tensor([1,2,3,4]),torch.tensor([1,2,3,4,5])], 5 ->
+                [tensor([1, 2, 0, 0, 0]), tensor([1, 2, 3, 4, 0]), tensor([1, 2, 3, 4, 5])]
+        """
+        return torch.stack([torch.cat([tensor.data, tensor.new(length-tensor.size(0)).zero_()])
+            for tensor in tensor_list]).to(self.device)
+
+
+    def _decode_expl_distr(self, distr, dictionary, threshold_expl_score=0.5):
+        """
+        An expl distribution for a given dict
+        dictionary - the dict corresponding to the class of the distribution
+        """
+        decoded = OrderedDict()
+#         for distr in len(distributions):          
+            # dict phrase:count
+            # distribution for each dict/class
+            # index sort - top predicted explanations
+        top_rated_expl_index = torch.argsort(distr, 0, True).tolist()
+        most_important_expl_idx = [idx for idx in top_rated_expl_index if distr[idx]>=threshold_expl_score]
+        if not most_important_expl_idx:
+            # empty, then take max only
+            max_val = torch.max(distr)
+            most_important_expl_idx = [idx for idx in top_rated_expl_index if distr[idx]==max_val]
+        # top expl for each instance
+        expl_text = np.array(list(dictionary.keys()))[most_important_expl_idx]
+        #expl: (count in class, distr value)
+        for i, text in enumerate(expl_text):
+            decoded[text]= (dictionary[text], distr[most_important_expl_idx[i]].item())
+#         batch_explanations.append(decoded)
+        # list of 
+        # ordered dict {expl:count} for a given dictionary/class
+        return decoded
+
+    def get_explanations(self, text, file_name=None):
+        text = text.transpose(0,1)
+#             start = datetime.now()
+#             formated_date = start.strftime(DATE_FORMAT)
+#             e_file = f"{self.explanations_path}_{file_name}_{formated_date}.txt"
+#             with open(e_file, "w", encoding="utf-8") as f:
+#                 print("Saving explanations at ", e_file)
+        text_expl = OrderedDict() # text: [expl_c1, expl_c2]           
+        # for class_idx, class_batch_dict in enumerate(self.expl_distributions):
+        #     #  tensor [batch, dict]
+        # label = list(self.dictionary.keys())
+        # dictionary = self.dictionaries[label]
+        for i in range(len(self.expl_distributions)):
+            nlp_expl_dict = self._decode_expl_distr(self.expl_distributions[i], self.dictionary)
+            nlp_text = " ".join([self.TEXT.vocab.itos[idx] for idx in (text[i])])
+            val = text_expl.get(nlp_text,[])
+            val.append(nlp_expl_dict)
+            val.append(self.predictions[i])
+            val.append(self.true_labels[i])
+            text_expl[nlp_text] = val
+
+            # header text,list of classes
+#                 f.write("text, " + ", ".join(list(self.dictionaries.keys()))+"\n")
+#                 f.write("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
+        return text_expl
+
+    def gen(self, activ, batch_size):
+        context_vector, final_dict, expl_distributions = [], [], []
+        # [dict_size, max_words, emb_dim]
+        # explanations[i] -> [dict_size, max_words, emb_dim]
+        v_emb_pos = self.embedding(self.explanations)
+        # v_emb_neg = self.embedding(self.explanations[1])
+        #[batch,dict_size, max_words, emd_dim
+        vocab_emb_pos = v_emb_pos.repeat(batch_size,1,1,1)
+        # vocab_emb_neg = v_emb_neg.repeat(batch_size,1,1,1)
+
+        #[batch,dict_size, max_words* emd_dim]
+        vocab_emb_pos = vocab_emb_pos.reshape(vocab_emb_pos.size(0),vocab_emb_pos.size(1),-1)
+        # vocab_emb_neg = vocab_emb_neg.reshape(vocab_emb_neg.size(0),vocab_emb_neg.size(1),-1)
+
+        # [sent, batch, dict_size]
+        expl_distribution_pos = self.dropout(activ)
+        expl_distribution_pos = self.lin_pos(expl_distribution_pos)
+        
+        # expl_activ_neg = self.lin_neg(activ)
+
+        # [batch,dict_size, sent]
+        # e_pos = torch.transpose(expl_distribution_pos,1,2)
+        # e_neg = torch.transpose(expl_distribution_neg,1,2)
+        # [batch, dict, 1]
+        # expl_distribution_pos = self.aggregation_pos(e_pos).squeeze()
+        # expl_distribution_neg = self.aggregation_neg(e_neg).squeeze()
+        # expl_distribution = self.sigmoid(expl_distribution) # on dim 1
+        
+        # batch, dict
+        expl_distribution_pos = F.gumbel_softmax(expl_distribution_pos, hard=True)
+        # expl_distribution_neg = F.gumbel_softmax(expl_distribution_neg, hard=True)
+
+        # expl_distribution_pos = self.softmax(expl_distribution_pos)
+        # expl_distribution_neg = self.softmax(expl_distribution_neg)
+        #[batch, dict]
+        # expl_distributions.append(torch.squeeze(expl_distribution_pos))
+        # expl_distributions.append(torch.squeeze(expl_distribution_neg))
+
+        # [batch,1, dict]
+        e_dist = torch.transpose(expl_distribution_pos.unsqueeze(-1),1,2)
+        # e_dist_neg = torch.transpose(expl_distribution_neg.unsqueeze(-1),1,2)
+        # batch, 1, dict x batch, dict, emb (max_words*emb_dim)
+        
+        # ipdb.set_trace(context=10)
+        expl_pos = torch.bmm(e_dist, vocab_emb_pos)
+        # expl_neg = torch.bmm(e_dist_neg, vocab_emb_neg)
+        # import ipdb
+        # ipdb.set_trace(context=10)
+        #[batch,max_words,emb_dim]
+        expl = expl_pos.reshape(batch_size, v_emb_pos.size(1),-1)
+        # context_vector.append(torch.max(expl_neg, dim=1).values.reshape(batch_size, v_emb_neg.size(1),-1))
+
+
+        # [batch, 1+1, emb_dim]
+        # final_dict.append(torch.cat((sep, context_vector[0]), 1))
+        # final_dict.append(torch.cat((sep, context_vector[1]), 1))
+
+        return expl, expl_distribution_pos
+
+
+
+    def forward(self, text, text_lengths, expl_file=None):
+
+        batch_size = text.size()[1]
+
+        #text = [sent len, batch size]
+
+        embedded = self.dropout(self.embedding(text))
+
+        #embedded = [sent len, batch size, emb dim]
+
+        output, hidden = self.vanilla.raw_forward(embedded, text_lengths)
+        #output = [sent len, batch size, hid dim * num directions]
+        #output over padding tokens are zero tensors
+
+        #hidden = [num layers * num directions, batch size, hid dim]
+        #cell = [num layers * num directions, batch size, hid dim]
+
+        expl_emb, expl_distributions = self.gen(hidden, batch_size)
+        self.expl_distributions = expl_distributions
+
+        #[batch, sent, emb]
+        x = torch.transpose(embedded,0,1)
+
+        sep = torch.zeros((batch_size,1,self.emb_dim), device=self.device)
+
+        # [batch, sent_len+2, emb_dim]
+        concat_input = torch.cat((x,torch.cat((sep, expl_emb), 1)),1) 
+
+        #[sent_len+1, batch, emb_dim]
+        final_input = torch.transpose(concat_input,0,1)
+        output, hidden = self.vanilla.raw_forward(final_input, text_lengths + 2)
+        return output, (expl_emb, x) # batch, words, emb
+
+
+    def evaluate(self, iterator, prefix="test"):
+        save = False # save explanations
+        if prefix=="test_f":
+            save = True
+            expl = "text, explanation, prediction, true label\n"
+            e_list = []
+            # distr = [torch.tensor([]).to(self.device) for i in range(len(self.dictionaries.keys()))]
+            distr = torch.tensor([]).to(self.device)
+        self.eval()
+        e_loss = 0
+        e_acc, e_prec, e_rec = 0,0,0
+        e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        with torch.no_grad():
+            for batch in iterator:
+                text, text_lengths = batch.text
+                logits, (expl_emb, text_emb) = self.forward(text, text_lengths, prefix)
+                logits = logits.squeeze()
+                batch.label = batch.label.to(self.device)
+                loss = self.criterion(logits, batch.label, expl_emb, text_emb)
+
+                predictions = torch.round(torch.sigmoid(logits))
+
+                y_pred = predictions.detach().cpu().numpy()
+                y_true = batch.label.cpu().numpy()
+                self.predictions = y_pred
+                self.true_labels = y_true
+                if save:
+                    text_expl= self.get_explanations(text)
+                    e_list.append("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
+                    # for class_idx in range(len(distr)):
+                    #     distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
+                    distr = torch.cat((distr, self.expl_distributions))
+                acc = accuracy_score(y_true, y_pred)
+                prec = precision_score(y_true, y_pred)
+                rec = recall_score(y_true, y_pred)
+                f1 = f1_score(y_true, y_pred)
+                macrof1 = f1_score(y_true, y_pred, average='macro')
+                microf1 = f1_score(y_true, y_pred, average='micro')
+                wf1 = f1_score(y_true, y_pred, average='weighted')
+
+                e_loss += loss.item()
+                e_acc += acc
+                e_prec += prec
+                e_rec += rec
+                e_f1 += f1
+                e_macrof1 += macrof1
+                e_microf1 += microf1
+                e_wf1 += wf1
+        if save:
+            start = datetime.now()
+            formated_date = start.strftime(DATE_FORMAT)
+            e_file = f"{self.explanations_path}_test-{self.epoch}_{formated_date}.txt"
+            print(f"Saving explanations at {e_file}")
+            with open(e_file, "w") as f:
+                f.write(expl)
+                f.write("".join(e_list))
+            with open(f"{self.explanations_path}_distr.txt", "w") as f:
+                f.write(f"{torch.tensor(distr).shape}\n")
+                f.write(str(distr))
+                f.write("\nSUMs\n")
+                f.write(str(torch.sum(torch.tensor(distr), dim=1)))
+                f.write("\nHard sums\n")
+                f.write(str([torch.sum(torch.where(d>0.5, torch.ones(d.shape).to(self.device), torch.zeros(d.shape).to(self.device))) for d in distr]))
+                f.write("\nIndices\n")
+                f.write(str(distr.nonzero().data[:,1]))
+
+        metrics ={}
+        size = len(iterator)
+        metrics[f"{prefix}_loss"] = e_loss/size
+        metrics[f"{prefix}_acc"] = e_acc/size
+        metrics[f"{prefix}_prec"] = e_prec/size
+        metrics[f"{prefix}_rec"] = e_rec/size
+        metrics[f"{prefix}_f1"] = e_f1/size
+        metrics[f"{prefix}_macrof1"] = e_macrof1/size
+        metrics[f"{prefix}_microf1"] = e_microf1/size
+        metrics[f"{prefix}_weightedf1"] = e_wf1/size
+        return metrics
+
+
+    def train_model(self, iterator):
+        """
+        metrics.keys(): [train_acc, train_loss, train_prec,
+                        train_rec, train_f1, train_macrof1,
+                        train_microf1, train_weightedf1]
+        e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
+        """
+        e_loss = 0
+        e_acc, e_prec, e_rec = 0,0,0
+        e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+
+        self.train()
+
+        for batch in iterator:
+            self.optimizer.zero_grad()
+            text, text_lengths = batch.text
+            logits, (expl, emb_text) = self.forward(text, text_lengths)
+            logits=logits.squeeze()
+            batch.label = batch.label.to(self.device)
+            loss = self.criterion(logits, batch.label, expl, emb_text)
+
+            y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
+            y_true = batch.label.cpu().numpy()
+            #metrics
+            acc = accuracy_score(y_true, y_pred)
+            prec = precision_score(y_true, y_pred)
+            rec = recall_score(y_true, y_pred)
+            f1 = f1_score(y_true, y_pred)
+            macrof1 = f1_score(y_true, y_pred, average='macro')
+            microf1 = f1_score(y_true, y_pred, average='micro')
+            wf1 = f1_score(y_true, y_pred, average='weighted')
+
+            loss.backward()
+            self.optimizer.step()
+
+            e_loss += loss.item()
+            e_acc += acc
+            e_prec += prec
+            e_rec += rec
+            e_f1 += f1
+            e_macrof1 += macrof1
+            e_microf1 += microf1
+            e_wf1 += wf1
+
+        metrics ={}
+        size = len(iterator)
+        metrics["train_loss"] = e_loss/size
+        metrics["train_acc"] = e_acc/size
+        metrics["train_prec"] = e_prec/size
+        metrics["train_rec"] = e_rec/size
+        metrics["train_f1"] = e_f1/size
+        metrics["train_macrof1"] = e_macrof1/size
+        metrics["train_microf1"] = e_microf1/size
+        metrics["train_weightedf1"] = e_wf1/size
+
+        return metrics
+
+    def similarity_loss(self, output, target, explanation, x_emb, alpha=None):
+      bce = nn.BCEWithLogitsLoss().to(self.device)
+      if not alpha:
+        alpha = self.alpha
+      text = torch.mean(x_emb, dim=1).squeeze()
+      expl = torch.mean(explanation, dim=1).squeeze()
+      cos = nn.CosineSimilarity(dim=1)
+      semantic_cost = 1-cos(text, expl)
+      loss = alpha*bce(output, target) + (1-alpha)*torch.mean(semantic_cost)
+      return loss
+
 
 ##########################################################################################################
 ############################################End of MLP before training ##################################
@@ -2108,7 +2480,7 @@ parser.add_argument('-d', metavar='dictionary_type', type=str,
                     help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
 
 parser.add_argument('-m', metavar='model_type', type=str,
-                    help='frozen_mlp_bilstm, frozen_bilstm_mlp')
+                    help='frozen_mlp_bilstm, frozen_bilstm_mlp, bilstm_mlp_similarity')
 
 # parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
 #                     help='Number of epochs')
@@ -2141,8 +2513,8 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
     "train": True,
     "max_words_dict": args.p,
-    "patience":300,
-    "epochs":300
+    "patience":20,
+    "epochs":20
 })
 print(experiment.config)
 
@@ -2173,6 +2545,11 @@ if args.m == "frozen_mlp_bilstm":
 elif args.m =="frozen_bilstm_mlp":
     start = datetime.now()
     model = MLPIndependentOneDict(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
+    print(f"Time model training: {str(datetime.now()-start)}")
+elif args.m =="bilstm_mlp_similarity":
+    start = datetime.now()
+    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
