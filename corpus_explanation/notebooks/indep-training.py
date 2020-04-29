@@ -2476,6 +2476,9 @@ parser = argparse.ArgumentParser(description='Config params.')
 parser.add_argument('-p', metavar='max_words_dict', type=int, default=CONFIG["max_words_dict"],
                     help='Max number of words per phrase in explanations dictionary')
 
+parser.add_argument('-a', metavar='alpha', type=int, default=CONFIG["alpha"],
+                    help='Similarity cost hyperparameter')
+
 parser.add_argument('-d', metavar='dictionary_type', type=str,
                     help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
 
@@ -2514,7 +2517,8 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "train": True,
     "max_words_dict": args.p,
     "patience":20,
-    "epochs":20
+    "epochs":20,
+    'alpha':args.a
 })
 print(experiment.config)
 
@@ -2549,7 +2553,7 @@ elif args.m =="frozen_bilstm_mlp":
     print(f"Time model training: {str(datetime.now()-start)}")
 elif args.m =="bilstm_mlp_similarity":
     start = datetime.now()
-    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-patient-{args.d}-{args.p}-alph_{args.a}", MODEL_MAPPING, experiment.config, dataset, explanations)
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
