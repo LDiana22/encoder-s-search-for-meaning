@@ -2144,7 +2144,8 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         print("Dict size", len(self.dictionary.keys()))
         self.lin1 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
         self.relu = nn.ReLU() 
-        self.lin2 = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
+        self.lin2 = nn.Linear(model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
+        self.lin3 = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
 
         self.explanations = self.__pad([
                 torch.tensor([self.TEXT.vocab.stoi[word] for word in phrase.split()]).to(self.device)
@@ -2240,7 +2241,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         activ = self.relu(activ)
         activ = self.dropout(activ)
         activ = self.lin2(activ)
-        expl_distribution_pos = self.dropout(activ)
+        activ = self.relu(activ)
+        activ = self.dropout(activ)
+        expl_distribution_pos = self.lin3(activ)
 
         
         # expl_activ_neg = self.lin_neg(activ)
@@ -2563,7 +2566,7 @@ elif args.m =="frozen_bilstm_mlp":
     print(f"Time model training: {str(datetime.now()-start)}")
 elif args.m =="bilstm_mlp_similarity":
     start = datetime.now()
-    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn-{args.d}-{args.p}-alph_{args.a}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-3dnn-{args.d}-{args.p}-alph_{args.a}", MODEL_MAPPING, experiment.config, dataset, explanations)
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
