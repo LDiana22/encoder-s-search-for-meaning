@@ -2142,9 +2142,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         self.dictionary = copy.deepcopy(dictionaries['pos'])
         self.dictionary.update(dictionaries['neg'])
         print("Dict size", len(self.dictionary.keys()))
-        self.lin1 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
+        self.lin1 = nn.Linear(2*model_args["hidden_dim"], 2*model_args["hidden_dim"]).to(self.device)
         self.relu = nn.ReLU() 
-        self.lin2 = nn.Linear(model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
+        self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
         self.lin3 = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
 
         self.explanations = self.__pad([
@@ -2566,7 +2566,7 @@ elif args.m =="frozen_bilstm_mlp":
     print(f"Time model training: {str(datetime.now()-start)}")
 elif args.m =="bilstm_mlp_similarity":
     start = datetime.now()
-    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-3dnn-{args.d}-{args.p}-alph_{args.a}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-3large-dnn-{args.d}-{args.p}-alph_{args.a}", MODEL_MAPPING, experiment.config, dataset, explanations)
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
