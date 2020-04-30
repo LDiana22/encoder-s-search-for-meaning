@@ -2148,7 +2148,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
         self.lins = []
         for i in range(model_args["mlp_depth"]):
-            self.lins[i] = nn.Linear(model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
+            self.lins.append(nn.Linear(model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device))
         self.lin3 = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
 
         self.explanations = self.__pad([
