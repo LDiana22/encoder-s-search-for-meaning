@@ -2108,7 +2108,8 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         explanations: Dictionary of explanations [{phrase: {class:freq}}]
         """
         super().__init__(id, mapping_file_location, model_args)
-        self.alpha=model_args['alpha']
+        self.alpha = model_args['alpha']
+        self.decay = model_args['alpha_decay']
         self.explanations_path = os.path.join(self.model_dir, model_args["dirs"]["explanations"], "e")
 
         if model_args["restore_v_checkpoint"]:
@@ -2347,7 +2348,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 logits, (expl_emb, text_emb) = self.forward(text, text_lengths, prefix)
                 logits = logits.squeeze()
                 batch.label = batch.label.to(self.device)
-                loss = self.criterion(logits, batch.label, expl_emb, text_emb)
+                loss = self.criterion(logits, batch.label, expl_emb, text_emb, 0.5)
 
                 predictions = torch.round(torch.sigmoid(logits))
 
@@ -2391,7 +2392,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 f.write("\nSUMs\n")
                 f.write(str(torch.sum(torch.tensor(distr), dim=1)))
                 f.write("\nHard sums\n")
-                f.write(str([torch.sum(torch.where(d>0.5, torch.ones(d.shape).to(self.device), torch.zeros(d.shape).to(self.device))) for d in distr]))
+                f.write(str([torch.sum(torch.where(d>0.5, torch.ones(d.shape).to(self.device), torch.zeros(d.shape).to(self.device))).data for d in distr]))
                 f.write("\nIndices\n")
                 f.write(str(distr.nonzero().data[:,1]))
 
@@ -2420,14 +2421,13 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
 
         self.train()
-
-        for batch in iterator:
+        for i, batch in enumerate(iterator):
             self.optimizer.zero_grad()
             text, text_lengths = batch.text
             logits, (expl, emb_text) = self.forward(text, text_lengths)
             logits=logits.squeeze()
             batch.label = batch.label.to(self.device)
-            loss = self.criterion(logits, batch.label, expl, emb_text)
+            loss = self.criterion(logits, batch.label, expl, emb_text, self.alpha - self.decay * i)
 
             y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
             y_true = batch.label.cpu().numpy()
@@ -2501,6 +2501,10 @@ parser.add_argument('-n', metavar='mlp_depth', type=int, default=0,
 parser.add_argument('-a', metavar='alpha', type=float, default=CONFIG["alpha"],
                     help='Similarity cost hyperparameter')
 
+parser.add_argument('-h', metavar='decay', type=float, default=0,
+                    help='alpha decay')
+
+
 parser.add_argument('-d', metavar='dictionary_type', type=str,
                     help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
 
@@ -2540,8 +2544,9 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "max_words_dict": args.p,
     "patience":20,
     "epochs":20,
-    'alpha':args.a,
-    "mlp_depth": args.n
+    'alpha': args.a,
+    "mlp_depth": args.n,
+    "alpha_decay": args.h
 })
 print(experiment.config)
 
@@ -2576,7 +2581,7 @@ elif args.m =="frozen_bilstm_mlp":
     print(f"Time model training: {str(datetime.now()-start)}")
 elif args.m =="bilstm_mlp_similarity":
     start = datetime.now()
-    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-3large-dnn{args.n}-{args.d}-{args.p}-alph_{args.a}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-3large-dnn{args.n}-decay{args.h}-eval0.5-{args.d}-alph_{args.a}", MODEL_MAPPING, experiment.config, dataset, explanations)
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
