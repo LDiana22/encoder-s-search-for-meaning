@@ -2145,6 +2145,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         self.lin1 = nn.Linear(2*model_args["hidden_dim"], 2*model_args["hidden_dim"]).to(self.device)
         self.relu = nn.ReLU() 
         self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
+        self.lins = []
+        for i in range(model_args["mlp_depth"]):
+            self.lins[i] = nn.Linear(model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
         self.lin3 = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
 
         self.explanations = self.__pad([
@@ -2242,6 +2245,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         activ = self.dropout(activ)
         activ = self.lin2(activ)
         activ = self.relu(activ)
+        for lin in self.lins:
+            activ = lin(activ)
+            activ = self.relu(activ)
         activ = self.dropout(activ)
         expl_distribution_pos = self.lin3(activ)
 
@@ -2489,6 +2495,9 @@ parser = argparse.ArgumentParser(description='Config params.')
 parser.add_argument('-p', metavar='max_words_dict', type=int, default=CONFIG["max_words_dict"],
                     help='Max number of words per phrase in explanations dictionary')
 
+parser.add_argument('-n', metavar='mlp_depth', type=int, default=0,
+                    help='Number of deep layers of the DNN generator')
+
 parser.add_argument('-a', metavar='alpha', type=float, default=CONFIG["alpha"],
                     help='Similarity cost hyperparameter')
 
@@ -2531,7 +2540,8 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "max_words_dict": args.p,
     "patience":20,
     "epochs":20,
-    'alpha':args.a
+    'alpha':args.a,
+    "mlp_depth": args.n
 })
 print(experiment.config)
 
