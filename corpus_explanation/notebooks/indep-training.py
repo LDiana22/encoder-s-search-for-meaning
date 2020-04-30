@@ -2501,9 +2501,7 @@ parser.add_argument('-n', metavar='mlp_depth', type=int, default=0,
 parser.add_argument('-a', metavar='alpha', type=float, default=CONFIG["alpha"],
                     help='Similarity cost hyperparameter')
 
-parser.add_argument('-h', metavar='decay', type=float, default=0,
-                    help='alpha decay')
-
+parser.add_argument('-b', metavar='decay', type=float, default=0, help='alpha decay')
 
 parser.add_argument('-d', metavar='dictionary_type', type=str,
                     help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
@@ -2546,7 +2544,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "epochs":20,
     'alpha': args.a,
     "mlp_depth": args.n,
-    "alpha_decay": args.h
+    "alpha_decay": args.b
 })
 print(experiment.config)
 
@@ -2581,7 +2579,7 @@ elif args.m =="frozen_bilstm_mlp":
     print(f"Time model training: {str(datetime.now()-start)}")
 elif args.m =="bilstm_mlp_similarity":
     start = datetime.now()
-    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-3large-dnn{args.n}-decay{args.h}-eval0.5-{args.d}-alph_{args.a}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-3large-dnn{args.n}-decay{args.b}-eval0.5-{args.d}-alph_{args.a}", MODEL_MAPPING, experiment.config, dataset, explanations)
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
