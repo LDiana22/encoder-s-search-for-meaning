@@ -261,7 +261,7 @@ class Experiment(object):
             self.model.epoch = epoch
             start_time = datetime.now()
 
-            train_metrics = self.model.train_model(self.train_iterator)
+            train_metrics = self.model.train_model(self.train_iterator, epoch+1)
             valid_metrics = self.model.evaluate(self.valid_iterator, "valid")
 
             end_time = datetime.now()
@@ -985,7 +985,7 @@ class AbstractModel(nn.Module):
                 res += ["{0:.4f}".format(metrics.get(metric, -1))]
             f.write(" & ".join(res))
 
-    def train_model(self, iterator):
+    def train_model(self, iterator, args=None):
         """
         metrics.keys(): [train_acc, train_loss, train_prec,
                         train_rec, train_f1, train_macrof1,
@@ -1586,7 +1586,7 @@ class FrozenVLSTM(AbstractModel):
         return self.lin(hidden).to(self.device), hidden
 
 
-    def train_model(self, iterator):
+    def train_model(self, iterator, args=None):
         """
         metrics.keys(): [train_acc, train_loss, train_prec,
                         train_rec, train_f1, train_macrof1,
@@ -2409,7 +2409,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         return metrics
 
 
-    def train_model(self, iterator):
+    def train_model(self, iterator, epoch):
         """
         metrics.keys(): [train_acc, train_loss, train_prec,
                         train_rec, train_f1, train_macrof1,
@@ -2421,14 +2421,13 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
 
         self.train()
-        for i, batch in enumerate(iterator):
+        for batch in iterator:
             self.optimizer.zero_grad()
             text, text_lengths = batch.text
             logits, (expl, emb_text) = self.forward(text, text_lengths)
             logits=logits.squeeze()
             batch.label = batch.label.to(self.device)
-            loss = self.criterion(logits, batch.label, expl, emb_text, self.alpha - self.decay * i)
-
+            loss = self.criterion(logits, batch.label, expl, emb_text, self.alpha - self.decay * epoch)
             y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
             y_true = batch.label.cpu().numpy()
             #metrics
