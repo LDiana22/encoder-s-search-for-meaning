@@ -2157,8 +2157,8 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
         self.dropout = nn.Dropout(model_args["dropout"])
 
-        self.optimizer = optim.AdamW(list(set(self.parameters()) - set(self.vanilla.parameters())))
-        # self.optimizer = optim.Adam(list(set(self.parameters()) - set(self.vanilla.parameters())))
+        # self.optimizer = optim.AdamW(list(set(self.parameters()) - set(self.vanilla.parameters())))
+        self.optimizer = optim.Adam(list(set(self.parameters()) - set(self.vanilla.parameters())))
         self.criterion = self.similarity_loss
 
         self = self.to(self.device)
@@ -2350,7 +2350,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 logits, (expl_emb, text_emb) = self.forward(text, text_lengths, prefix)
                 logits = logits.squeeze()
                 batch.label = batch.label.to(self.device)
-                loss = self.criterion(logits, batch.label, expl_emb, text_emb, 0.5)
+                loss = self.criterion(logits, batch.label, expl_emb, text_emb, 1)
 
                 predictions = torch.round(torch.sigmoid(logits))
 
@@ -2580,7 +2580,7 @@ elif args.m =="frozen_bilstm_mlp":
     print(f"Time model training: {str(datetime.now()-start)}")
 elif args.m =="bilstm_mlp_similarity":
     start = datetime.now()
-    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-3large-dnn{args.n}-decay{args.b}-L2-eval0.5-{args.d}-alph_{args.a}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-3large-dnn{args.n}-decay{args.b}-eval1-{args.d}-alph_{args.a}", MODEL_MAPPING, experiment.config, dataset, explanations)
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
