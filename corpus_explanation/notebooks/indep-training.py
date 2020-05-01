@@ -2157,7 +2157,8 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
         self.dropout = nn.Dropout(model_args["dropout"])
 
-        self.optimizer = optim.Adam(list(set(self.parameters()) - set(self.vanilla.parameters())))
+        self.optimizer = optim.AdamW(list(set(self.parameters()) - set(self.vanilla.parameters())))
+        # self.optimizer = optim.Adam(list(set(self.parameters()) - set(self.vanilla.parameters())))
         self.criterion = self.similarity_loss
 
         self = self.to(self.device)
