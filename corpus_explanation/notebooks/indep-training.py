@@ -2249,6 +2249,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         for lin in self.lins:
             activ = lin(activ)
             activ = self.relu(activ)
+            activ = self.dropout(activ)
         activ = self.dropout(activ)
         expl_distribution_pos = self.lin3(activ)
 
