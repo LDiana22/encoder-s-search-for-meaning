@@ -320,6 +320,8 @@ class Experiment(object):
 
         print("Evaluating...")
         metrics = self.model.evaluate(self.test_iterator, "test_f")
+        print("Test metrics:")
+        print(metrics)
         self.model.save_results(metrics, "test")
 
 """# Data
