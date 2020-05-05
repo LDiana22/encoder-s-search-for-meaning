@@ -2147,7 +2147,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         print("Dict size", len(self.dictionary.keys()))
         self.lin1s = [nn.Linear(2*model_args["hidden_dim"], 2*model_args["hidden_dim"]).to(self.device) for i in range(model_args["n1"])]
         self.relu = nn.ReLU() 
-        self.lin2s = [nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device) for i in range(model_args["n2"])]
+        self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
         self.lin3s = [nn.Linear(model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device) for i in range(model_args["n3"])]
         self.lin4 = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
 
@@ -2246,10 +2246,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             activ = lin(activ)
             activ = self.relu(activ)
             activ = self.dropout(activ)
-        for lin in self.lin2s:
-            activ = lin(activ)
-            activ = self.relu(activ)
-            activ = self.dropout(activ)
+        activ = self.lin2(activ)
+        activ = self.relu(activ)
+        activ = self.dropout(activ)
         for lin in self.lin3s:
             activ = lin(activ)
             activ = self.relu(activ)
