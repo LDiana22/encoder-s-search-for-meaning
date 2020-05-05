@@ -2145,13 +2145,11 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         self.dictionary = copy.deepcopy(dictionaries['pos'])
         self.dictionary.update(dictionaries['neg'])
         print("Dict size", len(self.dictionary.keys()))
-        self.lin1 = nn.Linear(2*model_args["hidden_dim"], 2*model_args["hidden_dim"]).to(self.device)
+        self.lin1s = [nn.Linear(2*model_args["hidden_dim"], 2*model_args["hidden_dim"]).to(self.device) for i in range(model_args["n1"])]
         self.relu = nn.ReLU() 
-        self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
-        self.lins = []
-        for i in range(model_args["mlp_depth"]):
-            self.lins.append(nn.Linear(model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device))
-        self.lin3 = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
+        self.lin2s = [nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device) for i in range(model_args["n2"])]
+        self.lin3s = [nn.Linear(model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device) for i in range(mode_args["n3"])]
+        self.lin4 = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
 
         self.explanations = self.__pad([
                 torch.tensor([self.TEXT.vocab.stoi[word] for word in phrase.split()]).to(self.device)
@@ -2244,17 +2242,20 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
         # [sent, batch, dict_size]
         # activ = self.dropout(activ)
-        activ = self.lin1(activ)
-        activ = self.relu(activ)
-        activ = self.dropout(activ)
-        activ = self.lin2(activ)
-        activ = self.relu(activ)
-        for lin in self.lins:
+        for lin in self.lin1s:
             activ = lin(activ)
             activ = self.relu(activ)
             activ = self.dropout(activ)
-        activ = self.dropout(activ)
-        expl_distribution_pos = self.lin3(activ)
+        for lin in self.lin2s:
+            activ = lin(activ)
+            activ = self.relu(activ)
+            activ = self.dropout(activ)
+        for lin in self.lin3s:
+            activ = lin(activ)
+            activ = self.relu(activ)
+            activ = self.dropout(activ)
+
+        expl_distribution_pos = self.lin4(activ)
 
         
         # expl_activ_neg = self.lin_neg(activ)
@@ -2498,8 +2499,16 @@ parser = argparse.ArgumentParser(description='Config params.')
 parser.add_argument('-p', metavar='max_words_dict', type=int, default=CONFIG["max_words_dict"],
                     help='Max number of words per phrase in explanations dictionary')
 
-parser.add_argument('-n', metavar='mlp_depth', type=int, default=0,
-                    help='Number of deep layers of the DNN generator')
+parser.add_argument('-n1', metavar='mlp_depth', type=int, default=1,
+                    help='Number of deep layers of the DNN generator - 2*hid->2*hid')
+
+parser.add_argument('-n2', metavar='mlp_depth', type=int, default=1,
+                    help='Number of deep layers of the DNN generator - 2*hid->1*hid')
+
+parser.add_argument('-n3', metavar='mlp_depth', type=int, default=1,
+                    help='Number of deep layers of the DNN generator - 1*hid->1*hid')
+
+
 
 parser.add_argument('-dr', metavar='dropout', type=float, default=CONFIG["dropout"],
                     help='Dropout value')
@@ -2549,7 +2558,9 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "patience":20,
     "epochs":20,
     'alpha': args.a,
-    "mlp_depth": args.n,
+    "n1": args.n1,
+    "n2": args.n2,
+    "n3": args.n3,
     "alpha_decay": args.decay,
     "dropout": args.dr
 })
