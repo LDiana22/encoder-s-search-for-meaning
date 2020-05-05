@@ -2311,6 +2311,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         #embedded = [sent len, batch size, emb dim]
 
         output, hidden = self.vanilla.raw_forward(embedded, text_lengths)
+        raw_pred = torch.sigmoid(output)
         #output = [sent len, batch size, hid dim * num directions]
         #output over padding tokens are zero tensors
 
@@ -2331,6 +2332,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         #[sent_len+1, batch, emb_dim]
         final_input = torch.transpose(concat_input,0,1)
         output, hidden = self.vanilla.raw_forward(final_input, text_lengths + 2)
+
+        self.contributions = torch.sigmoid(output) - raw_pred
+
         return output, (expl_emb, x) # batch, words, emb
 
 
@@ -2338,7 +2342,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         save = False # save explanations
         if prefix=="test_f":
             save = True
-            expl = "text, explanation, prediction, true label\n"
+            expl = "text, explanation (freq:confidence), prediction, true label\n"
             e_list = []
             # distr = [torch.tensor([]).to(self.device) for i in range(len(self.dictionaries.keys()))]
             distr = torch.tensor([]).to(self.device)
@@ -2362,7 +2366,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 self.true_labels = y_true
                 if save:
                     text_expl= self.get_explanations(text)
-                    e_list.append("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
+                    e_list.append("\n".join([f"{review} ~ {text_expl[review]} ~ {self.contributions[i]}" for i, review in enumerate(text_expl.keys())]))
                     # for class_idx in range(len(distr)):
                     #     distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
                     distr = torch.cat((distr, self.expl_distributions))
@@ -2399,6 +2403,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 f.write(str([torch.sum(torch.where(d>0.5, torch.ones(d.shape).to(self.device), torch.zeros(d.shape).to(self.device))).data for d in distr]))
                 f.write("\nIndices\n")
                 f.write(str(distr.nonzero().data[:,1]))
+
 
         metrics ={}
         size = len(iterator)
