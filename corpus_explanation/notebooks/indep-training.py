@@ -2356,7 +2356,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 logits, (expl_emb, text_emb) = self.forward(text, text_lengths, prefix)
                 logits = logits.squeeze()
                 batch.label = batch.label.to(self.device)
-                loss = self.criterion(logits, batch.label, expl_emb, text_emb, 1)
+                loss = self.criterion(logits, batch.label, expl_emb, text_emb)
 
                 predictions = torch.round(torch.sigmoid(logits))
 
@@ -2366,7 +2366,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 self.true_labels = y_true
                 if save:
                     text_expl= self.get_explanations(text)
-                    e_list.append("\n".join([f"{review} ~ {text_expl[review]} ~ {self.contributions[i]}" for i, review in enumerate(text_expl.keys())]))
+                    e_list.append("\n".join([f"{review} ~ {text_expl[review]} ~ C: {self.contributions[i]}" for i, review in enumerate(text_expl.keys())]))
                     # for class_idx in range(len(distr)):
                     #     distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
                     distr = torch.cat((distr, self.expl_distributions))
@@ -2428,6 +2428,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         e_loss = 0
         e_acc, e_prec, e_rec = 0,0,0
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        e_contributions, e_len = 0, 0 
 
         self.train()
         for batch in iterator:
@@ -2435,6 +2436,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             text, text_lengths = batch.text
             logits, (expl, emb_text) = self.forward(text, text_lengths)
             logits=logits.squeeze()
+            e_len += len(self.contributions)
+            e_contributions += sum(self.contributions)
+
             batch.label = batch.label.to(self.device)
             loss = self.criterion(logits, batch.label, expl, emb_text, self.alpha - self.decay * epoch)
             y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
@@ -2470,6 +2474,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         metrics["train_macrof1"] = e_macrof1/size
         metrics["train_microf1"] = e_microf1/size
         metrics["train_weightedf1"] = e_wf1/size
+        metrics["avg_contributions"] = e_contributions/e_len
 
         return metrics
 
@@ -2481,7 +2486,8 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
       expl = torch.mean(explanation, dim=1).squeeze()
       cos = nn.CosineSimilarity(dim=1)
       semantic_cost = 1-cos(text, expl)
-      loss = alpha*bce(output, target) + (1-alpha)*torch.mean(semantic_cost)
+      # loss = alpha*bce(output, target) + (1-alpha)*torch.mean(semantic_cost)
+      loss = bce(output, target) + torch.mean(semantic_cost)
       return loss
 
 
@@ -2601,7 +2607,7 @@ elif args.m =="frozen_bilstm_mlp":
     print(f"Time model training: {str(datetime.now()-start)}")
 elif args.m =="bilstm_mlp_similarity":
     start = datetime.now()
-    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-alph_{args.a}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-sumloss-c", MODEL_MAPPING, experiment.config, dataset, explanations)
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
