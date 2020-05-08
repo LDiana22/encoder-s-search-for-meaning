@@ -2350,11 +2350,16 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         e_loss = 0
         e_acc, e_prec, e_rec = 0,0,0
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        e_contributions, e_len = 0,0
         with torch.no_grad():
             for batch in iterator:
                 text, text_lengths = batch.text
                 logits, (expl_emb, text_emb) = self.forward(text, text_lengths, prefix)
                 logits = logits.squeeze()
+
+                e_len += len(self.contributions)
+                e_contributions += sum(self.contributions)
+
                 batch.label = batch.label.to(self.device)
                 loss = self.criterion(logits, batch.label, expl_emb, text_emb)
 
@@ -2398,7 +2403,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 f.write(f"{torch.tensor(distr).shape}\n")
                 f.write(str(distr))
                 f.write("\nSUMs\n")
-                f.write(str(torch.sum(torch.tensor(distr), dim=1)))
+                f.write(str(torch.sum(torch.tensor(distr), dim=1)).data)
                 f.write("\nHard sums\n")
                 f.write(str([torch.sum(torch.where(d>0.5, torch.ones(d.shape).to(self.device), torch.zeros(d.shape).to(self.device))).data for d in distr]))
                 f.write("\nIndices\n")
@@ -2415,6 +2420,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         metrics[f"{prefix}_macrof1"] = e_macrof1/size
         metrics[f"{prefix}_microf1"] = e_microf1/size
         metrics[f"{prefix}_weightedf1"] = e_wf1/size
+        metrics[f"{prefix}_avg_contributions"] = e_contributions/e_len
         return metrics
 
 
@@ -2474,7 +2480,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         metrics["train_macrof1"] = e_macrof1/size
         metrics["train_microf1"] = e_microf1/size
         metrics["train_weightedf1"] = e_wf1/size
-        metrics["avg_contributions"] = e_contributions/e_len
+        metrics["train_avg_contributions"] = e_contributions/e_len
 
         return metrics
 
