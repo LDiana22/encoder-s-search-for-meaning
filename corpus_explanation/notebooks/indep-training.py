@@ -134,6 +134,13 @@ def plot_training_metrics(plot_path, train_loss, valid_loss, training_acc, valid
 
     fig.savefig(plot_path)
         
+def plot_contributions(plot_path, train_c, valid_c): 
+    plt.plot(train_c, 'r', label="Train")
+    plt.plot(valid_c, 'b', label="Valid")
+    plt.title('Epochs avg contributions')
+    plt.legend()
+
+    fig.savefig(plot_path)       
 
 def _extract_date(f):
     date_string = re.search(f"^{DATE_REGEXP}",f)[0]
@@ -253,6 +260,7 @@ class Experiment(object):
 
         training_losses, training_acc = [], []
         v_losses, v_acc = [], []
+        training_contrib, v_contrib = [], []
 
         best_valid_loss = float('inf')
         n_epochs = self.config["epochs"]
@@ -268,8 +276,10 @@ class Experiment(object):
 
             training_losses.append(train_metrics["train_loss"])
             training_acc.append(train_metrics["train_acc"])
+            training_contrib.append(train_metrics["train_avg_contributions"])
             v_losses.append(valid_metrics["valid_loss"])
             v_acc.append(valid_metrics["valid_acc"])
+            v_contrib.append(valid_metrics["valid_avg_contributions"])
 
             if valid_metrics["valid_loss"] < best_valid_loss:
                 best_valid_loss = valid_metrics["valid_loss"]
@@ -305,6 +315,10 @@ class Experiment(object):
         plot_path = self.model.get_plot_path("train_plot")
         print(f"Plotting at {plot_path}")
         plot_training_metrics(plot_path, training_losses, v_losses, training_acc, v_acc)
+        plot_path = self.model.get_plot_path("contributions_plot")
+        print(f"Plotting contributions at {plot_path}")
+        plot_contributions(plot_path, training_contrib, v_contrib)
+
         self.model.save_results(metrics, "train")
 
     def run(self):
