@@ -287,7 +287,7 @@ class Experiment(object):
             print(f'Epoch: {epoch+1:02} | Epoch Time: {str(end_time-start_time)}')
             print(f'\tTrain Loss: {train_metrics["train_loss"]:.3f} | Train Acc: {train_metrics["train_acc"]*100:.2f}%')
             print(f'\t Val. Loss: {valid_metrics["valid_loss"]:.3f} |  Val. Acc: {valid_metrics["valid_acc"]*100:.2f}%')
-            print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]:.3f} |  Val. avgC: {valid_metrics["valid_avg_contributions"]*100:.2f}%')
+            print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]:.3f} |  Val. avgC: {valid_metrics["valid_avg_contributions"]:.2f}')
 
 
         print(f'Training Time: {str(datetime.now()-training_start_time)}')
@@ -2372,7 +2372,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 self.true_labels = y_true
                 if save:
                     text_expl= self.get_explanations(text)
-                    e_list.append("\n".join([f"{review} ~ {text_expl[review]} ~ C: {self.contributions[i]}" for i, review in enumerate(text_expl.keys())]))
+                    e_list.append("\n".join([f"{review} ~ {text_expl[review]} ~ C: {self.contributions[i].data}" for i, review in enumerate(text_expl.keys())]))
                     # for class_idx in range(len(distr)):
                     #     distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
                     distr = torch.cat((distr, self.expl_distributions))
@@ -2404,9 +2404,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 f.write(f"{torch.tensor(distr).shape}\n")
                 f.write(str(distr))
                 f.write("\nSUMs\n")
-                f.write(str(torch.sum(torch.tensor(distr), dim=1)).data)
+                f.write(str(torch.sum(torch.tensor(distr), dim=1)).item())
                 f.write("\nHard sums\n")
-                f.write(str([torch.sum(torch.where(d>0.5, torch.ones(d.shape).to(self.device), torch.zeros(d.shape).to(self.device))).data for d in distr]))
+                f.write(str([torch.sum(torch.where(d>0.5, torch.ones(d.shape).to(self.device), torch.zeros(d.shape).to(self.device))).item() for d in distr]))
                 f.write("\nIndices\n")
                 f.write(str(distr.nonzero().data[:,1]))
 
@@ -2421,7 +2421,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         metrics[f"{prefix}_macrof1"] = e_macrof1/size
         metrics[f"{prefix}_microf1"] = e_microf1/size
         metrics[f"{prefix}_weightedf1"] = e_wf1/size
-        metrics[f"{prefix}_avg_contributions"] = e_contributions/e_len
+        metrics[f"{prefix}_avg_contributions"] = (e_contributions/e_len).item()
         return metrics
 
 
@@ -2481,7 +2481,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         metrics["train_macrof1"] = e_macrof1/size
         metrics["train_microf1"] = e_microf1/size
         metrics["train_weightedf1"] = e_wf1/size
-        metrics["train_avg_contributions"] = e_contributions/e_len
+        metrics["train_avg_contributions"] = (e_contributions/e_len).item()
 
         return metrics
 
