@@ -2326,7 +2326,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         #embedded = [sent len, batch size, emb dim]
 
         output, hidden = self.vanilla.raw_forward(embedded, text_lengths)
-        raw_pred = torch.sigmoid(output)
+        self.raw_predictions = torch.sigmoid(output).squeeze()
         #output = [sent len, batch size, hid dim * num directions]
         #output over padding tokens are zero tensors
 
@@ -2348,7 +2348,6 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         final_input = torch.transpose(concat_input,0,1)
         output, hidden = self.vanilla.raw_forward(final_input, text_lengths + 2)
 
-        self.contributions = torch.sigmoid(output) - raw_pred
 
         return output, (expl_emb, x) # batch, words, emb
 
@@ -2371,15 +2370,19 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 text, text_lengths = batch.text
                 logits, (expl_emb, text_emb) = self.forward(text, text_lengths, prefix)
                 logits = logits.squeeze()
+                predictions = torch.sigmoid(logits)
 
-                e_len += len(self.contributions)
-                e_contributions += sum(self.contributions)
+                e_len += len(text)
+                e_contributions += sum(torch.sign(batch.label - 0.5)*(predictions-self.raw_predictions))
+
 
                 batch.label = batch.label.to(self.device)
+
+
                 loss = self.criterion(logits, batch.label, expl_emb, text_emb)
 
-                predictions = torch.round(torch.sigmoid(logits))
 
+                predictions = torch.round(predictions)
                 y_pred = predictions.detach().cpu().numpy()
                 y_true = batch.label.cpu().numpy()
                 self.predictions = y_pred
@@ -2457,13 +2460,15 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             text, text_lengths = batch.text
             logits, (expl, emb_text) = self.forward(text, text_lengths)
             logits=logits.squeeze()
-            e_len += len(self.contributions)
-            e_contributions += sum(self.contributions)
 
             batch.label = batch.label.to(self.device)
             loss = self.criterion(logits, batch.label, expl, emb_text, self.alpha - self.decay * epoch)
             y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
             y_true = batch.label.cpu().numpy()
+
+            e_len += len(text)
+            e_contributions += sum(torch.sign(batch.label - 0.5)*(torch.sigmoid(logits)-self.raw_predictions))
+
             #metrics
             acc = accuracy_score(y_true, y_pred)
             prec = precision_score(y_true, y_pred)
