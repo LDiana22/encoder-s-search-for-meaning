@@ -140,7 +140,7 @@ def plot_contributions(plot_path, train_c, valid_c):
     plt.title('Epochs avg contributions')
     plt.legend()
 
-    fig.savefig(plot_path)       
+    plt.savefig(plot_path)       
 
 def _extract_date(f):
     date_string = re.search(f"^{DATE_REGEXP}",f)[0]
