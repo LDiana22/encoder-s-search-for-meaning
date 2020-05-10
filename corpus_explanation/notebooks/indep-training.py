@@ -2373,7 +2373,8 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 predictions = torch.sigmoid(logits)
 
                 e_len += len(text)
-                e_contributions += sum(torch.sign(batch.label - 0.5)*(predictions-self.raw_predictions))
+                contributions = torch.sign(batch.label - 0.5)*(predictions-self.raw_predictions)
+                e_contributions += sum(contributions)
 
 
                 batch.label = batch.label.to(self.device)
@@ -2389,7 +2390,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 self.true_labels = y_true
                 if save:
                     text_expl= self.get_explanations(text)
-                    e_list.append("\n".join([f"{review} ~ {text_expl[review]} ~ C: {self.contributions[i].data}" for i, review in enumerate(text_expl.keys())]))
+                    e_list.append("\n".join([f"{review} ~ {text_expl[review]} ~ C: {contributions[i].data}" for i, review in enumerate(text_expl.keys())]))
                     # for class_idx in range(len(distr)):
                     #     distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
                     distr = torch.cat((distr, self.expl_distributions))
