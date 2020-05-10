@@ -297,7 +297,7 @@ class Experiment(object):
             print(f'Epoch: {epoch+1:02} | Epoch Time: {str(end_time-start_time)}')
             print(f'\tTrain Loss: {train_metrics["train_loss"]:.3f} | Train Acc: {train_metrics["train_acc"]*100:.2f}%')
             print(f'\t Val. Loss: {valid_metrics["valid_loss"]:.3f} |  Val. Acc: {valid_metrics["valid_acc"]*100:.2f}%')
-            print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]:.3f} |  Val. avgC: {valid_metrics["valid_avg_contributions"]:.2f}')
+            print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]} |  Val. avgC: {valid_metrics["valid_avg_contributions"]}')
 
 
         print(f'Training Time: {str(datetime.now()-training_start_time)}')
