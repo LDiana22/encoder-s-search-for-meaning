@@ -2174,7 +2174,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
         self.optimizer = optim.AdamW(list(set(self.parameters()) - set(self.vanilla.parameters())))
         # self.optimizer = optim.Adam(list(set(self.parameters()) - set(self.vanilla.parameters())))
-        self.criterion = self.similarity_loss
+        self.criterion = self.loss
 
         self = self.to(self.device)
         super().save_model_type(self)
@@ -2505,7 +2505,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
         return metrics
 
-    def similarity_loss(self, output, target, explanation, x_emb, alpha=None):
+    def loss(self, output, target, explanation, x_emb, alpha=None):
       bce = nn.BCEWithLogitsLoss().to(self.device)
       if not alpha:
         alpha = self.alpha
@@ -2517,6 +2517,11 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
       loss = bce(output, target) + torch.mean(semantic_cost)
       return loss
 
+class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
+
+    def loss(self, output, target, sth, sthelse, someparam=None):
+        min_contributions = 1 - torch.sign(target - 0.5)*(output-self.raw_predictions)
+        return sum(min_contributions)
 
 ##########################################################################################################
 ############################################End of MLP before training ##################################
@@ -2622,21 +2627,18 @@ elif args.d == "rake-corpus":
 
 print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()-start)}")
 
+start = datetime.now()
 if args.m == "frozen_mlp_bilstm":
-    start = datetime.now()
     model = MLPBefore(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
-    experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
-    print(f"Time model training: {str(datetime.now()-start)}")
 elif args.m =="frozen_bilstm_mlp":
-    start = datetime.now()
     model = MLPIndependentOneDict(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
-    experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
-    print(f"Time model training: {str(datetime.now()-start)}")
 elif args.m =="bilstm_mlp_similarity":
-    start = datetime.now()
     model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-sumloss-c", MODEL_MAPPING, experiment.config, dataset, explanations)
-    experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
-    print(f"Time model training: {str(datetime.now()-start)}")
+elif args.m=="bilstm_mlp_improve":
+    model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improveloss-c", MODEL_MAPPING, experiment.config, dataset, explanations)
+
+experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
+print(f"Time model training: {str(datetime.now()-start)}")
 # start = datetime.now()
 # formated_date = start.strftime(DATE_FORMAT)
 # model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config)
