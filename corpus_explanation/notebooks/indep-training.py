@@ -2422,7 +2422,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 f.write(f"{torch.tensor(distr).shape}\n")
                 f.write(str(distr))
                 f.write("\nSUMs\n")
-                f.write(str(torch.sum(torch.tensor(distr), dim=1)).item())
+                f.write(str(torch.sum(torch.tensor(distr), dim=1).item()))
                 f.write("\nHard sums\n")
                 f.write(str([torch.sum(torch.where(d>0.5, torch.ones(d.shape).to(self.device), torch.zeros(d.shape).to(self.device))).item() for d in distr]))
                 f.write("\nIndices\n")
