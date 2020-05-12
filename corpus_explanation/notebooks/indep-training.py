@@ -2520,6 +2520,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
 
     def loss(self, output, target, sth, sthelse, someparam=None):
+        output = torch.sigmoid(output)
         min_contributions = 1 - torch.sign(target - 0.5)*(output-self.raw_predictions)
         return sum(min_contributions)
 
