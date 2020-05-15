@@ -2520,6 +2520,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
 
     def loss(self, output, target, sth, sthelse, alpha=None):
+        bce = nn.BCEWithLogitsLoss().to(self.device)
+        if not alpha:
+            alpha = self.alpha
         output = torch.sigmoid(output)
         min_contributions = 1 - torch.sign(target - 0.5)*(output-self.raw_predictions)
         return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions)/100)
