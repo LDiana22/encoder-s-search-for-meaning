@@ -13,6 +13,9 @@ sklearn==0.22.1
 summa==1.2.0
 
 matplotlib==3.2.1
+# pip install git+https://github.com/LIAAD/yake
+
+
 
 # cc: module load python/3.6
 # python -m pip install <pkg> --user
