@@ -67,6 +67,7 @@ MODEL_MAPPING = "experiments/model_mappings/independent"
 
 MODEL_NAME = "mlp+frozen_bilstm_gumb-emb-one-dict-long"
 
+
 CONFIG = {
     "toy_data": False, # load only a small subset
 
@@ -74,8 +75,8 @@ CONFIG = {
 
     "embedding": "glove",
 
-    "restore_checkpoint" : False,
-    "checkpoint_file": None,
+    "restore_checkpoint" : True,
+    "checkpoint_file": "experiments/v-lstm",
     "train": True,
 
     "dropout": 0.05,
@@ -639,9 +640,9 @@ class VLSTM(AbstractModel):
         """
         super().__init__(id, mapping_file_location, model_args)
         self.device = torch.device('cuda' if model_args["cuda"] else 'cpu')
-
         # UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
         # PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
+
         self.input_size = model_args["max_vocab_size"]
         self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"])
         nn.init.uniform_(self.embedding.weight.data,-1,1)
@@ -712,9 +713,9 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "n_layers": 2,
     "max_dict": 300, 
     "cuda": True,
-    "restore_v_checkpoint" : True,
-    "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
-    "train": True,
+    "restore_checkpoint" : True,
+    "checkpoint_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
+    "train": False,
     "patience":300,
     "epochs":300
 })
@@ -729,8 +730,9 @@ start = datetime.now()
 
 test_instances = dataset.test_data
 model = VLSTM("loaded", MODEL_MAPPING, experiment.config)
-print(f"Time model load: {str(datetime.now()-start)}")
+experiment.with_data(dataset).with_model(model).run()
 
+print(f"Time model load: {str(datetime.now()-start)}")
 
 
 
@@ -752,7 +754,6 @@ def predict_sentiment(sentences):
     return np.array(predictions)
 
 
-
 from lime import lime_text
 explainer = lime_text.LimeTextExplainer(class_names=["pos", "neg"])
 
@@ -763,13 +764,12 @@ start = datetime.now()
 
 with open(LIME_LIST, "w") as pos:
   for i,example in enumerate(test_instances.examples):
-    if i == 500:
+    if i == 10:
       break
-    explanations = explainer.explain_instance(" ".join(example.text), predict_sentiment, labels=[0,1])
-    neg_expl = explanations.as_list(0)
+    explanations = explainer.explain_instance(" ".join(example.text), predict_sentiment, labels=[1])
     pos_expl = explanations.as_list(1)
-    pos.write(f"{i}\n\n{example.text}\n\n--pos--\n\n{pos_expl}\n\n--neg--\n\n{neg_expl}\n\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n")
-    explanations.save_to_file(f"{LIME_HTML}-{i}")
+    pos.write(f"{i}\n\n{' '.join(example.text)}-\n\n{pos_expl}\n\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n")
+    explanations.save_to_file(f"{LIME_HTML}-{i}.html")
 
 
-print(f"Time LIME explain test set: {str(datetime.now()-start)}")
+print(f"Time LIME explain test set: {str(datetime.now()-start)}") #1.41.40
