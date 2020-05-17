@@ -2644,7 +2644,7 @@ elif args.m =="frozen_bilstm_mlp":
 elif args.m =="bilstm_mlp_similarity":
     model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-sumloss-c", MODEL_MAPPING, experiment.config, dataset, explanations)
 elif args.m=="bilstm_mlp_improve":
-    model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improve100loss-alpha{args.a}-c", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improve100loss-alpha{args.a}-c-tr10", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 print(f"Time model training: {str(datetime.now()-start)}")
