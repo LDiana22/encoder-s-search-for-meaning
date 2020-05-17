@@ -2170,6 +2170,12 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 torch.tensor([self.TEXT.vocab.stoi[word] for word in phrase.split()]).to(self.device)
                 for phrase in self.dictionary.keys()], explanations.max_words)
 
+        start = datetime.now()
+        formated_date = start.strftime(DATE_FORMAT)with open("explanations-")
+        with open(f"explanations_dict-MLPAfterIndependentOneDictSimilarity-{formated_date}", "w") as f:
+            f.write(str(self.dictionary.keys()))
+            f.write("\n\n\n**\n\n\n")
+
         self.dropout = nn.Dropout(model_args["dropout"])
 
         self.optimizer = optim.AdamW(list(set(self.parameters()) - set(self.vanilla.parameters())))
@@ -2573,8 +2579,8 @@ parser.add_argument('-d', metavar='dictionary_type', type=str,
 parser.add_argument('-m', metavar='model_type', type=str,
                     help='frozen_mlp_bilstm, frozen_bilstm_mlp, bilstm_mlp_similarity')
 
-# parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
-#                     help='Number of epochs')
+parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
+                    help='Number of epochs')
 
 # parser.add_argument('--td', type=bool, default=CONFIG["toy_data"],
 #                     help='Toy data (load just a small data subset)')
@@ -2605,7 +2611,7 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
     "train": True,
     "max_words_dict": args.p,
     "patience":20,
-    "epochs":20,
+    "epochs": args.e,
     'alpha': args.a,
     "n1": args.n1,
     "n2": args.n2,
