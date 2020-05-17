@@ -2524,7 +2524,6 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
         if not alpha:
             alpha = self.alpha
         if epoch == 10:
-            print("Setting alpha to 0")
             alpha = 0
 
         output = torch.sigmoid(output)
