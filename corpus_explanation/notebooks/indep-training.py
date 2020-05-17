@@ -2463,7 +2463,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             logits=logits.squeeze()
 
             batch.label = batch.label.to(self.device)
-            loss = self.criterion(logits, batch.label, expl, emb_text, self.alpha - self.decay * epoch)
+            loss = self.criterion(logits, batch.label, expl, emb_text, self.alpha - self.decay * epoch, epoch)
             y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
             y_true = batch.label.cpu().numpy()
 
@@ -2505,7 +2505,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
         return metrics
 
-    def loss(self, output, target, explanation, x_emb, alpha=None):
+    def loss(self, output, target, explanation, x_emb, alpha=None, epoch=0):
       bce = nn.BCEWithLogitsLoss().to(self.device)
       if not alpha:
         alpha = self.alpha
@@ -2519,18 +2519,15 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
 class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
 
-    def __init__(self, id, mapping_file_location, model_args, dataset, explanations):
-        super().__init__(id, mapping_file_location, model_args, dataset, explanations)
-        self.train_count = 0
-
-
-    def loss(self, output, target, sth, sthelse, alpha=None):
+    def loss(self, output, target, sth, sthelse, alpha=None, epoch=0):
         self.train_count += 1
         bce = nn.BCEWithLogitsLoss().to(self.device)
         if not alpha:
             alpha = self.alpha
-        if self.train_count >= 10:
-            alpha=0
+        if epoch == 10:
+            print("Setting alpha to 0")
+            alpha = 0
+
         output = torch.sigmoid(output)
         min_contributions = 1 - torch.sign(target - 0.5)*(output-self.raw_predictions)
         return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions)/100)
