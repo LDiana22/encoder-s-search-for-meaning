@@ -2520,7 +2520,6 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
 
     def loss(self, output, target, sth, sthelse, alpha=None, epoch=0):
-        self.train_count += 1
         bce = nn.BCEWithLogitsLoss().to(self.device)
         if not alpha:
             alpha = self.alpha
