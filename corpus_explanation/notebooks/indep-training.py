@@ -365,11 +365,11 @@ class IMDBDataset:
 #     self.train_data, self.test_data =  datasets.IMDB.splits(TEXT, LABEL)
     self.train_data, self.valid_data = self.train_data.split(random_state=random.getstate())
     print("First train text: ")
-    print(f"{self.train_data[0].text} ~ {self.train_data[0].label}")
+    print(f"{' '.join(self.train_data[0].text)} ~ {self.train_data[0].label}")
     print("First val text: ")
-    print(f"{self.valid_data[0].text} ~  {self.valid_data[0].label}")
+    print(f"{' '.join(self.valid_data[0].text)} ~  {self.valid_data[0].label}")
     print("First test text: ")
-    print(f"{self.test_data[0].text} ~  {self.test_data[0].label}")
+    print(f"{' '.join(self.test_data[0].text)} ~  {self.test_data[0].label}")
     print("IMDB...")
     print(f"Train {len(self.train_data)}")
     print(f"Valid {len(self.valid_data)}")
@@ -2179,7 +2179,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         start = datetime.now()
         formated_date = start.strftime(DATE_FORMAT)
         with open(f"explanations_dict-MLPAfterIndependentOneDictSimilarity-{formated_date}", "w") as f:
-            f.write(" ".join(self.dictionary.keys()))
+            f.write(str(self.dictionary.keys()))
             f.write("\n\n\n**\n\n\n")
             print("explanations file")
 
