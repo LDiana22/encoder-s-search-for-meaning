@@ -371,7 +371,7 @@ class IMDBDataset:
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
     with open(f"train-imdb-{formated_date}", "w") as f:
-        f.write("\n".join([f"{' '.join(self.train_data[i].text)} ~  {self.train_data[i].label}" for i in rannge(len(self.train_data))]))
+        f.write("\n".join([f"{' '.join(self.train_data[i].text)} ~  {self.train_data[i].label}" for i in range(len(self.train_data))]))
     with open(f"val-imdb-{formated_date}", "w") as f:
         f.write("\n".join([f"{' '.join(self.valid_data[i].text)} ~  {self.valid_data[i].label}" for i in range(len(self.valid_data))]))
     with open(f"test-imdb-{formated_date}", "w") as f:
