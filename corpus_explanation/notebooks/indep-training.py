@@ -2536,6 +2536,8 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
         if not alpha:
             alpha = self.alpha
         if epoch == 10:
+            alpha = 0.25
+        elif epoch == 15:
             alpha = 0
 
         output = torch.sigmoid(output)
