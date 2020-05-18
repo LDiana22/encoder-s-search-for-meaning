@@ -367,14 +367,15 @@ class IMDBDataset:
     self.train_data, self.valid_data = self.train_data.split(random_state=random.getstate())
     print("First train text: ")
     print(f"{' '.join(self.train_data[0].text)} ~ {self.train_data[0].label}")
+
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
     with open(f"train-imdb-{formated_date}", "w") as f:
-        f.write("\n".join([f"{' '.join(self.train_data[i].text)} ~  {self.train_data[i].label}" for i in len(self.train_data)]))
+        f.write("\n".join([f"{' '.join(self.train_data[i].text)} ~  {self.train_data[i].label}" for i in rannge(len(self.train_data))]))
     with open(f"val-imdb-{formated_date}", "w") as f:
-        f.write("\n".join([f"{' '.join(self.valid_data[i].text)} ~  {self.valid_data[i].label}" for i in len(self.valid_data)]))
+        f.write("\n".join([f"{' '.join(self.valid_data[i].text)} ~  {self.valid_data[i].label}" for i in range(len(self.valid_data))]))
     with open(f"test-imdb-{formated_date}", "w") as f:
-        f.write("\n".join([f"{' '.join(self.test_data[i].text)} ~  {self.test_data[i].label}" for i in len(self.test_data)]))
+        f.write("\n".join([f"{' '.join(self.test_data[i].text)} ~  {self.test_data[i].label}" for i in range(len(self.test_data))]))
     print("First val text: ")
     print(f"{' '.join(self.valid_data[0].text)} ~  {self.valid_data[0].label}")
     print("First test text: ")
@@ -2678,6 +2679,5 @@ try:
     # print(f"Time: {str(datetime.now()-start)}")
 
 except:
-    import sys
-    e = sys.exc_info()[0]
-    print( "<p>Error: %s</p>" % e )
+    import sys, traceback
+    traceback.print_exc(file=sys.stdout)
