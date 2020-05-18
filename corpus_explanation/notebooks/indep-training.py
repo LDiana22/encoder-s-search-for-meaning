@@ -2177,7 +2177,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 for phrase in self.dictionary.keys()], explanations.max_words)
 
         start = datetime.now()
-        formated_date = start.strftime(DATE_FORMAT)with open("explanations-")
+        formated_date = start.strftime(DATE_FORMAT)
         with open(f"explanations_dict-MLPAfterIndependentOneDictSimilarity-{formated_date}", "w") as f:
             f.write(str(self.dictionary.keys()))
             f.write("\n\n\n**\n\n\n")
