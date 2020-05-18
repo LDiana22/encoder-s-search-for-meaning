@@ -2179,8 +2179,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         start = datetime.now()
         formated_date = start.strftime(DATE_FORMAT)
         with open(f"explanations_dict-MLPAfterIndependentOneDictSimilarity-{formated_date}", "w") as f:
-            f.write(str(self.dictionary.keys()))
+            f.write(" ".join(self.dictionary.keys()))
             f.write("\n\n\n**\n\n\n")
+            print("explanations file")
 
         self.dropout = nn.Dropout(model_args["dropout"])
 
@@ -2553,116 +2554,120 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
 import argparse
 from datetime import datetime
 
-
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
-
-
-parser = argparse.ArgumentParser(description='Config params.')
-parser.add_argument('-p', metavar='max_words_dict', type=int, default=CONFIG["max_words_dict"],
-                    help='Max number of words per phrase in explanations dictionary')
-
-parser.add_argument('-n1', metavar='mlp_depth', type=int, default=1,
-                    help='Number of deep layers of the DNN generator - 2*hid->2*hid')
-
-parser.add_argument('-n2', metavar='mlp_depth', type=int, default=1,
-                    help='Number of deep layers of the DNN generator - 2*hid->1*hid')
-
-parser.add_argument('-n3', metavar='mlp_depth', type=int, default=1,
-                    help='Number of deep layers of the DNN generator - 1*hid->1*hid')
+try:
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
 
 
+    parser = argparse.ArgumentParser(description='Config params.')
+    parser.add_argument('-p', metavar='max_words_dict', type=int, default=CONFIG["max_words_dict"],
+                        help='Max number of words per phrase in explanations dictionary')
 
-parser.add_argument('-dr', metavar='dropout', type=float, default=CONFIG["dropout"],
-                    help='Dropout value')
+    parser.add_argument('-n1', metavar='mlp_depth', type=int, default=1,
+                        help='Number of deep layers of the DNN generator - 2*hid->2*hid')
 
-parser.add_argument('-a', metavar='alpha', type=float, default=CONFIG["alpha"],
-                    help='Similarity cost hyperparameter')
+    parser.add_argument('-n2', metavar='mlp_depth', type=int, default=1,
+                        help='Number of deep layers of the DNN generator - 2*hid->1*hid')
 
-parser.add_argument('-decay', metavar='decay', type=float, default=0, help='alpha decay')
-
-parser.add_argument('-d', metavar='dictionary_type', type=str,
-                    help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
-
-parser.add_argument('-m', metavar='model_type', type=str,
-                    help='frozen_mlp_bilstm, frozen_bilstm_mlp, bilstm_mlp_similarity')
-
-parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
-                    help='Number of epochs')
-
-# parser.add_argument('--td', type=bool, default=CONFIG["toy_data"],
-#                     help='Toy data (load just a small data subset)')
-
-# parser.add_argument('--train', dest='train', action='store_true')
-# parser.add_argument('--no_train', dest='train', action='store_false')
-# parser.set_defaults(train=CONFIG["train"])
-
-# parser.add_argument('--restore', dest='restore', action='store_true')
-# parser.set_defaults(restore=CONFIG["restore_checkpoint"])
-
-# parser.add_argument('--cuda', type=bool, default=CONFIG["cuda"])
-args = parser.parse_args()
+    parser.add_argument('-n3', metavar='mlp_depth', type=int, default=1,
+                        help='Number of deep layers of the DNN generator - 1*hid->1*hid')
 
 
-"""# Main"""
+
+    parser.add_argument('-dr', metavar='dropout', type=float, default=CONFIG["dropout"],
+                        help='Dropout value')
+
+    parser.add_argument('-a', metavar='alpha', type=float, default=CONFIG["alpha"],
+                        help='Similarity cost hyperparameter')
+
+    parser.add_argument('-decay', metavar='decay', type=float, default=0, help='alpha decay')
+
+    parser.add_argument('-d', metavar='dictionary_type', type=str,
+                        help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
+
+    parser.add_argument('-m', metavar='model_type', type=str,
+                        help='frozen_mlp_bilstm, frozen_bilstm_mlp, bilstm_mlp_similarity')
+
+    parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
+                        help='Number of epochs')
+
+    # parser.add_argument('--td', type=bool, default=CONFIG["toy_data"],
+    #                     help='Toy data (load just a small data subset)')
+
+    # parser.add_argument('--train', dest='train', action='store_true')
+    # parser.add_argument('--no_train', dest='train', action='store_false')
+    # parser.set_defaults(train=CONFIG["train"])
+
+    # parser.add_argument('--restore', dest='restore', action='store_true')
+    # parser.set_defaults(restore=CONFIG["restore_checkpoint"])
+
+    # parser.add_argument('--cuda', type=bool, default=CONFIG["cuda"])
+    args = parser.parse_args()
 
 
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
-experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-    "hidden_dim": 256,
-    "n_layers": 2,
-    "max_dict": 300, 
-    "cuda": True,
-    "restore_v_checkpoint" : True,
-    "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
-    "train": True,
-    "max_words_dict": args.p,
-    "patience":20,
-    "epochs": args.e,
-    'alpha': args.a,
-    "n1": args.n1,
-    "n2": args.n2,
-    "n3": args.n3,
-    "alpha_decay": args.decay,
-    "dropout": args.dr
-})
-print(experiment.config)
+    """# Main"""
 
-start = datetime.now()
-dataset = IMDBDataset(experiment.config)
-print(f"Time data load: {str(datetime.now()-start)}")
 
-start = datetime.now()
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
+    experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
+        "hidden_dim": 256,
+        "n_layers": 2,
+        "max_dict": 300, 
+        "cuda": True,
+        "restore_v_checkpoint" : True,
+        "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
+        "train": True,
+        "max_words_dict": args.p,
+        "patience":20,
+        "epochs": args.e,
+        'alpha': args.a,
+        "n1": args.n1,
+        "n2": args.n2,
+        "n3": args.n3,
+        "alpha_decay": args.decay,
+        "dropout": args.dr
+    })
+    print(experiment.config)
 
-if args.d=="tfidf":
-    explanations = TFIDF("tfidf", dataset, experiment.config)
-elif args.d=="yake":
-    explanations = DefaultYAKE("default-yake", dataset, experiment.config)
-elif args.d=="textrank":
-    explanations = TextRank(f"textrank-300-5", dataset, experiment.config)
-elif args.d == "rake-inst":
-    explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.p}", dataset, experiment.config)
-elif args.d == "rake-corpus":
-    explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, experiment.config)
+    start = datetime.now()
+    dataset = IMDBDataset(experiment.config)
+    print(f"Time data load: {str(datetime.now()-start)}")
 
-print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()-start)}")
+    start = datetime.now()
 
-start = datetime.now()
-if args.m == "frozen_mlp_bilstm":
-    model = MLPBefore(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
-elif args.m =="frozen_bilstm_mlp":
-    model = MLPIndependentOneDict(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
-elif args.m =="bilstm_mlp_similarity":
-    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-sumloss-c", MODEL_MAPPING, experiment.config, dataset, explanations)
-elif args.m=="bilstm_mlp_improve":
-    model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improve100loss-alpha{args.a}-c-tr10", MODEL_MAPPING, experiment.config, dataset, explanations)
+    if args.d=="tfidf":
+        explanations = TFIDF("tfidf", dataset, experiment.config)
+    elif args.d=="yake":
+        explanations = DefaultYAKE("default-yake", dataset, experiment.config)
+    elif args.d=="textrank":
+        explanations = TextRank(f"textrank-300-5", dataset, experiment.config)
+    elif args.d == "rake-inst":
+        explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.p}", dataset, experiment.config)
+    elif args.d == "rake-corpus":
+        explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, experiment.config)
 
-experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
-print(f"Time model training: {str(datetime.now()-start)}")
-# start = datetime.now()
-# formated_date = start.strftime(DATE_FORMAT)
-# model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config)
-# experiment.with_data(dataset).with_model(model).run()
+    print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()-start)}")
 
-# print(f"Time: {str(datetime.now()-start)}")
+    start = datetime.now()
+    if args.m == "frozen_mlp_bilstm":
+        model = MLPBefore(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    elif args.m =="frozen_bilstm_mlp":
+        model = MLPIndependentOneDict(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    elif args.m =="bilstm_mlp_similarity":
+        model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-sumloss-c", MODEL_MAPPING, experiment.config, dataset, explanations)
+    elif args.m=="bilstm_mlp_improve":
+        model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improve100loss-alpha{args.a}-c-tr10", MODEL_MAPPING, experiment.config, dataset, explanations)
+
+    experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
+    print(f"Time model training: {str(datetime.now()-start)}")
+    # start = datetime.now()
+    # formated_date = start.strftime(DATE_FORMAT)
+    # model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config)
+    # experiment.with_data(dataset).with_model(model).run()
+
+    # print(f"Time: {str(datetime.now()-start)}")
+
+except:
+    e = sys.exc_info()[0]
+    print( "<p>Error: %s</p>" % e )
