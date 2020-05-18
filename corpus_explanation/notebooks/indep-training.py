@@ -365,21 +365,16 @@ class IMDBDataset:
     self.test_data = self._load_data(TEXT, LABEL, IMDB_PATH, "test")
 #     self.train_data, self.test_data =  datasets.IMDB.splits(TEXT, LABEL)
     self.train_data, self.valid_data = self.train_data.split(random_state=random.getstate())
-    print("First train text: ")
-    print(f"{' '.join(self.train_data[0].text)} ~ {self.train_data[0].label}")
 
-    start = datetime.now()
-    formated_date = start.strftime(DATE_FORMAT)
-    with open(f"train-imdb-{formated_date}", "w") as f:
-        f.write("\n".join([f"{' '.join(self.train_data[i].text)} ~  {self.train_data[i].label}" for i in range(len(self.train_data))]))
-    with open(f"val-imdb-{formated_date}", "w") as f:
-        f.write("\n".join([f"{' '.join(self.valid_data[i].text)} ~  {self.valid_data[i].label}" for i in range(len(self.valid_data))]))
-    with open(f"test-imdb-{formated_date}", "w") as f:
-        f.write("\n".join([f"{' '.join(self.test_data[i].text)} ~  {self.test_data[i].label}" for i in range(len(self.test_data))]))
-    print("First val text: ")
-    print(f"{' '.join(self.valid_data[0].text)} ~  {self.valid_data[0].label}")
-    print("First test text: ")
-    print(f"{' '.join(self.test_data[0].text)} ~  {self.test_data[0].label}")
+    # start = datetime.now()
+    # formated_date = start.strftime(DATE_FORMAT)
+    # with open(f"train-imdb-{formated_date}", "w") as f:
+    #     f.write("\n".join([f"{' '.join(self.train_data[i].text)} ~  {self.train_data[i].label}" for i in range(len(self.train_data))]))
+    # with open(f"val-imdb-{formated_date}", "w") as f:
+    #     f.write("\n".join([f"{' '.join(self.valid_data[i].text)} ~  {self.valid_data[i].label}" for i in range(len(self.valid_data))]))
+    # with open(f"test-imdb-{formated_date}", "w") as f:
+    #     f.write("\n".join([f"{' '.join(self.test_data[i].text)} ~  {self.test_data[i].label}" for i in range(len(self.test_data))]))
+
     print("IMDB...")
     print(f"Train {len(self.train_data)}")
     print(f"Valid {len(self.valid_data)}")
@@ -2173,8 +2168,12 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
 
         dictionaries = explanations.get_dict()
+        start = datetime.now()
+        formated_date = start.strftime(DATE_FORMAT)
         self.dictionary = copy.deepcopy(dictionaries['pos'])
         self.dictionary.update(dictionaries['neg'])
+        with open(f"dict-{formated_date}", "w") as f:
+            f.write(f"{dictionaries}")
         print("Dict size", len(self.dictionary.keys()))
         self.lin1s = [nn.Linear(2*model_args["hidden_dim"], 2*model_args["hidden_dim"]).to(self.device) for i in range(model_args["n1"])]
         self.relu = nn.ReLU() 
