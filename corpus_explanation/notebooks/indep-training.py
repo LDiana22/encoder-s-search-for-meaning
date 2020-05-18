@@ -367,7 +367,6 @@ class IMDBDataset:
     self.train_data, self.valid_data = self.train_data.split(random_state=random.getstate())
     print("First train text: ")
     print(f"{' '.join(self.train_data[0].text)} ~ {self.train_data[0].label}")
-
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
     with open(f"train-imdb-{formated_date}", "w") as f:
@@ -2679,5 +2678,6 @@ try:
     # print(f"Time: {str(datetime.now()-start)}")
 
 except:
+    import sys
     e = sys.exc_info()[0]
     print( "<p>Error: %s</p>" % e )
