@@ -2454,7 +2454,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 logits = logits.squeeze()
 
                 e_len += len(text)
-                contributions = torch.sign(batch.label - 0.5)*(predictions-self.raw_predictions)
+                contributions = torch.sign(batch.label - 0.5)*(logits-self.raw_predictions)
                 e_contributions += sum(contributions)
 
                 predictions = torch.sigmoid(logits)
