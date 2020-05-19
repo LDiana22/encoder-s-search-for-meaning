@@ -580,12 +580,13 @@ class AbstractDictionary:
     return result
 
   def _save_dict(self):
-
-    file = os.path.join(self.path, "dictionary.h5")
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
+    file = os.path.join(self.path, f"dictionary-{formated_date}.h5")
     with open(file, "wb") as f: 
         f.write(pickle.dumps(self.dictionary))
 
-    file = os.path.join(self.path, "dictionary.txt")
+    file = os.path.join(self.path, "dictionary-{formated_date}.txt")
     with open(file, "w", encoding="utf-8") as f:
         for text_class, e_dict in self.dictionary.items():
             f.write("**************\n")
