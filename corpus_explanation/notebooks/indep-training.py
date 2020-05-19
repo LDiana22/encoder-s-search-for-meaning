@@ -562,6 +562,10 @@ class AbstractDictionary:
     if not os.path.isdir(self.path):
         os.makedirs(self.path)
 
+
+  def load_dict(self, file):
+    return pickle.load(open(file, "rb"))
+
   def filter_phrases_max_words_by_occurence(self, phrases, corpus, max_phrases):
     """
     phrases: list of phrases
@@ -795,9 +799,13 @@ class RakeCorpusPolarityFiltered(AbstractDictionary):
     self.max_dict = args.get("max_dict", None)
     self.max_words = args["max_words_dict"]
     # self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
-    self.dictionary = self.get_dict()
+    if args["load_dict"]:
+        print(f"Loading RakeCorpusPolarityFiltered from: {args["load_dict"]}")
+        self.dictionary = self.load_dict(args["dict_checkpoint"])
+    else:
+        self.dictionary = self.get_dict()
+        self._save_dict()
     self.tokenizer = spacy.load("en")
-    self._save_dict()
 
   def get_dict(self):
     """
@@ -2686,7 +2694,9 @@ try:
         "n2": args.n2,
         "n3": args.n3,
         "alpha_decay": args.decay,
-        "dropout": args.dr
+        "dropout": args.dr, 
+        "load_dict":True,
+        "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5"
     })
     print(experiment.config)
 
