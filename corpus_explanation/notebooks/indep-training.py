@@ -800,7 +800,7 @@ class RakeCorpusPolarityFiltered(AbstractDictionary):
     self.max_words = args["max_words_dict"]
     # self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
     if args["load_dict"]:
-        print(f"Loading RakeCorpusPolarityFiltered from: {args["load_dict"]}")
+        print(f"Loading RakeCorpusPolarityFiltered from: {args['load_dict']}")
         self.dictionary = self.load_dict(args["dict_checkpoint"])
         print(f"Loaded dict keys: {[f'{key}:{len(self.dictionary[key].keys())}' for key in self.dictionary.keys()]}")
     else:
