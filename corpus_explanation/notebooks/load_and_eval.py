@@ -1111,7 +1111,7 @@ checkpoint = "experiments/independent/bilstm_mlp_improve-dnn15-1-30-decay0.0-L2-
 
 start = datetime.now()
 dataset = IMDBDataset(CONFIG)
-_,_, test_iterator = self.data.iterators()
+_,_, test_iterator = dataset.iterators()
 print(f"Time data load: {str(datetime.now()-start)}")
 
 explanations = RakeCorpusPolarityFiltered(f"rake-polarity", dataset, CONFIG)
