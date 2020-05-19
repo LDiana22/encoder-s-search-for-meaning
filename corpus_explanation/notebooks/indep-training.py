@@ -2408,7 +2408,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         #embedded = [sent len, batch size, emb dim]
 
         output, hidden = self.vanilla.raw_forward(embedded, text_lengths)
-        self.raw_predictions = output.squueze()
+        self.raw_predictions = output.squeeze()
         #output = [sent len, batch size, hid dim * num directions]
         #output over padding tokens are zero tensors
 
@@ -2612,7 +2612,7 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
 
         # output = torch.sigmoid(output)
         min_contributions = 1 - torch.sign(target - 0.5)*(output-self.raw_predictions)
-        return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions)/100)
+        return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions))
 
 ##########################################################################################################
 ############################################End of MLP before training ##################################
