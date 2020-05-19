@@ -47,6 +47,7 @@ import yake
 from summa import keywords
 from rake_nltk import Rake
 
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
@@ -755,8 +756,6 @@ class RakeMaxWordsExplanations(AbstractDictionary):
     # {"all":{word:freq}} OR
     {"pos":{word:freq}, "neg":{word:freq}}
     """
-#     import ipdb
-#     ipdb.set_trace(context=20)
     if hasattr(self, 'dictionary') and not self.dictionary:
         return self.dictionary
     dictionary = OrderedDict()
@@ -786,6 +785,57 @@ class RakeMaxWordsExplanations(AbstractDictionary):
         dictionary[text_class] = OrderedDict(ChainMap(*result)) # len(re.findall(".*".join(phrase.split()), class_corpus))
 
     return dictionary
+
+
+class RakeCorpusPolarityFiltered(AbstractDictionary):
+
+  def __init__(self, id, dataset, args): 
+    super().__init__(id, dataset, args)
+    self.max_dict = args.get("max_dict", None)
+    self.max_words = args["max_words_dict"]
+    # self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
+    self.dictionary = self.get_dict()
+    self.tokenizer = spacy.load("en")
+    self._save_dict()
+
+  def get_dict(self):
+    """
+    Builds a dictionary of keywords for each label.
+    # {"all":{word:freq}} OR
+    {"pos":{word:freq}, "neg":{word:freq}}
+    """
+    if hasattr(self, 'dictionary') and not self.dictionary:
+        return self.dictionary
+    dictionary = OrderedDict()
+    corpus = self.dataset.get_training_corpus()
+    
+    sentiment = SentimentIntensityAnalyzer()
+    
+    max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
+    for text_class in corpus.keys():
+        dictionary[text_class] = OrderedDict()
+        class_corpus = ".\n".join(corpus[text_class])
+        phrases = []
+        for i in range(1, self.max_words+1):
+            rake = Rake(max_length=self.max_words)
+            rake.extract_keywords_from_sentences(corpus[text_class])
+            phrases += rake.get_ranked_phrases()
+#         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
+#             f.write("\n".join(phrases))
+        # extract only phrases with a night polarity degree
+        ph_polarity = [(phrase, abs(analyser.polarity_scores(phrase)['compound'])) for phrase in phrases if abs(analyser.polarity_scores(phrase)['compound'])>0.5]
+        ph_polarity.sort(reverse=True, key=lambda x: x[1])
+        # rank based on ferquency and eliminate freq 0
+        if not max_per_class:
+            max_per_class = len(ph_polarity)
+        ph_freq = [{phrase: class_corpus.count(phrase)} for phrase in ph_polarity[:max_per_class] if class_corpus.count(phrase)>0]
+        
+        # tok_words = self.tokenizer(class_corpus)
+        # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
+        dictionary[text_class] = OrderedDict(ChainMap(*result)) # len(re.findall(".*".join(phrase.split()), class_corpus))
+
+    return dictionary
+
 
 """## TextRank"""
 
@@ -2622,7 +2672,7 @@ try:
     experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
         "hidden_dim": 256,
         "n_layers": 2,
-        "max_dict": 300, 
+        "max_dict": 1000, 
         "cuda": True,
         "restore_v_checkpoint" : True,
         "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
@@ -2655,6 +2705,8 @@ try:
         explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.p}", dataset, experiment.config)
     elif args.d == "rake-corpus":
         explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, experiment.config)
+    elif args.d == "rake-polarity":
+        explanations = RakeCorpusPolarityFiltered(f"rake-polarity", dataset, experiment.config)
 
     print(f"Dict {args.d}")
     d = explanations.get_dict()
