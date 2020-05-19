@@ -828,7 +828,7 @@ class RakeCorpusPolarityFiltered(AbstractDictionary):
         # rank based on ferquency and eliminate freq 0
         if not max_per_class:
             max_per_class = len(ph_polarity)
-        ph_freq = [{phrase: class_corpus.count(phrase)} for phrase in ph_polarity[:max_per_class] if class_corpus.count(phrase)>0]
+        ph_freq = [{phrase[0]: class_corpus.count(phrase[0])} for phrase in ph_polarity[:max_per_class] if class_corpus.count(phrase[0])>0]
         
         # tok_words = self.tokenizer(class_corpus)
         # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
