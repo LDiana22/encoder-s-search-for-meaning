@@ -823,7 +823,7 @@ class RakeCorpusPolarityFiltered(AbstractDictionary):
 #         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
 #             f.write("\n".join(phrases))
         # extract only phrases with a night polarity degree
-        ph_polarity = [(phrase, abs(analyser.polarity_scores(phrase)['compound'])) for phrase in phrases if abs(analyser.polarity_scores(phrase)['compound'])>0.5]
+        ph_polarity = [(phrase, abs(sentiment.polarity_scores(phrase)['compound'])) for phrase in phrases if abs(sentiment.polarity_scores(phrase)['compound'])>0.5]
         ph_polarity.sort(reverse=True, key=lambda x: x[1])
         # rank based on ferquency and eliminate freq 0
         if not max_per_class:
