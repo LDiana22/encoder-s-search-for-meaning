@@ -802,6 +802,7 @@ class RakeCorpusPolarityFiltered(AbstractDictionary):
     if args["load_dict"]:
         print(f"Loading RakeCorpusPolarityFiltered from: {args["load_dict"]}")
         self.dictionary = self.load_dict(args["dict_checkpoint"])
+        print(f"Loaded dict keys: {[f'{key}:{len(self.dictionary[key].keys())}' for key in self.dictionary.keys()]}")
     else:
         self.dictionary = self.get_dict()
         self._save_dict()
