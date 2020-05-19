@@ -2644,7 +2644,7 @@ try:
     print(f"Time data load: {str(datetime.now()-start)}")
 
     start = datetime.now()
-
+    formated_date = start.strftime(DATE_FORMAT)
     if args.d=="tfidf":
         explanations = TFIDF("tfidf", dataset, experiment.config)
     elif args.d=="yake":
@@ -2656,7 +2656,18 @@ try:
     elif args.d == "rake-corpus":
         explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, experiment.config)
 
+    print(f"Dict {args.d}")
+    d = explanations.get_dict()
+    print(str(d.keys()))
+    print(str(d.items()))
+    
+    with open(f"dict/{args.d}-{args.p}-{formated_date}", "w") as f:
+        for key in d.keys():
+            f.write(f"{key}\n**\n")
+            f.write("\n".join([f"{e} ~ {f}" for e,f in d[key].items()]))
+            f.write(f"\n\n------------\n\n")
     print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()-start)}")
+    exit()
 
     start = datetime.now()
     if args.m == "frozen_mlp_bilstm":
