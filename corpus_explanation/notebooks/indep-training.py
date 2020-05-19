@@ -2408,7 +2408,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         #embedded = [sent len, batch size, emb dim]
 
         output, hidden = self.vanilla.raw_forward(embedded, text_lengths)
-        self.raw_predictions = output
+        self.raw_predictions = output.squueze()
         #output = [sent len, batch size, hid dim * num directions]
         #output over padding tokens are zero tensors
 
