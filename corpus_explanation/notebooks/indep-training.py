@@ -2408,7 +2408,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         #embedded = [sent len, batch size, emb dim]
 
         output, hidden = self.vanilla.raw_forward(embedded, text_lengths)
-        self.raw_predictions = torch.sigmoid(output).squeeze()
+        self.raw_predictions = output
         #output = [sent len, batch size, hid dim * num directions]
         #output over padding tokens are zero tensors
 
@@ -2452,12 +2452,12 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 text, text_lengths = batch.text
                 logits, (expl_emb, text_emb) = self.forward(text, text_lengths, prefix)
                 logits = logits.squeeze()
-                predictions = torch.sigmoid(logits)
 
                 e_len += len(text)
                 contributions = torch.sign(batch.label - 0.5)*(predictions-self.raw_predictions)
                 e_contributions += sum(contributions)
 
+                predictions = torch.sigmoid(logits)
 
                 batch.label = batch.label.to(self.device)
 
@@ -2550,7 +2550,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             y_true = batch.label.cpu().numpy()
 
             e_len += len(text)
-            e_contributions += sum(torch.sign(batch.label - 0.5)*(torch.sigmoid(logits)-self.raw_predictions))
+            e_contributions += sum(torch.sign(batch.label - 0.5)*(logits-self.raw_predictions))
 
             #metrics
             acc = accuracy_score(y_true, y_pred)
@@ -2605,12 +2605,12 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
         bce = nn.BCEWithLogitsLoss().to(self.device)
         if not alpha:
             alpha = self.alpha
-        if epoch == 10:
-            alpha = 0.25
-        elif epoch == 15:
-            alpha = 0
+        # if epoch == 10:
+        #     alpha = 0.25
+        # elif epoch == 15:
+        #     alpha = 0
 
-        output = torch.sigmoid(output)
+        # output = torch.sigmoid(output)
         min_contributions = 1 - torch.sign(target - 0.5)*(output-self.raw_predictions)
         return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions)/100)
 
@@ -2731,7 +2731,6 @@ try:
             f.write("\n".join([f"{e} ~ {f}" for e,f in d[key].items()]))
             f.write(f"\n\n------------\n\n")
     print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()-start)}")
-    exit()
 
     start = datetime.now()
     if args.m == "frozen_mlp_bilstm":
