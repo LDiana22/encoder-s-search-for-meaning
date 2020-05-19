@@ -54,6 +54,78 @@ np.random.seed(0)
 random.seed(0)
 
 
+def plot_training_metrics(plot_path, train_loss, valid_loss, training_acc, valid_acc):
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    ax1.plot(train_loss, 'r', label='Train')
+    ax1.plot(valid_loss, 'b', label="Validation")
+    ax1.set_title('Loss curve')
+    ax1.legend()
+
+    ax2.plot(training_acc, 'r', label='Train')
+    ax2.plot(valid_acc, 'b', label="Valid")
+    ax2.set_title('Accuracy curve')
+    ax2.legend()
+
+    fig.savefig(plot_path)
+        
+def plot_contributions(plot_path, train_c, valid_c): 
+    plt.plot(train_c, 'r', label="Train")
+    plt.plot(valid_c, 'b', label="Valid")
+    plt.title('Epochs avg contributions')
+    plt.legend()
+
+    plt.savefig(plot_path)       
+
+def _extract_date(f):
+    date_string = re.search(f"^{DATE_REGEXP}",f)[0]
+    return datetime.strptime(date_string, DATE_FORMAT)
+
+def _extract_date(f):
+    date_string = re.search(f"^{DATE_REGEXP}",f)[0]
+    return datetime.strptime(date_string, DATE_FORMAT)
+
+def get_max_index_checkpoint(path):
+  """
+  Return int: suffix of checkpoint name
+  """
+  list_of_files = os.listdir(path)
+  # list_of_files = ["checkpoint_1","checkpoint_10","checkpoint_2", "checkpoint_22"]
+
+  n = max([_extract_number(f) for f in list_of_files]) if list_of_files else None
+  if n is None:
+    return 0
+
+  return n
+
+def get_last_checkpoint_by_date(path):
+  """
+  Return file_name with the largest suffix number
+  """
+  list_of_files = os.listdir(path)
+  print(list_of_files)
+
+  file_dates = {_extract_date(f): f for f in list_of_files}
+  if file_dates:
+    key = sorted(file_dates.keys(), reverse=True)[0]
+    return file_dates[key]
+  else:
+    return None
+
+
+def remove_br_tag(token):
+    return re.sub(r"br|(/><.*)|(</?(.*)/?>)|(<?(.*)/?>)|(<?/?(.*?)/?>?)", "", token)
+
+def remove_non_alpha(token):
+    if token.isalpha():
+        return token
+    return ""
+
+def preprocess(token):
+    token = remove_br_tag(token)
+    token = remove_non_alpha(token)
+    return token
+
+preprocess_pipeline = Pipeline(preprocess)
 
 
 class AbstractDictionary:
@@ -1038,11 +1110,11 @@ formated_date = start.strftime(DATE_FORMAT)
 checkpoint = "experiments/independent/bilstm_mlp_improve-dnn15-1-30-decay0.0-L2-dr0.3-eval1-textrank-improve100loss-alpha0.5-c-tr10/snapshot/2020-05-17_18-53-24_e18"
 
 start = datetime.now()
-dataset = IMDBDataset(experiment.config)
+dataset = IMDBDataset(CONFIG)
 _,_, test_iterator = self.data.iterators()
 print(f"Time data load: {str(datetime.now()-start)}")
 
-explanations = RakeCorpusPolarityFiltered(f"rake-polarity", dataset, experiment.config)
+explanations = RakeCorpusPolarityFiltered(f"rake-polarity", dataset, CONFIG)
 
 
 model = model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improve100loss-alpha{args.a}-c-tr10", MODEL_MAPPING, CONFIG, dataset, explanations)
