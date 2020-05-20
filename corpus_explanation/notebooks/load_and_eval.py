@@ -1257,7 +1257,7 @@ checkpoint = "experiments/independent/bilstm_mlp_improve-dnn15-1-30-decay0.0-L2-
 
 start = datetime.now()
 dataset = IMDBDataset(CONFIG)
-_,_, test_iterator = dataset.iterators()
+train_it, valid_it, test_iterator = dataset.iterators()
 print(f"Time data load: {str(datetime.now()-start)}")
 
 explanations = RakeCorpusPolarityFiltered(f"rake-polarity", dataset, CONFIG)
@@ -1277,8 +1277,18 @@ elif args.m == "frozen":
   for param in model.parameters():
       param.requires_grad=False
 
+print("Evaluating train data...")
+train_metrics = model.evaluate(train_iterator, "train_f")
+print("Train metrics:")
+print(train_metrics)
+
 print("Evaluating...")
-metrics = model.evaluate(test_iterator, "test_f")
+valid_metrics = model.evaluate(valid_iterator, "valid_f")
+print("Valid metrics:")
+print(valid_metrics)
+
+print("Evaluating...")
+test_metrics = model.evaluate(test_iterator, "test_f")
 print("Test metrics:")
-print(metrics)
-model.save_results(metrics, "test")
+print(test_metrics)
+# model.save_results(metrics, "test")
