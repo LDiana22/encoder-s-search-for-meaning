@@ -490,6 +490,138 @@ class AbstractModel(nn.Module):
         return metrics
 
 
+
+class FrozenVLSTM(AbstractModel):
+    """
+    Baseline - no generator model
+    """
+    def __init__(self, id, mapping_file_location, model_args):
+        """
+        id: Model id
+        mapping_file_location: directory to store the file "model_id" 
+                               that containes the hyperparameters values and 
+                               the model summary
+        logs_location: directory for the logs location of the model
+        model_args: hyperparameters of the model
+        """
+        super().__init__(id, mapping_file_location, model_args)
+        self.device = torch.device('cuda' if model_args["cuda"] else 'cpu')
+
+        # UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
+        # PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
+        self.input_size = model_args["max_vocab_size"]
+        self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"])
+        nn.init.uniform_(self.embedding.weight.data,-1,1)
+
+        self.lstm = nn.LSTM(model_args["emb_dim"], 
+                           model_args["hidden_dim"], 
+                           num_layers=model_args["n_layers"], 
+                           bidirectional=True, 
+                           dropout=model_args["dropout"])
+        self.lin = nn.Linear(2*model_args["hidden_dim"], model_args["output_dim"])
+        self.dropout = nn.Dropout(model_args["dropout"])
+
+        self.optimizer = optim.Adam(self.parameters())
+        self.criterion = nn.BCEWithLogitsLoss().to(self.device)
+
+        self = self.to(self.device)
+        super().save_model_type(self)
+
+    def forward(self, text, text_lengths, defaults=None):
+        text = text.to(self.device)
+        #text = [sent len, batch size]
+        embedded = self.dropout(self.embedding(text))
+
+        #embedded = [sent len, batch size, emb dim]
+
+        return self.raw_forward(embedded, text_lengths)[0]
+
+    def raw_forward(self, embedded, text_lengths):
+        #pack sequence
+        packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_lengths)
+        packed_output, (hidden, cell) = self.lstm(packed_embedded)
+
+        #unpack sequence
+        output, output_lengths = nn.utils.rnn.pad_packed_sequence(packed_output)
+
+        #output = [sent len, batch size, hid dim * num directions]
+        #output over padding tokens are zero tensors
+
+        #hidden = [num layers * num directions, batch size, hid dim]
+        #cell = [num layers * num directions, batch size, hid dim]
+
+        #concat the final forward (hidden[-2,:,:]) and backward (hidden[-1,:,:]) hidden layers
+        #and apply dropout
+
+        hidden = self.dropout(torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1))
+
+        #hidden = [batch size, hid dim * num directions]
+
+        return self.lin(hidden).to(self.device), hidden
+
+
+    def train_model(self, iterator, args=None):
+        """
+        metrics.keys(): [train_acc, train_loss, train_prec,
+                        train_rec, train_f1, train_macrof1,
+                        train_microf1, train_weightedf1]
+        e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
+        """
+        e_loss = 0
+        e_acc, e_prec, e_rec = 0,0,0
+        e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+
+        self.train()
+
+        for batch in iterator:
+            self.optimizer.zero_grad()
+            text, text_lengths = batch.text
+            logits = self.forward(text, text_lengths)[0].squeeze()
+            batch.label = batch.label.to(self.device)
+            loss = self.criterion(logits, batch.label)
+
+            y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
+            y_true = batch.label.cpu().numpy()
+            #metrics
+            acc = accuracy_score(y_true, y_pred)
+            prec = precision_score(y_true, y_pred)
+            rec = recall_score(y_true, y_pred)
+            f1 = f1_score(y_true, y_pred)
+            macrof1 = f1_score(y_true, y_pred, average='macro')
+            microf1 = f1_score(y_true, y_pred, average='micro')
+            wf1 = f1_score(y_true, y_pred, average='weighted')
+
+            loss.backward()
+            self.optimizer.step()
+
+            e_loss += loss.item()
+            e_acc += acc
+            e_prec += prec
+            e_rec += rec
+            e_f1 += f1
+            e_macrof1 += macrof1
+            e_microf1 += microf1
+            e_wf1 += wf1
+
+        metrics ={}
+        size = len(iterator)
+        metrics["train_loss"] = e_loss/size
+        metrics["train_acc"] = e_acc/size
+        metrics["train_prec"] = e_prec/size
+        metrics["train_rec"] = e_rec/size
+        metrics["train_f1"] = e_f1/size
+        metrics["train_macrof1"] = e_macrof1/size
+        metrics["train_microf1"] = e_microf1/size
+        metrics["train_weightedf1"] = e_wf1/size
+
+        return metrics
+
+
+
+
+
+
+
 from math import log
 
 class MLPAfterIndependentOneDictSimilarity(AbstractModel):
@@ -1100,6 +1232,19 @@ CONFIG = {
 }
 print(CONFIG)
 
+
+parser = argparse.ArgumentParser(description='Config params.')
+
+parser.add_argument('-m', metavar='model_type', type=str,
+                    help='frozen_mlp_bilstm, frozen_bilstm_mlp, bilstm_mlp_similarity')
+
+args = parser.parse_args()
+
+
+
+
+
+
 # %% [code]
 DATE_FORMAT = '%Y-%m-%d_%H-%M-%S'
 DATE_REGEXP = '[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}'
@@ -1116,12 +1261,20 @@ print(f"Time data load: {str(datetime.now()-start)}")
 
 explanations = RakeCorpusPolarityFiltered(f"rake-polarity", dataset, CONFIG)
 
-
-model = model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improve100loss-alpha{args.a}-c-tr10", MODEL_MAPPING, CONFIG, dataset, explanations)
-print(model_args["checkpoint_v_file"])
-model.load_checkpoint(checkpoint)
-for param in model.parameters():
-    param.requires_grad=False
+if args.m == "mlp_improve":
+	model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improve100loss-alpha{args.a}-c-tr10", MODEL_MAPPING, CONFIG, dataset, explanations)
+	print(model_args["checkpoint_v_file"])
+	model.load_checkpoint(checkpoint)
+	for param in model.parameters():
+	    param.requires_grad=False
+elif args.m == "frozen":
+  vanilla_args = copy.deepcopy(CONFIG)
+  vanilla_args["restore_checkpoint"] = True
+  self.vanilla = FrozenVLSTM("frozen-bi-lstm", MODEL_MAPPING, vanilla_args)
+  print(model_args["checkpoint_v_file"])
+  self.vanilla.load_checkpoint(model_args["checkpoint_v_file"])
+  for param in self.vanilla.parameters():
+      param.requires_grad=False
 
 print("Evaluating...")
 metrics = model.evaluate(test_iterator, "test_f")
