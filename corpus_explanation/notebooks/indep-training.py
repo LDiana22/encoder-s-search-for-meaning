@@ -2408,7 +2408,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         #embedded = [sent len, batch size, emb dim]
 
         output, hidden = self.vanilla.raw_forward(embedded, text_lengths)
-        self.raw_predictions = output.squeeze()
+        self.raw_predictions = torch.sigmoid(output).squeeze()
         #output = [sent len, batch size, hid dim * num directions]
         #output over padding tokens are zero tensors
 
@@ -2452,12 +2452,12 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 text, text_lengths = batch.text
                 logits, (expl_emb, text_emb) = self.forward(text, text_lengths, prefix)
                 logits = logits.squeeze()
+                predictions = torch.sigmoid(logits)
 
                 e_len += len(text)
-                contributions = torch.sign(batch.label - 0.5)*(logits-self.raw_predictions)
+                contributions = torch.sign(batch.label - 0.5)*(predictions-self.raw_predictions)
                 e_contributions += sum(contributions)
 
-                predictions = torch.sigmoid(logits)
 
                 batch.label = batch.label.to(self.device)
 
@@ -2550,7 +2550,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             y_true = batch.label.cpu().numpy()
 
             e_len += len(text)
-            e_contributions += sum(torch.sign(batch.label - 0.5)*(logits-self.raw_predictions))
+            e_contributions += sum(torch.sign(batch.label - 0.5)*(torch.sigmoid(logits)-self.raw_predictions))
 
             #metrics
             acc = accuracy_score(y_true, y_pred)
