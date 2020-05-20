@@ -1232,6 +1232,7 @@ CONFIG = {
 }
 print(CONFIG)
 
+import argparse
 
 parser = argparse.ArgumentParser(description='Config params.')
 
@@ -1270,10 +1271,10 @@ if args.m == "mlp_improve":
 elif args.m == "frozen":
   vanilla_args = copy.deepcopy(CONFIG)
   vanilla_args["restore_checkpoint"] = True
-  self.vanilla = FrozenVLSTM("frozen-bi-lstm", MODEL_MAPPING, vanilla_args)
-  print(model_args["checkpoint_v_file"])
-  self.vanilla.load_checkpoint(model_args["checkpoint_v_file"])
-  for param in self.vanilla.parameters():
+  model = FrozenVLSTM("frozen-bi-lstm", MODEL_MAPPING, vanilla_args)
+  print(vanilla_args["checkpoint_v_file"])
+  model.load_checkpoint(vanilla_args["checkpoint_v_file"])
+  for param in model.parameters():
       param.requires_grad=False
 
 print("Evaluating...")
