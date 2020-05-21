@@ -2255,7 +2255,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
         self.dropout = nn.Dropout(model_args["dropout"])
 
-        self.optimizer = optim.AdamW(list(set(self.parameters()) - set(self.vanilla.parameters())), lr=model_args["lr"], weight_decay=model_args["l2_wd"])
+        self.optimizer = optim.AdamW(list(set(self.parameters()) - set(self.vanilla.parameters())), lr=model_args["lr_init"], weight_decay=model_args["l2_wd"])
         # self.optimizer = optim.Adam(list(set(self.parameters()) - set(self.vanilla.parameters())))
         self.criterion = self.loss
 
