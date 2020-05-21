@@ -89,7 +89,7 @@ CONFIG = {
     "epochs": 200,
 
     "objective": "cross_entropy",
-    "init_lr": 0.001,
+    "lr": 0.001,
     "l2_wd": 0,
 
     "gumbel_decay": 1e-5,
@@ -2255,7 +2255,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
         self.dropout = nn.Dropout(model_args["dropout"])
 
-        self.optimizer = optim.AdamW(list(set(self.parameters()) - set(self.vanilla.parameters())), lr=model_args["lr_init"], weight_decay=model_args["l2_wd"])
+        self.optimizer = optim.AdamW(list(set(self.parameters()) - set(self.vanilla.parameters())), lr=model_args["lr"], weight_decay=model_args["l2_wd"])
         # self.optimizer = optim.Adam(list(set(self.parameters()) - set(self.vanilla.parameters())))
         self.criterion = self.loss
 
@@ -2662,7 +2662,7 @@ try:
     parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
                         help='Number of epochs')
 
-    parser.add_argument('-lr', metavar='learning_rate', type=float, default=CONFIG["init_lr"], help='Optimizer\'s lr')
+    parser.add_argument('-lr', metavar='learning_rate', type=float, default=CONFIG["lr"], help='Optimizer\'s lr')
 
     parser.add_argument('-l2', metavar='L2 weight decay', type=float, default=CONFIG["l2_wd"], help='L2 weight decay optimizer')
 
@@ -2705,7 +2705,7 @@ try:
         "load_dict":True,
         "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
 
-        "init_lr": args.lr,
+        "lr": args.lr,
         "l2_wd": args.l2
     })
     print(experiment.config)
