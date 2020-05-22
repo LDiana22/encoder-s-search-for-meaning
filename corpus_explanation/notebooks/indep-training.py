@@ -2616,6 +2616,23 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
         # min_contributions = abs(output-self.raw_predictions)
         return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions)/10)
 
+
+class LSTMAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
+
+    def loss(self, output, target, sth, sthelse, alpha=None, epoch=0):
+        bce = nn.BCEWithLogitsLoss().to(self.device)
+        if not alpha:
+            alpha = self.alpha
+        # if epoch == 10:
+        #     alpha = 0.25
+        # elif epoch == 15:
+        #     alpha = 0
+
+        # output = torch.sigmoid(output)
+        min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
+        # min_contributions = abs(output-self.raw_predictions)
+        return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions))
+
 ##########################################################################################################
 ############################################End of MLP before training ##################################
 ##########################################################################################################
