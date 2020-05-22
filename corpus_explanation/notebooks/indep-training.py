@@ -2612,9 +2612,9 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
         #     alpha = 0
 
         # output = torch.sigmoid(output)
-        # min_contributions = 1 - torch.sign(target - 0.5)*(output-self.raw_predictions)
-        min_contributions = abs(output-self.raw_predictions)
-        return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions))
+        min_contributions = 1 - torch.sign(target - 0.5)*(output-self.raw_predictions)
+        # min_contributions = abs(output-self.raw_predictions)
+        return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions)/10)
 
 ##########################################################################################################
 ############################################End of MLP before training ##################################
