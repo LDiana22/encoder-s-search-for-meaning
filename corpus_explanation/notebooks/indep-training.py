@@ -2631,7 +2631,8 @@ class LSTMAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
         # output = torch.sigmoid(output)
         min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
         # min_contributions = abs(output-self.raw_predictions)
-        return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions)/10)
+        return alpha*bce(output, target) + (1-alpha)*(mean(min_contributions))
+        # return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions)/10)
 
 ##########################################################################################################
 ############################################End of MLP before training ##################################
