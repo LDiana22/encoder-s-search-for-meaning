@@ -261,8 +261,8 @@ class Experiment(object):
     def train_model(self):
         training_start_time = datetime.now()
 
-        training_losses, training_acc = [], []
-        v_losses, v_acc = [], []
+        training_losses, training_acc, training_raw_acc = [], [], []
+        v_losses, v_acc, v_raw_acc = [], [], []
         training_contrib, v_contrib = [], []
 
         best_valid_loss = float('inf')
@@ -279,9 +279,11 @@ class Experiment(object):
 
             training_losses.append(train_metrics["train_loss"])
             training_acc.append(train_metrics["train_acc"])
+            training_raw_acc.append(train_metrics["train_raw_acc"])
             training_contrib.append(train_metrics["train_avg_contributions"])
             v_losses.append(valid_metrics["valid_loss"])
             v_acc.append(valid_metrics["valid_acc"])
+            v_raw_acc.append(valid_metrics["valid_raw_acc"])
             v_contrib.append(valid_metrics["valid_avg_contributions"])
 
             if valid_metrics["valid_loss"] < best_valid_loss:
@@ -301,6 +303,7 @@ class Experiment(object):
             print(f'\tTrain Loss: {train_metrics["train_loss"]:.3f} | Train Acc: {train_metrics["train_acc"]*100:.2f}%')
             print(f'\t Val. Loss: {valid_metrics["valid_loss"]:.3f} |  Val. Acc: {valid_metrics["valid_acc"]*100:.2f}%')
             print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]} |  Val. avgC: {valid_metrics["valid_avg_contributions"]}')
+            print(f'\tTrain raw_acc: {train_metrics["train_raw_acc"]} | Val. Raw_acc: {valid_metrics["valid_raw_acc"]*100:.2f}%')
 
 
         print(f'Training Time: {str(datetime.now()-training_start_time)}')
@@ -312,8 +315,10 @@ class Experiment(object):
             "training_time":  str(datetime.now()-training_start_time),
             "training_loss": training_losses,
             "training_acc": training_acc,
+            "training_raw_acc": training_raw_acc,
             "valid_loss": v_losses,
             "valid_acc": v_acc
+            "valid_raw_acc": v_raw_acc
          }
         plot_path = self.model.get_plot_path("train_plot")
         print(f"Plotting at {plot_path}")
@@ -2445,7 +2450,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             distr = torch.tensor([]).to(self.device)
         self.eval()
         e_loss = 0
-        e_acc, e_prec, e_rec = 0,0,0
+        e_acc, e_raw_acc, e_prec, e_rec = 0,0,0,0
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
         e_contributions, e_len = 0,0
         with torch.no_grad():
@@ -2478,6 +2483,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                     #     distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
                     distr = torch.cat((distr, self.expl_distributions))
                 acc = accuracy_score(y_true, y_pred)
+                raw_acc = accuracy_score(y_true, self.raw_predictions)
                 prec = precision_score(y_true, y_pred)
                 rec = recall_score(y_true, y_pred)
                 f1 = f1_score(y_true, y_pred)
@@ -2487,6 +2493,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
                 e_loss += loss.item()
                 e_acc += acc
+                e_raw_acc += raw_acc
                 e_prec += prec
                 e_rec += rec
                 e_f1 += f1
@@ -2516,6 +2523,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         size = len(iterator)
         metrics[f"{prefix}_loss"] = e_loss/size
         metrics[f"{prefix}_acc"] = e_acc/size
+        metrics[f"{prefix}_raw_acc"] = e_raw_acc/size
         metrics[f"{prefix}_prec"] = e_prec/size
         metrics[f"{prefix}_rec"] = e_rec/size
         metrics[f"{prefix}_f1"] = e_f1/size
@@ -2534,7 +2542,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
         """
         e_loss = 0
-        e_acc, e_prec, e_rec = 0,0,0
+        e_acc, e_raw_acc, e_prec, e_rec = 0,0,0,0
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
         e_contributions, e_len = 0, 0 
 
@@ -2554,6 +2562,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             e_contributions += sum(torch.sign(batch.label - 0.5)*(torch.sigmoid(logits)-self.raw_predictions))
 
             #metrics
+            raw_acc = accuracy_score(y_true, self.raw_predictions)
             acc = accuracy_score(y_true, y_pred)
             prec = precision_score(y_true, y_pred)
             rec = recall_score(y_true, y_pred)
@@ -2567,6 +2576,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
             e_loss += loss.item()
             e_acc += acc
+            e_raw_acc += raw_acc
             e_prec += prec
             e_rec += rec
             e_f1 += f1
@@ -2578,6 +2588,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         size = len(iterator)
         metrics["train_loss"] = e_loss/size
         metrics["train_acc"] = e_acc/size
+        metrics["train_raw_acc"] = e_raw_acc/size
         metrics["train_prec"] = e_prec/size
         metrics["train_rec"] = e_rec/size
         metrics["train_f1"] = e_f1/size
@@ -2604,6 +2615,7 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
 
     def loss(self, output, target, sth, sthelse, alpha=None, epoch=0):
         bce = nn.BCEWithLogitsLoss().to(self.device)
+        simple_bce = nn.BCELoss().to(self.device)
         if not alpha:
             alpha = self.alpha
         # if epoch == 10:
@@ -2614,6 +2626,7 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
         # output = torch.sigmoid(output)
         min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
         # min_contributions = abs(output-self.raw_predictions)
+        print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
         return alpha*bce(output, target) + (1-alpha)*(torch.mean(min_contributions))
 
 
