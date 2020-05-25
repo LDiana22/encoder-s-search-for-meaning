@@ -317,7 +317,7 @@ class Experiment(object):
             "training_acc": training_acc,
             "training_raw_acc": training_raw_acc,
             "valid_loss": v_losses,
-            "valid_acc": v_acc
+            "valid_acc": v_acc,
             "valid_raw_acc": v_raw_acc
          }
         plot_path = self.model.get_plot_path("train_plot")
@@ -2414,7 +2414,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         #embedded = [sent len, batch size, emb dim]
 
         output, hidden = self.vanilla.raw_forward(embedded, text_lengths)
-        self.raw_predictions = torch.sigmoid(output).squeeze()
+        self.raw_predictions = torch.sigmoid(output).squeeze().detach()
         #output = [sent len, batch size, hid dim * num directions]
         #output over padding tokens are zero tensors
 
