@@ -2614,7 +2614,7 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
         # output = torch.sigmoid(output)
         min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
         # min_contributions = abs(output-self.raw_predictions)
-        return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions))
+        return alpha*bce(output, target) + (1-alpha)*(np.mean(min_contributions))
 
 
 class LSTMAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
@@ -2767,8 +2767,8 @@ try:
         model = MLPIndependentOneDict(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
     elif args.m =="bilstm_mlp_similarity":
         model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-sumloss-c", MODEL_MAPPING, experiment.config, dataset, explanations)
-    elif args.m=="bilstm_mlp_improve":
-        model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improve100loss-alpha{args.a}-c-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    elif "bilstm_mlp_improve" in args.m:
+        model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
