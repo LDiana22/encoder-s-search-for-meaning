@@ -303,7 +303,7 @@ class Experiment(object):
             print(f'\tTrain Loss: {train_metrics["train_loss"]:.3f} | Train Acc: {train_metrics["train_acc"]*100:.2f}%')
             print(f'\t Val. Loss: {valid_metrics["valid_loss"]:.3f} |  Val. Acc: {valid_metrics["valid_acc"]*100:.2f}%')
             print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]} |  Val. avgC: {valid_metrics["valid_avg_contributions"]}')
-            print(f'\tTrain raw_acc: {train_metrics["train_raw_acc"]} | Val. Raw_acc: {valid_metrics["valid_raw_acc"]*100:.2f}%')
+            print(f'\tTrain raw_acc: {train_metrics["train_raw_acc"]*100:.2f} | Val. Raw_acc: {valid_metrics["valid_raw_acc"]*100:.2f}%')
 
 
         print(f'Training Time: {str(datetime.now()-training_start_time)}')
@@ -2626,10 +2626,7 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
         # output = torch.sigmoid(output)
         min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
         # min_contributions = abs(output-self.raw_predictions)
-        print(f"Loss raw_range: {min(self.raw_predictions), max(self.raw_predictions)}")
-        # import ipdb
-        # ipdb.set_trace(context=10)
-        # print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
+        print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
         return alpha*bce(output, target) + (1-alpha)*(torch.mean(min_contributions))
 
 
