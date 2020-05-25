@@ -2483,7 +2483,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                     #     distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
                     distr = torch.cat((distr, self.expl_distributions))
                 acc = accuracy_score(y_true, y_pred)
-                raw_acc = accuracy_score(y_true, self.raw_predictions.cpu().numpy())
+                raw_acc = accuracy_score(y_true, torch.round(self.raw_predictions).cpu().numpy())
                 prec = precision_score(y_true, y_pred)
                 rec = recall_score(y_true, y_pred)
                 f1 = f1_score(y_true, y_pred)
@@ -2562,7 +2562,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             e_contributions += sum(torch.sign(batch.label - 0.5)*(torch.sigmoid(logits)-self.raw_predictions))
 
             #metrics
-            raw_acc = accuracy_score(y_true, self.raw_predictions.cpu().numpy())
+            raw_acc = accuracy_score(y_true, torch.round(self.raw_predictions).cpu().numpy())
             acc = accuracy_score(y_true, y_pred)
             prec = precision_score(y_true, y_pred)
             rec = recall_score(y_true, y_pred)
