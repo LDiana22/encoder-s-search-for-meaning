@@ -75,8 +75,8 @@ CONFIG = {
 
     "embedding": "glove",
 
-    "restore_checkpoint" : False,
-    "checkpoint_file": None,
+    "restore_checkpoint" : True,
+    "checkpoint_file": "experiments/independent/bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improveloss_mean-alpha0.0-c-e25-2020-05-25_19-22-13/snapshot/2020-05-25_e_20",
     "train": True,
 
     "dropout": 0.05,
@@ -1587,6 +1587,7 @@ class MLPGen(AbstractModel):
             with open(e_file, "w") as f:
                 f.write(expl)
                 f.write("".join(e_list))
+                f.write("\n")
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(str(distr))
                 f.write("\nSUMs\n")
@@ -1641,6 +1642,7 @@ class FrozenVLSTM(AbstractModel):
         self.lin = nn.Linear(2*model_args["hidden_dim"], model_args["output_dim"])
         self.dropout = nn.Dropout(model_args["dropout"])
 
+        # self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()))
         self.optimizer = optim.Adam(self.parameters())
         self.criterion = nn.BCEWithLogitsLoss().to(self.device)
 
@@ -2046,6 +2048,7 @@ class MLPIndependentOneDict(AbstractModel):
             with open(e_file, "w") as f:
                 f.write(expl)
                 f.write("".join(e_list))
+                f.write("\n")
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(f"{torch.tensor(distr).shape}\n")
                 f.write(str(distr))
@@ -2215,7 +2218,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             for param in self.vanilla.parameters():
                 param.requires_grad=False
             self.vanilla.eval()
-            print("Vanilla frozen")
+            print(f"Vanilla frozen, params: {self.vanilla.parameters()}")
         else:
             self.vanilla = FrozenVLSTM("bi-lstm", mapping_file_location, model_args)
 
@@ -2508,6 +2511,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             with open(e_file, "w") as f:
                 f.write(expl)
                 f.write("".join(e_list))
+                f.write("\n")
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(f"{torch.tensor(distr).shape}\n")
                 f.write(str(distr))
@@ -2626,7 +2630,7 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
         # output = torch.sigmoid(output)
         min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
         # min_contributions = abs(output-self.raw_predictions)
-        print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
+        # print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
         return alpha*bce(output, target) + (1-alpha)*(torch.mean(min_contributions))
 
 
