@@ -63,8 +63,10 @@ random.seed(0)
 VECTOR_CACHE = "../.vector_cache"
 UCI_PATH = "../.data/uci"
 IMDB_PATH = "../.data/imdb/aclImdb"
-PREFIX_DIR = "experiments/independent"
-MODEL_MAPPING = "experiments/model_mappings/independent"
+#PREFIX_DIR = "experiments/independent"
+#MODEL_MAPPING = "experiments/model_mappings/independent"
+PREFIX_DIR = "experiments/debug"
+MODEL_MAPPING = "experiments/debug/model_mapping"
 
 MODEL_NAME = "mlp+frozen_bilstm_gumb-emb-one-dict-long"
 
@@ -76,7 +78,7 @@ CONFIG = {
     "embedding": "glove",
 
     "restore_checkpoint" : False,
-    "checkpoint_file": None,#"experiments/independent/bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improveloss_mean-alpha0.0-c-e25-2020-05-25_19-22-13/snapshot/2020-05-25_e_20",
+    "checkpoint_file": None, #"experiments/independent/bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improveloss_mean-alpha0.0-c-e25-2020-05-25_19-22-13/snapshot/2020-05-25_e20",
     "train": True,
 
     "dropout": 0.05,
@@ -2215,7 +2217,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             self.vanilla = FrozenVLSTM("frozen-bi-lstm", mapping_file_location, vanilla_args)
             print(model_args["checkpoint_v_file"])
             self.vanilla.load_checkpoint(model_args["checkpoint_v_file"])
-            print(f"Vanilla frozen, params {len(self.vanilla.parameters())}: {[name for name, param in self.vanilla.named_parameters()]}")
+            print(f"Vanilla frozen, params {len(list(self.vanilla.parameters()))}: {[name for name, param in self.vanilla.named_parameters()]}")
+            import ipdb
+            ipdb.set_trace(context=20)
             for param in self.vanilla.parameters():
                 param.requires_grad=False
             self.vanilla.eval()
@@ -2550,6 +2554,8 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
         e_contributions, e_len = 0, 0 
 
+        count = 0
+        batch_raw_accs = []
         self.train()
         for batch in iterator:
             self.optimizer.zero_grad()
@@ -2557,6 +2563,14 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             logits, (expl, emb_text) = self.forward(text, text_lengths)
             logits=logits.squeeze()
 
+            if count < 3 and epoch<3:
+               with open(f"debug/batch-{count}-e{epoch}", "w") as f:
+                    f.write(str(text))
+                    f.write("\n~\n")
+                    f.write(str(self.raw_predictions))
+                    f.write("\n\n**\n\n")
+            count += 1
+            
             batch.label = batch.label.to(self.device)
             loss = self.criterion(logits, batch.label, expl, emb_text, self.alpha - self.decay * epoch, epoch)
             y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
@@ -2567,6 +2581,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
             #metrics
             raw_acc = accuracy_score(y_true, torch.round(self.raw_predictions).cpu().numpy())
+            
+            batch_raw_accs.append(raw_acc)
+            
             acc = accuracy_score(y_true, y_pred)
             prec = precision_score(y_true, y_pred)
             rec = recall_score(y_true, y_pred)
@@ -2588,6 +2605,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             e_microf1 += microf1
             e_wf1 += wf1
 
+        with open(f"debug/train-raw-accs-{epoch}.txt", "w") as f:
+            f.write(str(batch_raw_accs))
+            f.write("\n\n**\n\n")
         metrics ={}
         size = len(iterator)
         metrics["train_loss"] = e_loss/size
