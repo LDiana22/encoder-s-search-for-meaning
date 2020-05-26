@@ -75,8 +75,8 @@ CONFIG = {
 
     "embedding": "glove",
 
-    "restore_checkpoint" : True,
-    "checkpoint_file": "experiments/independent/bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improveloss_mean-alpha0.0-c-e25-2020-05-25_19-22-13/snapshot/2020-05-25_e_20",
+    "restore_checkpoint" : False,
+    "checkpoint_file": None,#"experiments/independent/bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improveloss_mean-alpha0.0-c-e25-2020-05-25_19-22-13/snapshot/2020-05-25_e_20",
     "train": True,
 
     "dropout": 0.05,
