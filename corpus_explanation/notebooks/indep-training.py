@@ -2218,8 +2218,6 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             print(model_args["checkpoint_v_file"])
             self.vanilla.load_checkpoint(model_args["checkpoint_v_file"])
             print(f"Vanilla frozen, params {len(list(self.vanilla.parameters()))}: {[name for name, param in self.vanilla.named_parameters()]}")
-            import ipdb
-            ipdb.set_trace(context=20)
             for param in self.vanilla.parameters():
                 param.requires_grad=False
             self.vanilla.eval()
@@ -2745,7 +2743,7 @@ try:
         "n_layers": 2,
         "max_dict": 1000, 
         "cuda": True,
-        "restore_v_checkpoint" : True,
+        "restore_v_checkpoint" : False,
         "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
         "train": True,
         "max_words_dict": args.p,
@@ -2805,7 +2803,7 @@ try:
     elif args.m =="bilstm_mlp_similarity":
         model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-sumloss-c", MODEL_MAPPING, experiment.config, dataset, explanations)
     elif "bilstm_mlp_improve" in args.m:
-        model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
+        model = MLPAfterIndependentOneDictImprove(f"jointlytrained-{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
