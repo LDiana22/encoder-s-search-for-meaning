@@ -2215,7 +2215,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             self.vanilla = FrozenVLSTM("frozen-bi-lstm", mapping_file_location, vanilla_args)
             print(model_args["checkpoint_v_file"])
             self.vanilla.load_checkpoint(model_args["checkpoint_v_file"])
-            print(f"Vanilla frozen, params: {[name for name, param in self.vanilla.named_parameters()]}")
+            print(f"Vanilla frozen, params {len(self.vanilla.parameters())}: {[name for name, param in self.vanilla.named_parameters()]}")
             for param in self.vanilla.parameters():
                 param.requires_grad=False
             self.vanilla.eval()
