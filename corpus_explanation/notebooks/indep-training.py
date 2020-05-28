@@ -2166,12 +2166,16 @@ class MLPBefore(MLPIndependentOneDict):
         activ = self.relu(activ)
         activ = self.dropout(activ)
 
+    #maxsent, batch,dict
     expl_distribution_pos = self.lin4(activ)
 
     # expl_dist_pos -  sent, batch,dict -> dict batch sent
     expl_dist_pos = torch.transpose(expl_distribution_pos, 0,2)
+
+    expl_dist_pos = F.pad(expl_dist_pos, (0, self.max_sent_len-expl_distribution_pos.shape[2]))
+    
     #dict batch 1
-    expl_distribution_pos = self.aggregation_pos(expl_distribution_pos)
+    expl_distribution_pos = self.aggregation_pos(expl_dist_pos)
     #batch dict 1
     expl_distribution_pos = torch.transpose(expl_distribution_pos,0,1)
 
