@@ -2152,6 +2152,8 @@ class MLPBefore(MLPIndependentOneDict):
     #[batch,dict_size, max_words* emd_dim]
     vocab_emb_pos = vocab_emb_pos.reshape(vocab_emb_pos.size(0),vocab_emb_pos.size(1),-1)
 
+    # activ [max_sent, batch, hid]
+
     for lin in self.lin1s:
         activ = lin(activ)
         activ = self.relu(activ)
@@ -2165,6 +2167,14 @@ class MLPBefore(MLPIndependentOneDict):
         activ = self.dropout(activ)
 
     expl_distribution_pos = self.lin4(activ)
+
+    # expl_dist_pos -  sent, batch,dict -> dict batch sent
+    expl_dist_pos = torch.transpose(expl_distribution_pos, 0,2)
+    #dict batch 1
+    expl_distribution_pos = self.aggregation_pos(expl_distribution_pos)
+    #batch dict 1
+    expl_distribution_pos = torch.transpose(expl_distribution_pos,0,1)
+
     expl_distribution_pos = F.gumbel_softmax(expl_distribution_pos, hard=True)
     
     # [batch, max_sent, dict_size] (pad right)
@@ -2190,10 +2200,14 @@ class MLPBefore(MLPIndependentOneDict):
     #[batch, dict]
     # expl_distributions.append(torch.squeeze(expl_distribution_pos))
 
-    # [batch,1, dict]
-    e_dist_pos = torch.transpose(expl_distribution_pos.unsqueeze(-1),1,2)
+
+
+    # [max_sent, dict, batch,1]
+    # e_dist_pos = torch.transpose(expl_distribution_pos.unsqueeze(-1),0,1) #batch, sent, dict
+    
     # batch, 1, dict x batch, dict, emb (max_words*emb_dim)
-    expl_pos = torch.bmm(e_dist_pos, vocab_emb_pos)
+    
+    expl_pos = torch.bmm(vocab_emb_pos, expl_distribution_pos)
 
     # #[batch,max_words,emb_dim]
     # context_vector.append(torch.max(expl_pos, dim=1).values.reshape(batch_size, v_emb_pos.size(1),-1))
