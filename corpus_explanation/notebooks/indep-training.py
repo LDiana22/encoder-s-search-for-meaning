@@ -2088,6 +2088,7 @@ class MLPBefore(MLPIndependentOneDict):
   """
   def __init__(self, id, mapping_file_location, model_args, dataset, explanations):
     super().__init__(id, mapping_file_location, model_args, dataset, explanations)
+    self.lin = nn.Linear(self.emb_dim, 2*model_args["hidden_dim"])
     self.lin1s = [nn.Linear(2*model_args["hidden_dim"], 2*model_args["hidden_dim"]).to(self.device) for i in range(model_args["n1"])]
     self.relu = nn.ReLU() 
     self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
@@ -2103,6 +2104,9 @@ class MLPBefore(MLPIndependentOneDict):
     #text = [sent len, batch size]
 
     embedded = self.dropout(self.embedding(text))
+    embedded = self.lin(embedded)
+    embedded = self.relu(embedded)
+    embedded = self.dropout(embedded)
 
     #embedded = [sent len, batch size, emb dim]
     # expl_activ = self.lin(embedded)
