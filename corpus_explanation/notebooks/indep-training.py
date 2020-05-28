@@ -2088,7 +2088,12 @@ class MLPBefore(MLPIndependentOneDict):
   """
   def __init__(self, id, mapping_file_location, model_args, dataset, explanations):
     super().__init__(id, mapping_file_location, model_args, dataset, explanations)
-    self.lin_pos = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
+    self.lin1s = [nn.Linear(2*model_args["hidden_dim"], 2*model_args["hidden_dim"]).to(self.device) for i in range(model_args["n1"])]
+    self.relu = nn.ReLU() 
+    self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
+    self.lin3s = [nn.Linear(model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device) for i in range(model_args["n3"])]
+    self.lin4 = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
+
 
   
   def forward(self, text, text_lengths, expl_file=None):
@@ -2100,20 +2105,23 @@ class MLPBefore(MLPIndependentOneDict):
     embedded = self.dropout(self.embedding(text))
 
     #embedded = [sent len, batch size, emb dim]
-    expl_activ = self.lin(embedded)
-    # expl_activ = self.lin21(embedded)
-    expl_activ = self.relu(expl_activ)
-    expl_activ = self.dropout(expl_activ)
+    # expl_activ = self.lin(embedded)
+    # # expl_activ = self.lin21(embedded)
+    # expl_activ = self.relu(expl_activ)
+    # expl_activ = self.dropout(expl_activ)
     # expl_activ = self.lin2(expl_activ)
     # expl_activ = self.relu(expl_activ)
     # # expl_activ = nn.Dropout(0.2)(expl_activ)
 
-    final_dict, expl_distributions = self.gen(expl_activ, batch_size)
-    final_expl = final_dict[0]
+    final_dict, expl_distributions = self.gen(embedded, batch_size)
+    # final_expl = final_dict[0]
 
     x = torch.transpose(embedded,0,1)
+    sep = torch.zeros((batch_size,1,self.emb_dim), device=self.device)
+    concat_input = torch.cat((x,torch.cat((sep, expl_emb), 1)),1) 
+    
     # [batch, sent_len+2*len(final_dict), emb_dim]
-    concat_input = torch.cat((x,final_dict),1)
+    # concat_input = torch.cat((x,final_dict),1)
     #[sent_len+len(final_dict), batch, emb_dim]
     final_input = torch.transpose(concat_input,0,1)
 
@@ -2140,29 +2148,38 @@ class MLPBefore(MLPIndependentOneDict):
     #[batch,dict_size, max_words* emd_dim]
     vocab_emb_pos = vocab_emb_pos.reshape(vocab_emb_pos.size(0),vocab_emb_pos.size(1),-1)
 
-    # [sent, batch, dict_size]
-    expl_activ_pos = self.lin_pos(activ)
+    for lin in self.lin1s:
+        activ = lin(activ)
+        activ = self.relu(activ)
+        activ = self.dropout(activ)
+    activ = self.lin2(activ)
+    activ = self.relu(activ)
+    activ = self.dropout(activ)
+    for lin in self.lin3s:
+        activ = lin(activ)
+        activ = self.relu(activ)
+        activ = self.dropout(activ)
 
-    # [batch, sent, dict_size]
-    expl_distribution_pos = torch.transpose(expl_activ_pos, 0, 1)
+    expl_distribution_pos = self.lin4(activ)
+    expl_distribution_pos = F.gumbel_softmax(expl_distribution_pos, hard=True)
     
     # [batch, max_sent, dict_size] (pad right)
-    size1, size2, size3 = expl_distribution_pos.shape[0], expl_distribution_pos.shape[1], expl_distribution_pos.shape[2]
-    if self.max_sent_len>=size2:
-        # 0-padding
-        expl_distribution_pos = torch.cat([expl_distribution_pos, expl_distribution_pos.new(size1, self.max_sent_len-size2, size3).zero_()],1).to(self.device)
-    else:
-        # trimming
-        expl_distribution_pos = expl_distribution_pos[:,:self.max_sent_len,:]
+    # size1, size2, size3 = expl_distribution_pos.shape[0], expl_distribution_pos.shape[1], expl_distribution_pos.shape[2]
+    # if self.max_sent_len>=size2:
+    #     # 0-padding
+    #     expl_distribution_pos = torch.cat([expl_distribution_pos, expl_distribution_pos.new(size1, self.max_sent_len-size2, size3).zero_()],1).to(self.device)
+    # else:
+    #     # trimming
+    #     expl_distribution_pos = expl_distribution_pos[:,:self.max_sent_len,:]
     
 
 
-    # [batch,dict_size, sent]
-    e_pos = torch.transpose(expl_distribution_pos,1,2)
+    # [batch,1, dict_size]
+    # e_pos = torch.transpose(expl_distribution_pos,1,2)
     # [batch, dict, 1]
-    expl_distribution_pos = self.aggregation_pos(e_pos).squeeze()
-    # expl_distribution = self.sigmoid(expl_distribution) # on dim 1
-    expl_distribution_pos = F.gumbel_softmax(expl_distribution_pos, hard=True)
+    # expl_distribution_pos = self.aggregation_pos(e_pos).squeeze()
+    # # expl_distribution = self.sigmoid(expl_distribution) # on dim 1
+    # expl_distribution_pos = F.gumbel_softmax(expl_distribution_pos, hard=True)
 
     # expl_distribution_pos = self.softmax(expl_distribution_pos)
     # expl_distribution_neg = self.softmax(expl_distribution_neg)
@@ -2175,16 +2192,17 @@ class MLPBefore(MLPIndependentOneDict):
     expl_pos = torch.bmm(e_dist_pos, vocab_emb_pos)
 
     # #[batch,max_words,emb_dim]
-    context_vector.append(torch.max(expl_pos, dim=1).values.reshape(batch_size, v_emb_pos.size(1),-1))
+    # context_vector.append(torch.max(expl_pos, dim=1).values.reshape(batch_size, v_emb_pos.size(1),-1))
 
+    expl = expl_pos.reshape(batch_size, v_emb_pos.size(1),-1)
 
-    sep = torch.zeros((batch_size,1,self.emb_dim), device=self.device)
+    # sep = torch.zeros((batch_size,1,self.emb_dim), device=self.device)
     # [batch, 1+1, emb_dim]
     # final_dict.append(torch.cat((sep, context_vector[0]), 1))
 
-    return torch.cat((sep, context_vector[0]), 1), torch.squeeze(expl_distribution_pos)
+    # return torch.cat((sep, context_vector[0]), 1), torch.squeeze(expl_distribution_pos)
 
-
+    return expl, expl_distribution_pos
 
 ##########################################################################################################
 ############################################biLSTM  + MLP  + similarity ##################################
