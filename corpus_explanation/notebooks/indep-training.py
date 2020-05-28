@@ -2135,7 +2135,7 @@ class MLPBefore(MLPIndependentOneDict):
 
     self.expl_distributions = expl_distributions
 
-    return output
+    return output, (expl_emb, x)
 
   def gen(self, activ, batch_size):
     context_vector, final_dict, expl_distributions = [], [], []
@@ -2203,6 +2203,202 @@ class MLPBefore(MLPIndependentOneDict):
     # return torch.cat((sep, context_vector[0]), 1), torch.squeeze(expl_distribution_pos)
 
     return expl, expl_distribution_pos
+
+
+    def loss(self, output, target, sth, sthelse, alpha=None, epoch=0):
+        bce = nn.BCEWithLogitsLoss().to(self.device)
+        simple_bce = nn.BCELoss().to(self.device)
+        if not alpha:
+            alpha = self.alpha
+        # if epoch == 10:
+        #     alpha = 0.25
+        # elif epoch == 15:
+        #     alpha = 0
+
+        # output = torch.sigmoid(output)
+        min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
+        # min_contributions = abs(output-self.raw_predictions)
+        # print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
+        return alpha*bce(output, target) + (1-alpha)*(torch.mean(min_contributions))
+
+
+    def evaluate(self, iterator, prefix="test"):
+        save = False # save explanations
+        if prefix=="test_f":
+            save = True
+            expl = "text, explanation (freq:confidence), prediction, true label\n"
+            e_list = []
+            # distr = [torch.tensor([]).to(self.device) for i in range(len(self.dictionaries.keys()))]
+            distr = torch.tensor([]).to(self.device)
+        self.eval()
+        e_loss = 0
+        e_acc, e_raw_acc, e_prec, e_rec = 0,0,0,0
+        e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        e_contributions, e_len = 0,0
+        with torch.no_grad():
+            for batch in iterator:
+                text, text_lengths = batch.text
+                logits, (expl_emb, text_emb) = self.forward(text, text_lengths, prefix)
+                logits = logits.squeeze()
+                predictions = torch.sigmoid(logits)
+
+                e_len += len(text)
+                contributions = torch.sign(batch.label - 0.5)*(predictions-self.raw_predictions)
+                e_contributions += sum(contributions)
+
+
+                batch.label = batch.label.to(self.device)
+
+
+                loss = self.criterion(logits, batch.label, expl_emb, text_emb)
+
+
+                predictions = torch.round(predictions)
+                y_pred = predictions.detach().cpu().numpy()
+                y_true = batch.label.cpu().numpy()
+                self.predictions = y_pred
+                self.true_labels = y_true
+                if save:
+                    text_expl= self.get_explanations(text)
+                    e_list.append("\n".join([f"{review} ~ {text_expl[review]} ~ C: {contributions[i].data}" for i, review in enumerate(text_expl.keys())]))
+                    # for class_idx in range(len(distr)):
+                    #     distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
+                    distr = torch.cat((distr, self.expl_distributions))
+                acc = accuracy_score(y_true, y_pred)
+                raw_acc = accuracy_score(y_true, torch.round(self.raw_predictions).cpu().numpy())
+                prec = precision_score(y_true, y_pred)
+                rec = recall_score(y_true, y_pred)
+                f1 = f1_score(y_true, y_pred)
+                macrof1 = f1_score(y_true, y_pred, average='macro')
+                microf1 = f1_score(y_true, y_pred, average='micro')
+                wf1 = f1_score(y_true, y_pred, average='weighted')
+
+                e_loss += loss.item()
+                e_acc += acc
+                e_raw_acc += raw_acc
+                e_prec += prec
+                e_rec += rec
+                e_f1 += f1
+                e_macrof1 += macrof1
+                e_microf1 += microf1
+                e_wf1 += wf1
+        if save:
+            start = datetime.now()
+            formated_date = start.strftime(DATE_FORMAT)
+            e_file = f"{self.explanations_path}_test-{self.epoch}_{formated_date}.txt"
+            print(f"Saving explanations at {e_file}")
+            with open(e_file, "w") as f:
+                f.write(expl)
+                f.write("".join(e_list))
+                f.write("\n")
+            with open(f"{self.explanations_path}_distr.txt", "w") as f:
+                f.write(f"{torch.tensor(distr).shape}\n")
+                f.write(str(distr))
+                f.write("\nSUMs\n")
+                f.write(str(torch.sum(torch.tensor(distr), dim=1)))
+                f.write("\nHard sums\n")
+                f.write(str([torch.sum(torch.where(d>0.5, torch.ones(d.shape).to(self.device), torch.zeros(d.shape).to(self.device))).item() for d in distr]))
+                f.write("\nIndices\n")
+                f.write(str(distr.nonzero().data[:,1]))
+
+
+        metrics ={}
+        size = len(iterator)
+        metrics[f"{prefix}_loss"] = e_loss/size
+        metrics[f"{prefix}_acc"] = e_acc/size
+        metrics[f"{prefix}_raw_acc"] = e_raw_acc/size
+        metrics[f"{prefix}_prec"] = e_prec/size
+        metrics[f"{prefix}_rec"] = e_rec/size
+        metrics[f"{prefix}_f1"] = e_f1/size
+        metrics[f"{prefix}_macrof1"] = e_macrof1/size
+        metrics[f"{prefix}_microf1"] = e_microf1/size
+        metrics[f"{prefix}_weightedf1"] = e_wf1/size
+        metrics[f"{prefix}_avg_contributions"] = (e_contributions/e_len).item()
+        return metrics
+
+
+    def train_model(self, iterator, epoch):
+        """
+        metrics.keys(): [train_acc, train_loss, train_prec,
+                        train_rec, train_f1, train_macrof1,
+                        train_microf1, train_weightedf1]
+        e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
+        """
+        e_loss = 0
+        e_acc, e_raw_acc, e_prec, e_rec = 0,0,0,0
+        e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        e_contributions, e_len = 0, 0 
+
+        count = 0
+        batch_raw_accs = []
+        self.train()
+        for batch in iterator:
+            self.optimizer.zero_grad()
+            text, text_lengths = batch.text
+            logits, (expl, emb_text) = self.forward(text, text_lengths)
+            logits=logits.squeeze()
+
+            if count < 3 and epoch<3:
+               with open(f"debug/batch-{count}-e{epoch}", "w") as f:
+                    f.write(str(text))
+                    f.write("\n~\n")
+                    f.write(str(self.raw_predictions))
+                    f.write("\n\n**\n\n")
+            count += 1
+            
+            batch.label = batch.label.to(self.device)
+            loss = self.criterion(logits, batch.label, expl, emb_text, self.alpha - self.decay * epoch, epoch)
+            y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
+            y_true = batch.label.cpu().numpy()
+
+            e_len += len(text)
+            e_contributions += sum(torch.sign(batch.label - 0.5)*(torch.sigmoid(logits)-self.raw_predictions))
+
+            #metrics
+            raw_acc = accuracy_score(y_true, torch.round(self.raw_predictions).cpu().numpy())
+            
+            batch_raw_accs.append(raw_acc)
+            
+            acc = accuracy_score(y_true, y_pred)
+            prec = precision_score(y_true, y_pred)
+            rec = recall_score(y_true, y_pred)
+            f1 = f1_score(y_true, y_pred)
+            macrof1 = f1_score(y_true, y_pred, average='macro')
+            microf1 = f1_score(y_true, y_pred, average='micro')
+            wf1 = f1_score(y_true, y_pred, average='weighted')
+
+            loss.backward()
+            self.optimizer.step()
+
+            e_loss += loss.item()
+            e_acc += acc
+            e_raw_acc += raw_acc
+            e_prec += prec
+            e_rec += rec
+            e_f1 += f1
+            e_macrof1 += macrof1
+            e_microf1 += microf1
+            e_wf1 += wf1
+
+        with open(f"debug/train-raw-accs-{epoch}.txt", "w") as f:
+            f.write(str(batch_raw_accs))
+            f.write("\n\n**\n\n")
+        metrics ={}
+        size = len(iterator)
+        metrics["train_loss"] = e_loss/size
+        metrics["train_acc"] = e_acc/size
+        metrics["train_raw_acc"] = e_raw_acc/size
+        metrics["train_prec"] = e_prec/size
+        metrics["train_rec"] = e_rec/size
+        metrics["train_f1"] = e_f1/size
+        metrics["train_macrof1"] = e_macrof1/size
+        metrics["train_microf1"] = e_microf1/size
+        metrics["train_weightedf1"] = e_wf1/size
+        metrics["train_avg_contributions"] = (e_contributions/e_len).item()
+
+        return metrics
+
+
 
 ##########################################################################################################
 ############################################biLSTM  + MLP  + similarity ##################################
@@ -2814,8 +3010,8 @@ try:
 
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
-    if args.m == "frozen_mlp_bilstm":
-        model = MLPBefore(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    if "mlp_bilstm" in args.m:
+        model = MLPBefore(f"{args.m}-d{args.d}-p{args.p}dnn{args.n1}-{args.n3}-decay{args.decay}-L2{args.l2}-lr{args.lr}-dr{args.dr}-improveloss_mean-alpha{args.a}-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
     elif args.m =="frozen_bilstm_mlp":
         model = MLPIndependentOneDict(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
     elif args.m =="bilstm_mlp_similarity":
