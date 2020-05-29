@@ -2172,13 +2172,26 @@ class MLPBefore(MLPIndependentOneDict):
     # expl_dist_pos -  sent, batch,dict -> dict batch sent
     expl_dist_pos = torch.transpose(expl_distribution_pos, 0,2)
 
+    #sent, batch, dict
     expl_dist_pos = F.pad(expl_dist_pos, (0, self.max_sent_len-expl_distribution_pos.shape[2]))
     
     import ipdb
     ipdb.set_trace(context=10)
 
+    # [batch, sent, dict_size]
+    expl_distribution_pos = torch.transpose(expl_activ_pos, 0, 1)
+    
+    # [batch, max_sent, dict_size] (pad right)
+    size1, size2, size3 = expl_distribution_pos.shape[0], expl_distribution_pos.shape[1], expl_distribution_pos.shape[2]
+    if self.max_sent_len>=size2:
+        # 0-padding
+        expl_distribution_pos = torch.cat([expl_distribution_pos, expl_distribution_pos.new(size1, self.max_sent_len-size2, size3).zero_()],1).to(self.device)
+    else:
+        # trimming
+        expl_distribution_pos = expl_distribution_pos[:,:self.max_sent_len,:]
+
     #dict batch 1
-    expl_distribution_pos = self.aggregation_pos(expl_dist_pos)
+    expl_distribution_pos = self.aggregation_pos(expl_distribution_pos)
     #batch dict 1
     expl_distribution_pos = torch.transpose(expl_distribution_pos,0,1)
 
