@@ -2132,6 +2132,8 @@ class MLPBefore(MLPIndependentOneDict):
 
 
         output, hidden = self.vanilla.raw_forward(final_input, text_lengths+1+self.max_words_dict)
+        
+        self.raw_predictions = torch.sigmoid(output).squeeze().detach()
         #output = [sent len, batch size, hid dim * num directions]
         #output over padding tokens are zero tensors
 
