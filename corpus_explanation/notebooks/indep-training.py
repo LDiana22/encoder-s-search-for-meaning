@@ -2083,9 +2083,9 @@ class MLPIndependentOneDict(AbstractModel):
 ############################################ MLP before frozen bi-LSTM ##################################
 ##########################################################################################################
 class MLPBefore(MLPIndependentOneDict):
-  """
-  MLP + pretrained bi-LSTM
-  """
+    """
+    MLP + pretrained bi-LSTM
+    """
     def __init__(self, id, mapping_file_location, model_args, dataset, explanations):
         super().__init__(id, mapping_file_location, model_args, dataset, explanations)
         self.lin = nn.Linear(self.emb_dim, 2*model_args["hidden_dim"]).to(self.device)
