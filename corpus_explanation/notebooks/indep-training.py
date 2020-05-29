@@ -1817,7 +1817,7 @@ class MLPIndependentOneDict(AbstractModel):
         self.dropout = nn.Dropout(model_args["dropout"])
 
         self.optimizer = optim.Adam(list(set(self.parameters()) - set(self.vanilla.parameters())))
-        self.criterion = nn.BCEWithLogitsLoss().to(self.device)
+        #self.criterion = nn.BCEWithLogitsLoss().to(self.device)
 
         self = self.to(self.device)
         super().save_model_type(self)
@@ -2088,15 +2088,20 @@ class MLPBefore(MLPIndependentOneDict):
     """
     def __init__(self, id, mapping_file_location, model_args, dataset, explanations):
         super().__init__(id, mapping_file_location, model_args, dataset, explanations)
-        self.lin = nn.Linear(self.emb_dim, 2*model_args["hidden_dim"]).to(self.device)
-        self.lin1s = [nn.Linear(2*model_args["hidden_dim"], 2*model_args["hidden_dim"]).to(self.device) for i in range(model_args["n1"])]
         self.relu = nn.ReLU() 
+        self.lin1s = [nn.Linear(2*model_args["hidden_dim"], 2*model_args["hidden_dim"]).to(self.device) for i in range(model_args["n1"])]
+  
         self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
         self.lin3s = [nn.Linear(model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device) for i in range(model_args["n3"])]
         self.lin4 = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
         self.max_words_dict = explanations.max_words
+        self.alpha = model_args['alpha']
+        self.decay = model_args['alpha_decay']
+        self.criterion = self.loss
 
-  
+        self.lin = nn.Linear(self.emb_dim, 2*model_args["hidden_dim"]).to(self.device)
+
+
     def forward(self, text, text_lengths, expl_file=None):
 
         batch_size = text.size()[1]
