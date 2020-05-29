@@ -2215,7 +2215,7 @@ class MLPBefore(MLPIndependentOneDict):
 
         expl = expl_pos.reshape(batch_size, v_emb_pos.size(1),-1)
 
-        return expl, expl_distribution_pos
+        return expl, expl_distribution_pos.squeeze()
 
 
     def loss(self, output, target, sth, sthelse, alpha=None, epoch=0):
