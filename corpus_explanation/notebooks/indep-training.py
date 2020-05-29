@@ -2094,7 +2094,7 @@ class MLPBefore(MLPIndependentOneDict):
     self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
     self.lin3s = [nn.Linear(model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device) for i in range(model_args["n3"])]
     self.lin4 = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
-
+    self.max_words_dict = explanations.max_words
 
   
   def forward(self, text, text_lengths, expl_file=None):
@@ -2104,25 +2104,26 @@ class MLPBefore(MLPIndependentOneDict):
     #text = [sent len, batch size]
 
     embedded = self.dropout(self.embedding(text))
-    embedded = self.lin(embedded)
-    embedded = self.relu(embedded)
-    embedded = self.dropout(embedded)
-
     #embedded = [sent len, batch size, emb dim]
-    # expl_activ = self.lin(embedded)
+    expl_activ = self.lin(embedded)
     # # expl_activ = self.lin21(embedded)
-    # expl_activ = self.relu(expl_activ)
-    # expl_activ = self.dropout(expl_activ)
+    expl_activ = self.relu(expl_activ)
+    expl_activ = self.dropout(expl_activ)
     # expl_activ = self.lin2(expl_activ)
     # expl_activ = self.relu(expl_activ)
     # # expl_activ = nn.Dropout(0.2)(expl_activ)
 
-    final_dict, expl_distributions = self.gen(embedded, batch_size)
+    expl, expl_distributions = self.gen(expl_activ, batch_size)
     # final_expl = final_dict[0]
+
+    #embedded = self.lin(embedded)
+    #embedded = self.relu(embedded)
+    #embedded = self.dropout(embedded)
+
 
     x = torch.transpose(embedded,0,1)
     sep = torch.zeros((batch_size,1,self.emb_dim), device=self.device)
-    concat_input = torch.cat((x,torch.cat((sep, expl_emb), 1)),1) 
+    concat_input = torch.cat((x,torch.cat((sep, expl), 1)),1) 
     
     # [batch, sent_len+2*len(final_dict), emb_dim]
     # concat_input = torch.cat((x,final_dict),1)
@@ -2130,7 +2131,7 @@ class MLPBefore(MLPIndependentOneDict):
     final_input = torch.transpose(concat_input,0,1)
 
 
-    output, hidden = self.vanilla.raw_forward(final_input, text_lengths+2)
+    output, hidden = self.vanilla.raw_forward(final_input, text_lengths+1+self.max_words_dict)
     #output = [sent len, batch size, hid dim * num directions]
     #output over padding tokens are zero tensors
 
@@ -2139,7 +2140,7 @@ class MLPBefore(MLPIndependentOneDict):
 
     self.expl_distributions = expl_distributions
 
-    return output, (expl_emb, x)
+    return output, (expl, x)
 
   def gen(self, activ, batch_size):
     context_vector, final_dict, expl_distributions = [], [], []
@@ -2175,9 +2176,6 @@ class MLPBefore(MLPIndependentOneDict):
     # dict, batch, sent
     expl_dist_pos = F.pad(expl_dist_pos, (0, self.max_sent_len-expl_distribution_pos.shape[2]))
     
-    import ipdb
-    ipdb.set_trace(context=10)
-
     #  sent, batch, dict 
     expl_dist_pos = torch.transpose(expl_dist_pos, 0, 2)
     #  batch, sent, dict 
@@ -2196,7 +2194,7 @@ class MLPBefore(MLPIndependentOneDict):
     expl_distribution_pos = torch.transpose(expl_distribution_pos, 1, 2)
     
     #batch dict 1
-    expl_distribution_pos = self.aggregation_pos(expl_distribution_pos)
+    expl_distribution_pos = self.aggregation_pos(expl_distribution_pos).squeeze()
 
     expl_distribution_pos = F.gumbel_softmax(expl_distribution_pos, hard=True)
     
@@ -2230,7 +2228,8 @@ class MLPBefore(MLPIndependentOneDict):
     
     # batch, 1, dict x batch, dict, emb (max_words*emb_dim)
     
-    expl_pos = torch.bmm(vocab_emb_pos, expl_distribution_pos)
+    expl_distribution_pos = torch.unsqueeze(expl_distribution_pos, 1)
+    expl_pos = torch.bmm(expl_distribution_pos, vocab_emb_pos)
 
     # #[batch,max_words,emb_dim]
     # context_vector.append(torch.max(expl_pos, dim=1).values.reshape(batch_size, v_emb_pos.size(1),-1))
