@@ -2191,11 +2191,12 @@ class MLPBefore(MLPIndependentOneDict):
     else:
         # trimming
         expl_distribution_pos = expl_distribution_pos[:,:self.max_sent_len,:]
+    #batch, max_sent, dict
 
-    #dict batch 1
-    expl_distribution_pos = self.aggregation_pos(expl_distribution_pos)
+    expl_distribution_pos = torch.transpose(expl_distribution_pos, 1, 2)
+    
     #batch dict 1
-    expl_distribution_pos = torch.transpose(expl_distribution_pos,0,1)
+    expl_distribution_pos = self.aggregation_pos(expl_distribution_pos)
 
     expl_distribution_pos = F.gumbel_softmax(expl_distribution_pos, hard=True)
     
