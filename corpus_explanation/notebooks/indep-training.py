@@ -2174,6 +2174,9 @@ class MLPBefore(MLPIndependentOneDict):
 
     expl_dist_pos = F.pad(expl_dist_pos, (0, self.max_sent_len-expl_distribution_pos.shape[2]))
     
+    import ipdb
+    ipdb.set_trace(context=10)
+
     #dict batch 1
     expl_distribution_pos = self.aggregation_pos(expl_dist_pos)
     #batch dict 1
@@ -2955,8 +2958,8 @@ try:
 
     parser.add_argument('-l2', metavar='L2 weight decay', type=float, default=CONFIG["l2_wd"], help='L2 weight decay optimizer')
 
-    # parser.add_argument('--td', type=bool, default=CONFIG["toy_data"],
-    #                     help='Toy data (load just a small data subset)')
+    parser.add_argument('--td', type=bool, default=CONFIG["toy_data"],
+                        help='Toy data (load just a small data subset)')
 
     # parser.add_argument('--train', dest='train', action='store_true')
     # parser.add_argument('--no_train', dest='train', action='store_false')
@@ -2993,7 +2996,7 @@ try:
         "dropout": args.dr, 
         "load_dict":True,
         "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
-
+        "toy_data": args.td,
         "lr": args.lr,
         "l2_wd": args.l2
     })
