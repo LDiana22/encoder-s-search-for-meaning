@@ -128,6 +128,15 @@ print_metrics(df[df["prediction"]!=df["label"]], all_metrics_path)
 neg_hist_path = os.path.join(args.p, "all_incorrect_hist.png")
 plot_hist(df["contribution"], "Histogram negatives' contributions", neg_hist_path)
 
+path = os.path.join(args.p, "descending_contribution.txt")
+df.sort_values(by=["contribution"], ascending=False).to_csv(path)
+
+path = os.path.join(args.p, "descending_contribution_correct.txt")
+df[df["label"]==df["prediction"]].sort_values(by=["contribution"], ascending=False).to_csv(path)
+
+path = os.path.join(args.p, "descending_contribution_incorrect.txt")
+df[df["label"]!=df["prediction"]].sort_values(by=["contribution"], ascending=False).to_csv(path)
+
 # print(df.head())
 # print(df[(df["prediction"]==df["label"])].shape)
 # print(df[(df["prediction"]==df["label"])]["contribution"].mean())
