@@ -1508,9 +1508,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
 
     def forward(self, text, text_lengths, expl_file=None):
-        print(text.shape)
-        print(text_lengths.shape)
-        return
+        #print(text.shape)
+        #print(text_lengths.shape)
+        #return
 
         batch_size = text.size()[1]
 
@@ -1544,7 +1544,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         output, hidden = self.vanilla.raw_forward(final_input, text_lengths + 2)
 
 
-        return output, (expl_emb, x) # batch, words, emb
+        return output#, (expl_emb, x) # batch, words, emb
 
 
     def evaluate(self, iterator, prefix="test"):
@@ -1791,10 +1791,10 @@ try:
 
     parser.add_argument('-decay', metavar='decay', type=float, default=0, help='alpha decay')
 
-    parser.add_argument('-d', metavar='dictionary_type', type=str,
+    parser.add_argument('-d', metavar='dictionary_type', type=str, default='rake-polarity', 
                         help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
 
-    parser.add_argument('-m', metavar='model_type', type=str,
+    parser.add_argument('-m', metavar='model_type', type=str, default='bilstm_mlp_improve',
                         help='frozen_mlp_bilstm, frozen_bilstm_mlp, bilstm_mlp_similarity')
 
     parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
@@ -1828,7 +1828,7 @@ try:
         "n_layers": 2,
         "max_dict": 1000, 
         "cuda": True,
-        "restore_v_checkpoint" : False,
+        "restore_v_checkpoint" : True,
         "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
         "train": True,
         "max_words_dict": args.p,
@@ -1851,6 +1851,7 @@ try:
     start = datetime.now()
     dataset = IMDBDataset(experiment.config)
     print(f"Time data load: {str(datetime.now()-start)}")
+    tr,_,_ = dataset.iterators()
 
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
@@ -1891,10 +1892,21 @@ try:
         model = MLPAfterIndependentOneDictImprove(f"jointlytrained-{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
 
+    for batch in tr:
+        x1,x2=batch.text
+        break
+
 
     from torchviz import make_dot
-    x = torch.randn(1,8)
-    make_dot(model(x), params=dict(model.named_parameters()))
+    #x1,x2 = torch.LongTensor(1,8).random_(1,8), torch.LongTensor([7,6,6,6,4,3,2,1])
+    x1 = x1.to(model.device)
+    x2 = x2.to(model.device)
+    import ipdb
+    #ipdb.set_trace(context=20)
+    for p in model.named_parameters():
+        if p[1].requires_grad:
+            print(p[0])
+    make_dot(model(x1,x2), params=dict([(p[0],p[1]) for p in model.named_parameters() if p[1].requires_grad]))
     # experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
 
     # print(f"Time model training: {str(datetime.now()-start)}")
