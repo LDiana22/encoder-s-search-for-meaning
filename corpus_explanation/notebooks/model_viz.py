@@ -1508,9 +1508,6 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
 
     def forward(self, text, text_lengths, expl_file=None):
-        #print(text.shape)
-        #print(text_lengths.shape)
-        #return
 
         batch_size = text.size()[1]
 
