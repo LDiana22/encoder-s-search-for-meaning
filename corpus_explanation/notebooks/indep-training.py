@@ -65,8 +65,8 @@ UCI_PATH = "../.data/uci"
 IMDB_PATH = "../.data/imdb/aclImdb"
 #PREFIX_DIR = "experiments/independent"
 #MODEL_MAPPING = "experiments/model_mappings/independent"
-PREFIX_DIR = "experiments/debug"
-MODEL_MAPPING = "experiments/debug/model_mapping"
+PREFIX_DIR = "experiments/agnostic"
+MODEL_MAPPING = "experiments/agnostic/model_mapping"
 
 MODEL_NAME = "mlp+frozen_bilstm_gumb-emb-one-dict-long"
 
