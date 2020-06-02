@@ -15,7 +15,7 @@ vaderSentiment
 matplotlib==3.2.1
 # pip install git+https://github.com/LIAAD/yake
 
-
+torchviz=0.0.1
 
 # cc: module load python/3.6
 # python -m pip install <pkg> --user
