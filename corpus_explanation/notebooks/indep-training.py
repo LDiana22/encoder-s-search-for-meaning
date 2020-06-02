@@ -436,6 +436,9 @@ class IMDBDataset:
     return self.train_data
 
   def get_training_corpus(self):
+    """
+    Returns a dictionary: {class: list of instances for that class}
+    """
     self.corpus = {"pos":[], "neg":[]}
     self.corpus["pos"] = [" ".join(example.text) for example in self.train_data if example.label == "pos"]
     self.corpus["neg"] = [" ".join(example.text) for example in self.train_data if example.label == "neg"]
