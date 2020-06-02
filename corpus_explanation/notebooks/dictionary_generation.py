@@ -70,7 +70,7 @@ CONFIG = {
     "toy_data": False, # load only a small subset
     "cuda": False,
     "restore_checkpoint" : False,
-    "checkpoint_file": None,
+    "dict_checkpoint_file": None,
 
     "max_words_dict": 300,
     "phrase_len":5,
@@ -388,7 +388,7 @@ args = parser.parse_args()
 
 if args.load:
     CONFIG["load_dictionary"] = True
-    CONFIG["checkpoint_file"] = args.cp
+    CONFIG["dict_checkpoint_file"] = args.cp
 if args.filterpolarity:
     CONFIG["filterpolarity"] = True
 if args.td:
@@ -417,6 +417,7 @@ try:
         explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, CONFIG)
     elif args.d == "rake-polarity":
         explanations = RakeCorpusPolarityFiltered(f"rake-polarity", dataset, CONFIG)
+    print(f"Time explanations: {str(datetime.now()-start)}")
 
 except:
     import sys, traceback

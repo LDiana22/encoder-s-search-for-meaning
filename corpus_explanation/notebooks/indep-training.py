@@ -557,8 +557,6 @@ class UCIDataset:
 ## Abstract
 """
 
-
-
 class AbstractDictionary:
   def __init__(self, id, dataset, args):
     """
@@ -572,10 +570,22 @@ class AbstractDictionary:
     self.metrics = {}
     if not os.path.isdir(self.path):
         os.makedirs(self.path)
+    if args["load_dictionary"]:
+        self.dictionary = self.load_dict(args["dict_checkpoint"])
 
 
   def load_dict(self, file):
     return pickle.load(open(file, "rb"))
+
+  def filter_by_sentiment_polarity(self, phrases, metric="compound", threshold=0.5):
+    """
+    in: list of phrases  [(score, "phrase")]
+    metric: compound, pos, neg
+    out: list of fitered phrases
+    """
+    sentiment = SentimentIntensityAnalyzer()
+    return [(score, phrase) for score, phrase in phrases if abs(sentiment.polarity_scores(phrase)[metric])>threshold]
+
 
   def filter_phrases_max_words_by_occurence(self, phrases, corpus, max_phrases):
     """
@@ -601,7 +611,7 @@ class AbstractDictionary:
     with open(file, "wb") as f: 
         f.write(pickle.dumps(self.dictionary))
 
-    file = os.path.join(self.path, "dictionary-{formated_date}.txt")
+    file = os.path.join(self.path, f"dictionary-{formated_date}.txt")
     with open(file, "w", encoding="utf-8") as f:
         for text_class, e_dict in self.dictionary.items():
             f.write("**************\n")
@@ -855,6 +865,49 @@ class RakeCorpusPolarityFiltered(AbstractDictionary):
         # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
         dictionary[text_class] = OrderedDict(ChainMap(*result)) # len(re.findall(".*".join(phrase.split()), class_corpus))
 
+    return dictionary
+
+class RakeInstanceExplanations(AbstractDictionary):
+  """ Rake max words per instance"""
+  def __init__(self, id, dataset, args): 
+    super().__init__(id, dataset, args)
+    # self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
+    self.max_dict = args["max_words_dict"]
+    self.max_words = args["phrase_len"]
+    self.dictionary = self.get_dict()
+    self.tokenizer = spacy.load("en")
+    self._save_dict()
+
+  def get_dict(self):
+    """
+    Builds a dictionary of keywords for each label.
+    # {"all":{word:freq}} OR
+    {"pos":{word:freq}, "neg":{word:freq}}
+    """
+    if hasattr(self, 'dictionary') and not self.dictionary:
+        return self.dictionary
+    print("Generating new dict rake-inst")
+    dictionary = OrderedDict()
+    corpus = self.dataset.get_training_corpus()
+
+    max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
+    res_phrases = []
+    for text_class in corpus.keys():
+        phrases = []
+        dictionary[text_class] = OrderedDict()
+        for review in corpus[text_class]:
+            rake = Rake(max_length=self.max_words)
+            rake.extract_keywords_from_text(review)
+            phrases += rake.get_ranked_phrases_with_scores()
+        phrases.sort(reverse=True)
+        if self.args["filterpolarity"]:
+            print("Filtering by polarity...")
+            phrases = self.filter_by_sentiment_polarity(phrases)
+        with open(os.path.join(self.path, f"phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join([str(ph) for ph in phrases]))
+        if max_per_class:
+            phrases = phrases[:max_per_class]
+        dictionary[text_class] = OrderedDict(ChainMap(*[{ph[1]:" ".join(corpus[text_class]).count(ph[1])} for ph in phrases]))
     return dictionary
 
 
@@ -2985,10 +3038,13 @@ try:
         "alpha_decay": args.decay,
         "dropout": args.dr, 
         "load_dict":True,
-        "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
+        # "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
+        "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-max-words-instance-300-4/dictionary-2020-06-02_16-00-44.h5",
+
         "toy_data": args.td,
         "lr": args.lr,
-        "l2_wd": args.l2
+        "l2_wd": args.l2, 
+        "filterpolarity": True
     })
     print(experiment.config)
 
@@ -3005,7 +3061,8 @@ try:
     elif args.d=="textrank":
         explanations = TextRank(f"textrank-300-5", dataset, experiment.config)
     elif args.d == "rake-inst":
-        explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.p}", dataset, experiment.config)
+        explanations = RakeInstanceExplanations(f"rake-max-words-instance-{CONFIG['max_words_dict']}-{args.p}-filtered_{CONFIG["filterpolarity"]}", dataset, CONFIG)
+        # explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.p}", dataset, experiment.config)
     elif args.d == "rake-corpus":
         explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, experiment.config)
     elif args.d == "rake-polarity":
