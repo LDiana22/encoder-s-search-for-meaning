@@ -571,6 +571,7 @@ class AbstractDictionary:
     if not os.path.isdir(self.path):
         os.makedirs(self.path)
     if args["load_dictionary"]:
+        print("Loading dictionary...")
         self.dictionary = self.load_dict(args["dict_checkpoint"])
 
 
@@ -884,7 +885,7 @@ class RakeInstanceExplanations(AbstractDictionary):
     # {"all":{word:freq}} OR
     {"pos":{word:freq}, "neg":{word:freq}}
     """
-    if hasattr(self, 'dictionary') and not self.dictionary:
+    if hasattr(self, 'dictionary') and self.dictionary:
         return self.dictionary
     print("Generating new dict rake-inst")
     dictionary = OrderedDict()
@@ -3037,14 +3038,15 @@ try:
         "n3": args.n3,
         "alpha_decay": args.decay,
         "dropout": args.dr, 
-        "load_dict":True,
+        "load_dictionary":True,
         # "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
         "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-max-words-instance-300-4/dictionary-2020-06-02_16-00-44.h5",
 
         "toy_data": args.td,
         "lr": args.lr,
         "l2_wd": args.l2, 
-        "filterpolarity": True
+        "filterpolarity": True,
+        "phrase_len":4
     })
     print(experiment.config)
 
@@ -3061,7 +3063,7 @@ try:
     elif args.d=="textrank":
         explanations = TextRank(f"textrank-300-5", dataset, experiment.config)
     elif args.d == "rake-inst":
-        explanations = RakeInstanceExplanations(f"rake-max-words-instance-{CONFIG['max_words_dict']}-{args.p}-filtered_{CONFIG["filterpolarity"]}", dataset, CONFIG)
+        explanations = RakeInstanceExplanations(f"rake-max-words-instance-{CONFIG['max_words_dict']}-{args.p}-filtered", dataset, experiment.config)
         # explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.p}", dataset, experiment.config)
     elif args.d == "rake-corpus":
         explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, experiment.config)
@@ -3089,7 +3091,7 @@ try:
     elif args.m =="bilstm_mlp_similarity":
         model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-sumloss-c", MODEL_MAPPING, experiment.config, dataset, explanations)
     elif "bilstm_mlp_improve" in args.m:
-        model = MLPAfterIndependentOneDictImprove(f"jointlytrained-{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
+        model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
