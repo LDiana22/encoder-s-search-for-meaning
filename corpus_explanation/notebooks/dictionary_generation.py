@@ -86,7 +86,8 @@ CONFIG = {
     "max_vocab_size": 100000,
     "emb_dim": 300,
     "batch_size": 32,
-    "load_dictionary": False
+    "load_dictionary": False,
+    "filterpolarity": False
 }
 
 
@@ -389,7 +390,7 @@ if args.load:
     CONFIG["load_dictionary"] = True
     CONFIG["checkpoint_file"] = args.cp
 if args.filterpolarity:
-    CONFIG["filter_polarity"] = True
+    CONFIG["filterpolarity"] = True
 if args.td:
     CONFIG["toy_data"] = True
 CONFIG["max_words_dict"] = args.size
