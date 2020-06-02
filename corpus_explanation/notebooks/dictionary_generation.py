@@ -233,12 +233,12 @@ class AbstractDictionary:
 
   def filter_by_sentiment_polarity(self, phrases, metric="compound", threshold=0.5):
     """
-    in: list of phrases (strings)
+    in: list of phrases  [(score, "phrase")]
     metric: compound, pos, neg
     out: list of fitered phrases
     """
     sentiment = SentimentIntensityAnalyzer()
-    return [(phrase, sentiment.polarity_scores(phrase)[metric]) for phrase in phrases if abs(sentiment.polarity_scores(phrase)[metric])>threshold]
+    return [(score, phrase) for score, phrase in phrases if abs(sentiment.polarity_scores(phrase)[metric])>threshold]
 
 
   def filter_phrases_max_words_by_occurence(self, phrases, corpus, max_phrases):
@@ -356,6 +356,9 @@ class RakeInstanceExplanations(AbstractDictionary):
             rake.extract_keywords_from_text(review)
             phrases += rake.get_ranked_phrases_with_scores()
         phrases.sort(reverse=True)
+        if self.args["filterpolarity"]:
+            print("Filtering by polarity...")
+            phrases = self.filter_by_sentiment_polarity(phrases)
         with open(os.path.join(self.path, f"phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join([str(ph) for ph in phrases]))
         if max_per_class:
@@ -375,7 +378,7 @@ parser.add_argument('-d', metavar='dictionary_type', type=str,
 parser.add_argument('-cp', metavar='checkpoint_file', type=str)
 
 parser.add_argument('--load', action='store_true')
-parser.add_argument('--filterpolarity', action='store_false')
+parser.add_argument('--filterpolarity', action='store_true')
 
 parser.add_argument('--td', action='store_true',
                     help='Toy data (load just a small data subset)')
@@ -392,7 +395,7 @@ if args.td:
 CONFIG["max_words_dict"] = args.size
 CONFIG["phrase_len"] = args.p
 
-
+print(CONFIG)
 try:
 
     start = datetime.now()
