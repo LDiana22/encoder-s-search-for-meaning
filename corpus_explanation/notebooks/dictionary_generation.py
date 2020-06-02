@@ -358,7 +358,7 @@ class RakeInstanceExplanations(AbstractDictionary):
             phrases += rake.get_ranked_phrases_with_scores()
         phrases.sort(reverse=True)
         if self.args["filterpolarity"]:
-            print("Filtering by polarity...")
+            print(f"Filtering by polarity {text_class}...")
             phrases = self.filter_by_sentiment_polarity(phrases)
         with open(os.path.join(self.path, f"phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join([str(ph) for ph in phrases]))
