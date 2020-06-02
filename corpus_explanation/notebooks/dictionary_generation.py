@@ -265,7 +265,7 @@ class AbstractDictionary:
     with open(file, "wb") as f: 
         f.write(pickle.dumps(self.dictionary))
 
-    file = os.path.join(self.path, "dictionary-{formated_date}.txt")
+    file = os.path.join(self.path, f"dictionary-{formated_date}.txt")
     with open(file, "w", encoding="utf-8") as f:
         for text_class, e_dict in self.dictionary.items():
             f.write("**************\n")
@@ -408,7 +408,7 @@ try:
     elif args.d=="textrank":
         explanations = TextRank(f"textrank-filtered_{CONFIG['filterpolarity']}", dataset, CONFIG)
     elif args.d == "rake-inst":
-        explanations = RakeInstanceExplanations(f"rake-max-words-instance-300-{args.p}", dataset, CONFIG)
+        explanations = RakeInstanceExplanations(f"rake-max-words-instance-{CONFIG['max_words_dict']}-{args.p}", dataset, CONFIG)
     elif args.d == "rake-corpus":
         explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, CONFIG)
     elif args.d == "rake-polarity":
