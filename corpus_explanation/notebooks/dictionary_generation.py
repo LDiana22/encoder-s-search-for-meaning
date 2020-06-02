@@ -5,6 +5,7 @@
 # %% [code]
 # -*- coding: utf-8 -*-
 from abc import ABC
+import argparse
 from collections import OrderedDict 
 from collections import ChainMap
 from contextlib import redirect_stdout
@@ -67,7 +68,7 @@ PREFIX_DIR = "experiments/dict_acquisition"
 
 CONFIG = {
     "toy_data": False, # load only a small subset
-
+    "cuda": False,
     "restore_checkpoint" : False,
     "checkpoint_file": None,
 
@@ -223,7 +224,7 @@ class AbstractDictionary:
     self.metrics = {}
     if not os.path.isdir(self.path):
         os.makedirs(self.path)
-    if args["load_dict"]:
+    if args["load_dictionary"]:
         self.dictionary = self.load_dict(args["dict_checkpoint"])
 
 
@@ -328,6 +329,8 @@ class RakeInstanceExplanations(AbstractDictionary):
   def __init__(self, id, dataset, args): 
     super().__init__(id, dataset, args)
     # self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
+    self.max_dict = args["max_words_dict"]
+    self.max_words = args["phrase_len"]
     self.dictionary = self.get_dict()
     self.tokenizer = spacy.load("en")
     self._save_dict()
@@ -371,10 +374,10 @@ parser.add_argument('-d', metavar='dictionary_type', type=str,
                     help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
 parser.add_argument('-cp', metavar='checkpoint_file', type=str)
 
-parser.add_argument('--load', action='store_false')
+parser.add_argument('--load', action='store_true')
 parser.add_argument('--filterpolarity', action='store_false')
 
-parser.add_argument('--td', type=bool, action='store_false',
+parser.add_argument('--td', action='store_true',
                     help='Toy data (load just a small data subset)')
 
 args = parser.parse_args()
@@ -393,6 +396,10 @@ CONFIG["phrase_len"] = args.p
 try:
 
     start = datetime.now()
+    dataset = IMDBDataset(CONFIG)
+    print(f"Time data load: {str(datetime.now()-start)}")
+    
+    start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
     if args.d=="tfidf":
         explanations = TFIDF(f"tfidf-filtered_{CONFIG['filterpolarity']}", dataset, CONFIG)
@@ -401,7 +408,7 @@ try:
     elif args.d=="textrank":
         explanations = TextRank(f"textrank-filtered_{CONFIG['filterpolarity']}", dataset, CONFIG)
     elif args.d == "rake-inst":
-        explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.p}", dataset, CONFIG)
+        explanations = RakeInstanceExplanations(f"rake-max-words-instance-300-{args.p}", dataset, CONFIG)
     elif args.d == "rake-corpus":
         explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, CONFIG)
     elif args.d == "rake-polarity":
