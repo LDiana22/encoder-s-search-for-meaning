@@ -473,9 +473,9 @@ try:
     elif args.d=="textrank":
         explanations = TextRank(f"textrank-filtered_{CONFIG['filterpolarity']}", dataset, CONFIG)
     elif args.d == "rake-inst":
-        explanations = RakeInstanceExplanations(f"rake-max-words-instance-{CONFIG['max_words_dict']}-{args.p}", dataset, CONFIG)
+        explanations = RakeInstanceExplanations(f"rake-instance-{CONFIG['max_words_dict']}-{args.p}-filtered{CONFIG ['filterpolarity']}", dataset, CONFIG)
     elif args.d == "rake-corpus":
-        explanations = RakeCorpusExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, CONFIG)
+        explanations = RakeCorpusExplanations(f"rake-corpus-{CONFIG['max_words_dict']}-{args.p}-filtered{CONFIG ['filterpolarity']}", dataset, CONFIG)
     elif args.d == "rake-polarity":
         explanations = RakeCorpusPolarityFiltered(f"rake-polarity", dataset, CONFIG)
     print(f"Time explanations: {str(datetime.now()-start)}")
