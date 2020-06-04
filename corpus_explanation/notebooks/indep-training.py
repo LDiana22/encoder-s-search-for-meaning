@@ -2829,6 +2829,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                         train_microf1, train_weightedf1]
         e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
         """
+        self.vanilla.eval()
         e_loss = 0
         e_acc, e_raw_acc, e_prec, e_rec = 0,0,0,0
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
@@ -3025,7 +3026,7 @@ try:
         "n_layers": 2,
         "max_dict": 1000, 
         "cuda": True,
-        "restore_v_checkpoint" : False,
+        "restore_v_checkpoint" : True,
         "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
         "train": True,
         "max_words_dict": args.p,
@@ -3089,7 +3090,7 @@ try:
     elif args.m =="bilstm_mlp_similarity":
         model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-sumloss-c", MODEL_MAPPING, experiment.config, dataset, explanations)
     elif "bilstm_mlp_improve" in args.m:
-        model = MLPAfterIndependentOneDictImprove(f"jointlytrained-{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
+        model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
 
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")
