@@ -324,6 +324,7 @@ class AbstractDictionary:
 
 ################################# DICTIONARIES ################################
 
+################################# RAKE-INST ################################
 
 class RakeInstanceExplanations(AbstractDictionary):
   """ Rake max words per instance"""
@@ -342,6 +343,9 @@ class RakeInstanceExplanations(AbstractDictionary):
     # {"all":{word:freq}} OR
     {"pos":{word:freq}, "neg":{word:freq}}
     """
+
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
     if hasattr(self, 'dictionary') and not self.dictionary:
         return self.dictionary
     dictionary = OrderedDict()
@@ -360,11 +364,68 @@ class RakeInstanceExplanations(AbstractDictionary):
         if self.args["filterpolarity"]:
             print(f"Filtering by polarity {text_class}...")
             phrases = self.filter_by_sentiment_polarity(phrases)
-        with open(os.path.join(self.path, f"phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
+        with open(os.path.join(self.path, f"phrases-{text_class}-{formated_date}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join([str(ph) for ph in phrases]))
         if max_per_class:
             phrases = phrases[:max_per_class]
         dictionary[text_class] = OrderedDict(ChainMap(*[{ph[1]:" ".join(corpus[text_class]).count(ph[1])} for ph in phrases]))
+    return dictionary
+
+################################# RAKE-CORPUS ################################
+
+class RakeCorpusExplanations(AbstractDictionary):
+
+  def __init__(self, id, dataset, args): 
+    super().__init__(id, dataset, args)
+    self.max_dict = args.get("max_dict", None)
+    self.max_words = args["max_words_dict"]
+    # self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
+    self.dictionary = self.get_dict()
+    self.tokenizer = spacy.load("en")
+    self._save_dict()
+
+  def get_dict(self):
+    """
+    Builds a dictionary of keywords for each label.
+    # {"all":{word:freq}} OR
+    {"pos":{word:freq}, "neg":{word:freq}}
+    """
+    if hasattr(self, 'dictionary') and not self.dictionary:
+        return self.dictionary
+    dictionary = OrderedDict()
+    corpus = self.dataset.get_training_corpus()
+
+    max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
+    for text_class in corpus.keys():
+        dictionary[text_class] = OrderedDict()
+        class_corpus = ".\n".join(corpus[text_class])
+        rake = Rake(max_length=self.max_words)
+        rake.extract_keywords_from_sentences(corpus[text_class])
+        phrases = rake.get_ranked_phrases()
+        phrases.sort(reverse=True)
+        if self.args["filterpolarity"]:
+            print(f"Filtering by polarity {text_class}...")
+            phrases = self.filter_by_sentiment_polarity(phrases)
+        with open(os.path.join(self.path, f"phrases-{text_class}-{formated_date}.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join([str(ph) for ph in phrases]))
+        if max_per_class:
+            phrases = phrases[:max_per_class]
+        dictionary[text_class] = OrderedDict(ChainMap(*[{ph[1]:" ".join(corpus[text_class]).count(ph[1])} for ph in phrases]))
+
+        # result = []
+        # count = 0
+        # for phrase in phrases:
+        #     freq = class_corpus.count(phrase)
+        #     if freq > 0:
+        #         result.append({phrase:freq})
+        #         count+=1
+        #     if count == max_per_class:
+        #         break;
+        
+        # tok_words = self.tokenizer(class_corpus)
+        # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
+        # dictionary[text_class] = OrderedDict(ChainMap(*result)) # len(re.findall(".*".join(phrase.split()), class_corpus))
+
     return dictionary
 
 
@@ -414,7 +475,7 @@ try:
     elif args.d == "rake-inst":
         explanations = RakeInstanceExplanations(f"rake-max-words-instance-{CONFIG['max_words_dict']}-{args.p}", dataset, CONFIG)
     elif args.d == "rake-corpus":
-        explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, CONFIG)
+        explanations = RakeCorpusExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, CONFIG)
     elif args.d == "rake-polarity":
         explanations = RakeCorpusPolarityFiltered(f"rake-polarity", dataset, CONFIG)
     print(f"Time explanations: {str(datetime.now()-start)}")
