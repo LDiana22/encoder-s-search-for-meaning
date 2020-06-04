@@ -2831,6 +2831,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                         train_microf1, train_weightedf1]
         e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
         """
+        self.vanilla.eval()
         e_loss = 0
         e_acc, e_raw_acc, e_prec, e_rec = 0,0,0,0
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
