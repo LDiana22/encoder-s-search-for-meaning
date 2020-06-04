@@ -65,8 +65,8 @@ UCI_PATH = "../.data/uci"
 IMDB_PATH = "../.data/imdb/aclImdb"
 #PREFIX_DIR = "experiments/independent"
 #MODEL_MAPPING = "experiments/model_mappings/independent"
-PREFIX_DIR = "experiments/agnostic"
-MODEL_MAPPING = "experiments/agnostic/model_mapping"
+PREFIX_DIR = "experiments/soa-dicts"
+MODEL_MAPPING = "experiments/soa-dicts/model_mapping"
 
 MODEL_NAME = "mlp+frozen_bilstm_gumb-emb-one-dict-long"
 
@@ -2700,7 +2700,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         embedded = self.dropout(self.embedding(text))
 
         #embedded = [sent len, batch size, emb dim]
-
+        self.vanilla.eval()
         output, hidden = self.vanilla.raw_forward(embedded, text_lengths)
         self.raw_predictions = torch.sigmoid(output).squeeze().detach()
         #output = [sent len, batch size, hid dim * num directions]
@@ -2737,6 +2737,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             # distr = [torch.tensor([]).to(self.device) for i in range(len(self.dictionaries.keys()))]
             distr = torch.tensor([]).to(self.device)
         self.eval()
+        self.vanilla.eval()
         e_loss = 0
         e_acc, e_raw_acc, e_prec, e_rec = 0,0,0,0
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
@@ -3026,7 +3027,7 @@ try:
         "n_layers": 2,
         "max_dict": 1000, 
         "cuda": True,
-        "restore_v_checkpoint" : False,
+        "restore_v_checkpoint" : True,
         "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
         "train": True,
         "max_words_dict": args.p,
@@ -3039,7 +3040,7 @@ try:
         "alpha_decay": args.decay,
         "dropout": args.dr, 
         "load_dictionary":True,
-        # "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
+        #"dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
         "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-max-words-instance-300-4/dictionary-2020-06-02_16-00-44.h5",
 
         "toy_data": args.td,
