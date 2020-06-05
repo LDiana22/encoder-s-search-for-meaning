@@ -458,10 +458,10 @@ class DefaultYAKE(AbstractDictionary):
     max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
     for text_class in corpus.keys():
         dictionary[text_class] = OrderedDict()
-        phrases = [yake.KeywordExtractor().extract_keywords(review) for review in corpus[text_class] if review]
+        phrases = [yake.KeywordExtractor(n=self.max_words).extract_keywords(review) for review in corpus[text_class] if review]
         phrases = list(itertools.chain.from_iterable(phrases))
-        phrases.sort(key=lambda x: x[1])
-        rev_phrases = [(score, phrase) for score, phrase in phrases]
+        phrases.sort(key=lambda x: x[1],reverse=True)
+        rev_phrases = [(score, phrase) for phrase, score in phrases]
         if self.args["filterpolarity"]:
             print(f"Filtering by polarity {text_class}...")
             phrases = self.filter_by_sentiment_polarity(rev_phrases)
@@ -509,7 +509,7 @@ class TextRank(AbstractDictionary):
             phrases = self.filter_by_sentiment_polarity(rev_phrases)
         with open(os.path.join(self.path, f"raw-phrases-{text_class}-{formated_date}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join([str(ph) for ph in phrases]))
-        phrases = list(set([" ".join(ph[0].split()[:self.max_words]) for ph in phrases]))
+        phrases = list(set([" ".join(ph[1].split()[:self.max_words]) for ph in phrases]))
         dictionary[text_class] = OrderedDict(ChainMap(*[{phrases[i]:" ".join(corpus[text_class]).count(phrases[i])} for i in range(min(max_per_class,len(phrases)))]))
     return dictionary
 
@@ -554,7 +554,7 @@ try:
     if args.d=="tfidf":
         explanations = TFIDF(f"tfidf-filtered_{CONFIG['filterpolarity']}", dataset, CONFIG)
     elif args.d=="yake":
-        explanations = DefaultYAKE(f"default-yake-filtered_{CONFIG['filterpolarity']}-p{CONFIG['phrase_len']}-d{CONFIG['max_words_dict']}", dataset, CONFIG)
+        explanations = DefaultYAKE(f"yake-filtered_{CONFIG['filterpolarity']}-p{CONFIG['phrase_len']}-d{CONFIG['max_words_dict']}", dataset, CONFIG)
     elif args.d=="textrank":
         explanations = TextRank(f"textrank-filtered_{CONFIG['filterpolarity']}-p{CONFIG['phrase_len']}-d{CONFIG['max_words_dict']}", dataset, CONFIG)
     elif args.d == "rake-inst":
