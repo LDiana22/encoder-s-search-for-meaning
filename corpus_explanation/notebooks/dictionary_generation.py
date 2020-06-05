@@ -346,7 +346,7 @@ class RakeInstanceExplanations(AbstractDictionary):
 
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
-    if hasattr(self, 'dictionary') and not self.dictionary:
+    if hasattr(self, 'dictionary') and self.dictionary:
         return self.dictionary
     dictionary = OrderedDict()
     corpus = self.dataset.get_training_corpus()
@@ -390,7 +390,7 @@ class RakeCorpusExplanations(AbstractDictionary):
     # {"all":{word:freq}} OR
     {"pos":{word:freq}, "neg":{word:freq}}
     """
-    if hasattr(self, 'dictionary') and not self.dictionary:
+    if hasattr(self, 'dictionary') and self.dictionary:
         return self.dictionary
     dictionary = OrderedDict()
     corpus = self.dataset.get_training_corpus()
@@ -426,6 +426,40 @@ class RakeCorpusExplanations(AbstractDictionary):
         # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
         # dictionary[text_class] = OrderedDict(ChainMap(*result)) # len(re.findall(".*".join(phrase.split()), class_corpus))
 
+    return dictionary
+
+################################# YAKE ################################
+
+class DefaultYAKE(AbstractDictionary):
+  def __init__(self, id, dataset, args): 
+    super().__init__(id, dataset, args)
+    self.max_dict = args.get("max_dict", None)
+    self.max_words = args["max_words_dict"]
+    self.dictionary = self.get_dict()
+    self.tokenizer = spacy.load("en")
+    self._save_dict()
+  
+  def get_dict(self):
+    """
+    Builds a dictionary of keywords for each label.
+    # {"all":{word:freq}} OR
+    {"pos":{word:freq}, "neg":{word:freq}}
+    """
+    if hasattr(self, 'dictionary') and self.dictionary:
+        return self.dictionary
+    dictionary = OrderedDict()
+    corpus = self.dataset.get_training_corpus()
+
+    max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
+    for text_class in corpus.keys():
+        dictionary[text_class] = OrderedDict()
+        phrases = [yake.KeywordExtractor().extract_keywords(review) for review in corpus[text_class] if review]
+        phrases = list(itertools.chain.from_iterable(phrases))
+        phrases.sort(key=lambda x: x[1])
+        with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join([str(ph) for ph in phrases]))
+        phrases = list(set([" ".join(ph[0].split()[:self.max_words]) for ph in phrases]))
+        dictionary[text_class] = OrderedDict(ChainMap(*[{phrases[i]:" ".join(corpus[text_class]).count(phrases[i])} for i in range(min(max_per_class,len(phrases)))]))
     return dictionary
 
 
