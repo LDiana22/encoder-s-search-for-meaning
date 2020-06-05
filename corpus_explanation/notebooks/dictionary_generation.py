@@ -466,10 +466,10 @@ class DefaultYAKE(AbstractDictionary):
         rev_phrases = [(score, phrase) for phrase, score in phrases]
         if self.args["filterpolarity"]:
             print(f"Filtering by polarity {text_class}...")
-            phrases = self.filter_by_sentiment_polarity(rev_phrases)
+            rev_phrases = self.filter_by_sentiment_polarity(rev_phrases)
         with open(os.path.join(self.path, f"raw-phrases-{text_class}-{formated_date}.txt"), "w", encoding="utf-8") as f:
-            f.write("\n".join([str(ph) for ph in phrases]))
-        phrases = list(set([" ".join(ph[0].split()[:self.max_words]) for ph in phrases]))
+            f.write("\n".join([str(ph) for ph in rev_phrases]))
+        phrases = list(set([" ".join(ph[0].split()[:self.max_words]) for ph in rev_phrases]))
         dictionary[text_class] = OrderedDict(ChainMap(*[{phrases[i]:" ".join(corpus[text_class]).count(phrases[i])} for i in range(min(max_per_class,len(phrases)))]))
     return dictionary
 
@@ -505,13 +505,13 @@ class TextRank(AbstractDictionary):
         phrases = [keywords.keywords(review, scores=True) for review in corpus[text_class]]
         phrases = list(itertools.chain.from_iterable(phrases))
         phrases.sort(reverse=True, key=lambda x: x[1])
-        rev_phrases = [(score, phrase) for score, phrase in phrases]
+        rev_phrases = [(score, phrase) for phrase, score in phrases]
         if self.args["filterpolarity"]:
             print(f"Filtering by polarity {text_class}...")
-            phrases = self.filter_by_sentiment_polarity(rev_phrases)
+            rev_phrases = self.filter_by_sentiment_polarity(rev_phrases)
         with open(os.path.join(self.path, f"raw-phrases-{text_class}-{formated_date}.txt"), "w", encoding="utf-8") as f:
-            f.write("\n".join([str(ph) for ph in phrases]))
-        phrases = list(set([" ".join(ph[0].split()[:self.max_words]) for ph in phrases]))
+            f.write("\n".join([str(ph) for ph in rev_phrases]))
+        phrases = list(set([" ".join(ph[0].split()[:self.max_words]) for ph in rev_phrases]))
         dictionary[text_class] = OrderedDict(ChainMap(*[{phrases[i]:" ".join(corpus[text_class]).count(phrases[i])} for i in range(min(max_per_class,len(phrases)))]))
     return dictionary
 
