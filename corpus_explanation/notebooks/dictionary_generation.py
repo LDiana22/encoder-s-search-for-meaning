@@ -509,7 +509,7 @@ class TextRank(AbstractDictionary):
             phrases = self.filter_by_sentiment_polarity(rev_phrases)
         with open(os.path.join(self.path, f"raw-phrases-{text_class}-{formated_date}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join([str(ph) for ph in phrases]))
-        phrases = list(set([" ".join(ph[1].split()[:self.max_words]) for ph in phrases]))
+        phrases = list(set([" ".join(ph[0].split()[:self.max_words]) for ph in phrases]))
         dictionary[text_class] = OrderedDict(ChainMap(*[{phrases[i]:" ".join(corpus[text_class]).count(phrases[i])} for i in range(min(max_per_class,len(phrases)))]))
     return dictionary
 
