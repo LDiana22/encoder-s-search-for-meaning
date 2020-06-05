@@ -377,8 +377,8 @@ class RakeCorpusExplanations(AbstractDictionary):
 
   def __init__(self, id, dataset, args): 
     super().__init__(id, dataset, args)
-    self.max_dict = args.get("max_dict", None)
-    self.max_words = args["max_words_dict"]
+    self.max_dict = args["max_words_dict"]
+    self.max_words = args["phrase_len"]
     # self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
     self.dictionary = self.get_dict()
     self.tokenizer = spacy.load("en")
@@ -401,7 +401,7 @@ class RakeCorpusExplanations(AbstractDictionary):
         class_corpus = ".\n".join(corpus[text_class])
         rake = Rake(max_length=self.max_words)
         rake.extract_keywords_from_sentences(corpus[text_class])
-        phrases = rake.get_ranked_phrases()
+        phrases = rake.get_ranked_phrases_with_scores()
         phrases.sort(reverse=True)
         if self.args["filterpolarity"]:
             print(f"Filtering by polarity {text_class}...")
