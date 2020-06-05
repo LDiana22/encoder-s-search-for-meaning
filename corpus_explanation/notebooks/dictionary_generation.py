@@ -392,6 +392,9 @@ class RakeCorpusExplanations(AbstractDictionary):
     """
     if hasattr(self, 'dictionary') and self.dictionary:
         return self.dictionary
+    
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
     dictionary = OrderedDict()
     corpus = self.dataset.get_training_corpus()
 
@@ -450,6 +453,8 @@ class DefaultYAKE(AbstractDictionary):
     dictionary = OrderedDict()
     corpus = self.dataset.get_training_corpus()
 
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
     max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
     for text_class in corpus.keys():
         dictionary[text_class] = OrderedDict()
@@ -460,7 +465,49 @@ class DefaultYAKE(AbstractDictionary):
         if self.args["filterpolarity"]:
             print(f"Filtering by polarity {text_class}...")
             phrases = self.filter_by_sentiment_polarity(rev_phrases)
-        with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
+        with open(os.path.join(self.path, f"raw-phrases-{text_class}-{formated_date}.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join([str(ph) for ph in phrases]))
+        phrases = list(set([" ".join(ph[0].split()[:self.max_words]) for ph in phrases]))
+        dictionary[text_class] = OrderedDict(ChainMap(*[{phrases[i]:" ".join(corpus[text_class]).count(phrases[i])} for i in range(min(max_per_class,len(phrases)))]))
+    return dictionary
+
+################################# TEXTRANK ################################
+
+
+class TextRank(AbstractDictionary):
+
+  def __init__(self, id, dataset, args): 
+    super().__init__(id, dataset, args)
+    self.max_dict = args.get("max_dict", None)
+    self.max_words = args["max_words_dict"]
+    self.dictionary = self.get_dict()
+    self.tokenizer = spacy.load("en")
+    self._save_dict()
+  
+  def get_dict(self):
+    """
+    Builds a dictionary of keywords for each label.
+    # {"all":{word:freq}} OR
+    {"pos":{word:freq}, "neg":{word:freq}}
+    """
+    if hasattr(self, 'dictionary') and not self.dictionary:
+        return self.dictionary
+    dictionary = OrderedDict()
+    corpus = self.dataset.get_training_corpus()
+
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
+    max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
+    for text_class in corpus.keys():
+        dictionary[text_class] = OrderedDict()
+        phrases = [keywords.keywords(review, scores=True) for review in corpus[text_class]]
+        phrases = list(itertools.chain.from_iterable(phrases))
+        phrases.sort(reverse=True, key=lambda x: x[1])
+        rev_phrases = [(score, phrase) for score, phrase in phrases]
+        if self.args["filterpolarity"]:
+            print(f"Filtering by polarity {text_class}...")
+            phrases = self.filter_by_sentiment_polarity(rev_phrases)
+        with open(os.path.join(self.path, f"raw-phrases-{text_class}-{formated_date}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join([str(ph) for ph in phrases]))
         phrases = list(set([" ".join(ph[0].split()[:self.max_words]) for ph in phrases]))
         dictionary[text_class] = OrderedDict(ChainMap(*[{phrases[i]:" ".join(corpus[text_class]).count(phrases[i])} for i in range(min(max_per_class,len(phrases)))]))
@@ -509,7 +556,7 @@ try:
     elif args.d=="yake":
         explanations = DefaultYAKE(f"default-yake-filtered_{CONFIG['filterpolarity']}-p{CONFIG['phrase_len']}-d{CONFIG['max_words_dict']}", dataset, CONFIG)
     elif args.d=="textrank":
-        explanations = TextRank(f"textrank-filtered_{CONFIG['filterpolarity']}", dataset, CONFIG)
+        explanations = TextRank(f"textrank-filtered_{CONFIG['filterpolarity']}-p{CONFIG['phrase_len']}-d{CONFIG['max_words_dict']}", dataset, CONFIG)
     elif args.d == "rake-inst":
         explanations = RakeInstanceExplanations(f"rake-instance-{CONFIG['max_words_dict']}-{args.p}-filtered{CONFIG ['filterpolarity']}", dataset, CONFIG)
     elif args.d == "rake-corpus":
