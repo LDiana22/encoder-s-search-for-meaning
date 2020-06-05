@@ -458,7 +458,9 @@ class DefaultYAKE(AbstractDictionary):
     max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
     for text_class in corpus.keys():
         dictionary[text_class] = OrderedDict()
-        phrases = [yake.KeywordExtractor(n=self.max_words).extract_keywords(review) for review in corpus[text_class] if review]
+        print("Yake extraction...")
+        phrases = [yake.KeywordExtractor().extract_keywords(review) for review in corpus[text_class] if review]
+        print("Yake extraction done...")
         phrases = list(itertools.chain.from_iterable(phrases))
         phrases.sort(key=lambda x: x[1],reverse=True)
         rev_phrases = [(score, phrase) for phrase, score in phrases]
@@ -554,7 +556,7 @@ try:
     if args.d=="tfidf":
         explanations = TFIDF(f"tfidf-filtered_{CONFIG['filterpolarity']}", dataset, CONFIG)
     elif args.d=="yake":
-        explanations = DefaultYAKE(f"yake-filtered_{CONFIG['filterpolarity']}-p{CONFIG['phrase_len']}-d{CONFIG['max_words_dict']}", dataset, CONFIG)
+        explanations = DefaultYAKE(f"yake-nomax-filtered_{CONFIG['filterpolarity']}-p{CONFIG['phrase_len']}-d{CONFIG['max_words_dict']}", dataset, CONFIG)
     elif args.d=="textrank":
         explanations = TextRank(f"textrank-filtered_{CONFIG['filterpolarity']}-p{CONFIG['phrase_len']}-d{CONFIG['max_words_dict']}", dataset, CONFIG)
     elif args.d == "rake-inst":
