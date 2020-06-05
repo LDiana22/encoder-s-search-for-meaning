@@ -436,8 +436,8 @@ class RakeCorpusExplanations(AbstractDictionary):
 class DefaultYAKE(AbstractDictionary):
   def __init__(self, id, dataset, args): 
     super().__init__(id, dataset, args)
-    self.max_dict = args.get("max_dict", None)
-    self.max_words = args["max_words_dict"]
+    self.max_dict = args["max_words_dict"]
+    self.max_words = args["phrase_len"]
     self.dictionary = self.get_dict()
     self.tokenizer = spacy.load("en")
     self._save_dict()
@@ -480,8 +480,8 @@ class TextRank(AbstractDictionary):
 
   def __init__(self, id, dataset, args): 
     super().__init__(id, dataset, args)
-    self.max_dict = args.get("max_dict", None)
-    self.max_words = args["max_words_dict"]
+    self.max_dict = args["max_words_dict"]
+    self.max_words = args["phrase_len"]
     self.dictionary = self.get_dict()
     self.tokenizer = spacy.load("en")
     self._save_dict()
