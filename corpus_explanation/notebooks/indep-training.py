@@ -916,13 +916,12 @@ class RakeInstanceExplanations(AbstractDictionary):
 
 # pip install summa
 
-
 class TextRank(AbstractDictionary):
 
   def __init__(self, id, dataset, args): 
     super().__init__(id, dataset, args)
-    self.max_dict = args.get("max_dict", None)
-    self.max_words = args["max_words_dict"]
+    self.max_dict = args["max_words_dict"]
+    self.max_words = args["phrase_len"]
     self.dictionary = self.get_dict()
     self.tokenizer = spacy.load("en")
     self._save_dict()
@@ -938,17 +937,24 @@ class TextRank(AbstractDictionary):
     dictionary = OrderedDict()
     corpus = self.dataset.get_training_corpus()
 
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
     max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
     for text_class in corpus.keys():
         dictionary[text_class] = OrderedDict()
         phrases = [keywords.keywords(review, scores=True) for review in corpus[text_class]]
         phrases = list(itertools.chain.from_iterable(phrases))
         phrases.sort(reverse=True, key=lambda x: x[1])
-        with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
-            f.write("\n".join([str(ph) for ph in phrases]))
-        phrases = list(set([" ".join(ph[0].split()[:self.max_words]) for ph in phrases]))
+        rev_phrases = [(score, phrase) for phrase, score in phrases]
+        if self.args["filterpolarity"]:
+            print(f"Filtering by polarity {text_class}...")
+            rev_phrases = self.filter_by_sentiment_polarity(rev_phrases)
+        with open(os.path.join(self.path, f"raw-phrases-{text_class}-{formated_date}.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join([str(ph) for ph in rev_phrases]))
+        phrases = list(set([" ".join(ph[1].split()[:self.max_words]) for ph in rev_phrases]))
         dictionary[text_class] = OrderedDict(ChainMap(*[{phrases[i]:" ".join(corpus[text_class]).count(phrases[i])} for i in range(min(max_per_class,len(phrases)))]))
     return dictionary
+
 
 """## TF-IDF"""
 
@@ -3042,8 +3048,8 @@ try:
         "dropout": args.dr, 
         "load_dictionary":True,
         #"dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
-        "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-max-words-instance-300-4/dictionary-2020-06-02_16-00-44.h5",
-
+        # "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-max-words-instance-300-4/dictionary-2020-06-02_16-00-44.h5",
+        "dict_checkpoint":"experiments/dict_acquisition/dictionaries/textrank-filtered_True-p5-d300/dictionary-2020-06-05_14-56-57.h5",
         "toy_data": args.td,
         "lr": args.lr,
         "l2_wd": args.l2, 
@@ -3063,7 +3069,7 @@ try:
     elif args.d=="yake":
         explanations = DefaultYAKE("default-yake", dataset, experiment.config)
     elif args.d=="textrank":
-        explanations = TextRank(f"textrank-300-5", dataset, experiment.config)
+        explanations = TextRank(f"textrank-filtered", dataset, experiment.config)
     elif args.d == "rake-inst":
         explanations = RakeInstanceExplanations(f"rake-max-words-instance-{CONFIG['max_words_dict']}-{args.p}-filtered", dataset, experiment.config)
         # explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.p}", dataset, experiment.config)
