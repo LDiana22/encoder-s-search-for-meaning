@@ -456,6 +456,10 @@ class DefaultYAKE(AbstractDictionary):
         phrases = [yake.KeywordExtractor().extract_keywords(review) for review in corpus[text_class] if review]
         phrases = list(itertools.chain.from_iterable(phrases))
         phrases.sort(key=lambda x: x[1])
+        rev_phrases = [(score, phrase) for score, phrase in phrases]
+        if self.args["filterpolarity"]:
+            print(f"Filtering by polarity {text_class}...")
+            phrases = self.filter_by_sentiment_polarity(rev_phrases)
         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join([str(ph) for ph in phrases]))
         phrases = list(set([" ".join(ph[0].split()[:self.max_words]) for ph in phrases]))
