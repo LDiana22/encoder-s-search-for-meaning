@@ -19,6 +19,9 @@ import os.path
 import pickle
 import random
 import re
+
+from scipy.stats import expon
+
 import spacy
 import string
 import time
@@ -257,7 +260,67 @@ class AbstractDictionary:
       if freq > 0:
         result.update({phrase:freq})
 
+  def order_phrases_by_occurence(self, phrases, corpus):
+    """
+        phrases: list of phrases (score, 'phrase')
+        corpus: used for phrase frequency
+        return: [{'score': 2.3, 'freq': 13, 'phrase':'text' }]
+    """
+    result = [{'score':ph[0], 'text':ph[1], 'freq':corpus.count(ph[1])} for ph in phrases]
+    result.sort(key=lambda x: x['freq'], reverse=True)
     return result
+
+  def __gen_probability_expo_distribution(self, size):
+    data_expon = expon.rvs(scale=1,loc=0,size=size)
+    data_expon = (data_expon-min(data_expon))/(max(data_expon)-min(data_expon))
+    s = data_expon.sum()
+    data_expon = list(data_expon/s)
+    data_expon.sort(reverse=True)
+    return data_expon
+
+  def __get_bins(self, phrases):
+    """
+    Transform list of [(score, 'phrase')]
+    into dict { score: [list_of_phrases]}
+      {8.0: ['yay', 'yay2'], 7.5: []}
+    """
+    score_phrases_dict = {}
+    for score, phrase in phrases:
+      phrases_with_score = score_phrases_dict.get(score,[])
+      phrases_with_score.append(phrase)
+      score_phrases_dict[score] = phrases_with_score
+    return score_phrases_dict
+
+  def filter_using_distribution(self, phrases, second_criterion):
+    """
+        phrases: list of phrases (score, 'phrase')
+        corpus: used for phrase frequency
+        return: [{'score': 2.3, 'freq': 13, 'phrase':'text' }]
+    """
+    # create bins for each phrase score
+    score_phrases_dict = self.__get_bins(phrases)
+    bin_counts = {score: len(ph) for score, ph in score_phrases_dict}
+
+    # get the unique set of scores in reverse order
+    bins = list(set(score_phrases_dict.keys()))
+    bins.sort(reverse=True)
+    # generate a probability distribution to choose subsets of phrases for each score
+    probability_distr = self.__gen_probability_expo_distribution(len(bins))
+    sorted_scores = sorted(score_phrases_dict.keys(), reverse=True) # scores reverse order
+
+    # compute the number of phrases to be extracted for each score, based on the gen distr
+    counts_to_be_extracted = {} 
+    for i in range(len(sorted_scores)):
+      counts_to_be_extracted[sorted_scores[i]] = int(probability_distr[i]*bin_counts[sorted_scores[i]])
+
+    # filter out the top phrases based on the second criterion (frequency in the corpus)
+    resulting_phrases = []
+    for score, score_phrases in score_phrases_dict.items():
+      sorted_by_freq = sorted(score_phrases, key=second_criterion, reverse=True)
+      filtered = sorted_by_freq[:counts_to_be_extracted[score]]
+      resulting_phrases.extend([(score, ph) for ph in filtered])
+
+    return resulting_phrases
 
   def _save_dict(self):
     start = datetime.now()
@@ -284,19 +347,19 @@ class AbstractDictionary:
     class_avg_w = {}
     word_intersection = None
     for class_label in self.dictionary.keys():
-        instances = list(self.dictionary[class_label].keys())
-        no_instances = len(instances)
-        if word_intersection is None:
-            word_intersection = set(instances)
-        else:
-            word_intersection = set(instances).intersection(word_intersection)
-            overlap = len(word_intersection)
-        sum_number_of_words = sum([len(instance.split(" ")) for instance in instances])
-        class_avg_w[class_label] = sum_number_of_words/no_instances
-        global_avg_w += sum_number_of_words
-        global_count += no_instances
+      instances = list(self.dictionary[class_label].keys())
+      no_instances = len(instances)
+      if word_intersection is None:
+        word_intersection = set(instances)
+      else:
+        word_intersection = set(instances).intersection(word_intersection)
+        overlap = len(word_intersection)
+      sum_number_of_words = sum([len(instance.split(" ")) for instance in instances])
+      class_avg_w[class_label] = sum_number_of_words/no_instances
+      global_avg_w += sum_number_of_words
+      global_count += no_instances
     if global_count:
-        global_avg_w = global_avg_w/global_count
+      global_avg_w = global_avg_w/global_count
     self.metrics = {
       "dictionary_entries": global_count,
       "overlap_count": overlap,
@@ -307,12 +370,12 @@ class AbstractDictionary:
 
   def print_metrics(self):
     if not self.metrics:
-        self._compute_metrics()
+      self._compute_metrics()
     metrics_path = os.path.join(self.path, "metrics.txt")
     with open(metrics_path, "w", encoding="utf-8") as f:
-        f.write(str(self.metrics))
-        f.write("\nOverlapping words:\n")
-        f.write("\n".join(self.metrics["overlap_words"]))
+      f.write(str(self.metrics))
+      f.write("\nOverlapping words:\n")
+      f.write("\n".join(self.metrics["overlap_words"]))
 
   def get_dict(self):
     """
@@ -347,28 +410,30 @@ class RakeInstanceExplanations(AbstractDictionary):
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
     if hasattr(self, 'dictionary') and self.dictionary:
-        return self.dictionary
+      return self.dictionary
     dictionary = OrderedDict()
     corpus = self.dataset.get_training_corpus()
 
     max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
     res_phrases = []
     for text_class in corpus.keys():
-        phrases = []
-        dictionary[text_class] = OrderedDict()
-        for review in corpus[text_class]:
-            rake = Rake(max_length=self.max_words)
-            rake.extract_keywords_from_text(review)
-            phrases += rake.get_ranked_phrases_with_scores()
-        phrases.sort(reverse=True)
-        if self.args["filterpolarity"]:
-            print(f"Filtering by polarity {text_class}...")
-            phrases = self.filter_by_sentiment_polarity(phrases)
-        with open(os.path.join(self.path, f"phrases-{text_class}-{formated_date}.txt"), "w", encoding="utf-8") as f:
-            f.write("\n".join([str(ph) for ph in phrases]))
-        if max_per_class:
-            phrases = phrases[:max_per_class]
-        dictionary[text_class] = OrderedDict(ChainMap(*[{ph[1]:" ".join(corpus[text_class]).count(ph[1])} for ph in phrases]))
+      phrases = []
+      dictionary[text_class] = OrderedDict()
+      for review in corpus[text_class]:
+        rake = Rake(max_length=self.max_words)
+        rake.extract_keywords_from_text(review)
+        phrases += rake.get_ranked_phrases_with_scores()
+      phrases.sort(reverse=True)
+      if self.args["filterpolarity"]:
+        print(f"Filtering by polarity {text_class}...")
+        phrases = self.filter_by_sentiment_polarity(phrases)
+      corpus = " ".join(corpus[text_class])
+      phrases = self.filter_using_distribution(phrases, lambda ph: corpus.count(ph))
+      with open(os.path.join(self.path, f"phrases-{text_class}-{formated_date}.txt"), "w", encoding="utf-8") as f:
+        f.write("\n".join([str(ph) for ph in phrases]))
+      if max_per_class:
+        phrases = result[:max_per_class]
+      dictionary[text_class] = OrderedDict(ChainMap(*[{ph[1]:" ".join(corpus[text_class]).count(ph[1])} for ph in phrases]))
     return dictionary
 
 ################################# RAKE-CORPUS ################################
