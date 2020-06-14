@@ -1763,7 +1763,7 @@ class FrozenVLSTM(AbstractModel):
         #hidden = [batch size, hid dim * num directions]
 
         return self.lin(hidden).to(self.device), hidden
-   
+
 
     def train_model(self, iterator, args=None):
         """
@@ -3021,6 +3021,13 @@ try:
 
     parser.add_argument('-a', metavar='alpha', type=float, default=CONFIG["alpha"],
                         help='Similarity cost hyperparameter')
+    
+    parser.add_argument('-hd', metavar='hidden_dim', type=float, default=CONFIG["hidden_dim"],
+                        help='LSTM hidden dim')
+
+    parser.add_argument('-nl', metavar='num_layers', type=float, default=CONFIG["n_layers"],
+                        help='LSTM num_layers')
+
 
     parser.add_argument('-decay', metavar='decay', type=float, default=0, help='alpha decay')
 
@@ -3057,8 +3064,8 @@ try:
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
     experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-        "hidden_dim": 256,
-        "n_layers": 2,
+        "hidden_dim": args.hd,
+        "n_layers": args.nl,
         "max_dict": 1000, 
         "cuda": True,
         "restore_v_checkpoint" : True,
@@ -3108,9 +3115,10 @@ try:
     elif args.d == None:
         explanations = None
     print(f"Dict {args.d}")
-    d = explanations.get_dict()
-    print(str(d.keys()))
-    print(str(d.items()))
+    if explanations:
+        d = explanations.get_dict()
+        print(str(d.keys()))
+        print(str(d.items()))
     
     with open(f"dict/{args.d}-{args.p}-{formated_date}", "w") as f:
         for key in d.keys():
