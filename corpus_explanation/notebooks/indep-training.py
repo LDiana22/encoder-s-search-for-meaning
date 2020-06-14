@@ -1090,7 +1090,7 @@ class AbstractModel(nn.Module):
         """
         Saves the hyperparameters 
         """
-        mapping_file = os.path.join(self.mapping_location, self.id)        
+        mapping_file = os.path.join(self.mapping_location, f"{self.id}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")        
         with open(mapping_file, "w") as map_file:
             print(self.delim, file=map_file)
             print(self.args, file=map_file)
@@ -1152,8 +1152,8 @@ class AbstractModel(nn.Module):
         e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
         """
         e_loss = 0
-        e_acc, e_prec, e_rec = 0,0,0
-        e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        e_acc, e_prec_neg, e_prec_pos, e_rec_neg, e_rec_pos = 0,0,0,0,0
+        e_f1_neg, e_f1_pos, e_macrof1, e_microf1, e_wf1 = 0,0,0,0,0
 
         self.train()
 
@@ -1168,9 +1168,12 @@ class AbstractModel(nn.Module):
             y_true = batch.label.cpu().numpy()
             #metrics
             acc = accuracy_score(y_true, y_pred)
-            prec = precision_score(y_true, y_pred)
-            rec = recall_score(y_true, y_pred)
-            f1 = f1_score(y_true, y_pred)
+            prec_neg = precision_score(y_true, y_pred, pos_label=1)
+            prec_pos = precision_score(y_true, y_pred, pos_label=0)
+            rec_neg = recall_score(y_true, y_pred, pos_label=1)
+            rec_pos = recall_score(y_true, y_pred, pos_label=0)
+            f1_neg = f1_score(y_true, y_pred, pos_label=1)
+            f1_pos = f1_score(y_true, y_pred, pos_label=0)
             macrof1 = f1_score(y_true, y_pred, average='macro')
             microf1 = f1_score(y_true, y_pred, average='micro')
             wf1 = f1_score(y_true, y_pred, average='weighted')
@@ -1180,9 +1183,12 @@ class AbstractModel(nn.Module):
 
             e_loss += loss.item()
             e_acc += acc
-            e_prec += prec
-            e_rec += rec
-            e_f1 += f1
+            e_prec_neg += prec_neg
+            e_prec_pos += prec_pos
+            e_rec_neg += rec_neg
+            e_rec_pos += rec_pos
+            e_f1_neg += f1_neg
+            e_f1_pos += f1_pos
             e_macrof1 += macrof1
             e_microf1 += microf1
             e_wf1 += wf1
@@ -1191,9 +1197,12 @@ class AbstractModel(nn.Module):
         size = len(iterator)
         metrics["train_loss"] = e_loss/size
         metrics["train_acc"] = e_acc/size
-        metrics["train_prec"] = e_prec/size
-        metrics["train_rec"] = e_rec/size
-        metrics["train_f1"] = e_f1/size
+        metrics["train_prec_neg"] = e_prec_neg/size
+        metrics["train_prec_pos"] = e_prec_pos/size
+        metrics["train_rec_neg"] = e_rec_neg/size
+        metrics["train_rec_pos"] = e_rec_pos/size
+        metrics["train_f1_neg"] = e_f1_neg/size
+        metrics["train_f1_pos"] = e_f1_pos/size
         metrics["train_macrof1"] = e_macrof1/size
         metrics["train_microf1"] = e_microf1/size
         metrics["train_weightedf1"] = e_wf1/size
@@ -1209,8 +1218,8 @@ class AbstractModel(nn.Module):
         self.eval()
 
         e_loss = 0
-        e_acc, e_prec, e_rec = 0,0,0
-        e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        e_acc, e_prec_neg, e_prec_pos, e_rec_neg, e_rec_pos = 0,0,0,0,0
+        e_f1_neg, e_f1_pos, e_macrof1, e_microf1, e_wf1 = 0,0,0,0,0
         with torch.no_grad():
             for batch in iterator:
                 text, text_lengths = batch.text
@@ -1224,18 +1233,24 @@ class AbstractModel(nn.Module):
                 y_true = batch.label.cpu().numpy()
 
                 acc = accuracy_score(y_true, y_pred)
-                prec = precision_score(y_true, y_pred)
-                rec = recall_score(y_true, y_pred)
-                f1 = f1_score(y_true, y_pred)
+                prec_neg = precision_score(y_true, y_pred, pos_label=1)
+                prec_pos = precision_score(y_true, y_pred, pos_label=0)
+                rec_neg = recall_score(y_true, y_pred, pos_label=1)
+                rec_pos = recall_score(y_true, y_pred, pos_label=0)
+                f1_neg = f1_score(y_true, y_pred, pos_label=1)
+                f1_pos = f1_score(y_true, y_pred, pos_label=0)
                 macrof1 = f1_score(y_true, y_pred, average='macro')
                 microf1 = f1_score(y_true, y_pred, average='micro')
                 wf1 = f1_score(y_true, y_pred, average='weighted')
 
                 e_loss += loss.item()
                 e_acc += acc
-                e_prec += prec
-                e_rec += rec
-                e_f1 += f1
+                e_prec_neg += prec_neg
+                e_prec_pos += prec_pos
+                e_rec_neg += rec_neg
+                e_rec_pos += rec_pos
+                e_f1_neg += f1_neg
+                e_f1_pos += f1_pos
                 e_macrof1 += macrof1
                 e_microf1 += microf1
                 e_wf1 += wf1
@@ -1244,9 +1259,12 @@ class AbstractModel(nn.Module):
         size = len(iterator)
         metrics[f"{prefix}_loss"] = e_loss/size
         metrics[f"{prefix}_acc"] = e_acc/size
-        metrics[f"{prefix}_prec"] = e_prec/size
-        metrics[f"{prefix}_rec"] = e_rec/size
-        metrics[f"{prefix}_f1"] = e_f1/size
+        metrics[f"{prefix}_prec_neg"] = e_prec_neg/size
+        metrics[f"{prefix}_prec_pos"] = e_prec_pos/size
+        metrics[f"{prefix}_rec_neg"] = e_rec_neg/size
+        metrics[f"{prefix}_rec_pos"] = e_rec_pos/size
+        metrics[f"{prefix}_f1_neg"] = e_f1_neg/size
+        metrics[f"{prefix}_f1_pos"] = e_f1_pos/size
         metrics[f"{prefix}_macrof1"] = e_macrof1/size
         metrics[f"{prefix}_microf1"] = e_microf1/size
         metrics[f"{prefix}_weightedf1"] = e_wf1/size
@@ -1745,7 +1763,7 @@ class FrozenVLSTM(AbstractModel):
         #hidden = [batch size, hid dim * num directions]
 
         return self.lin(hidden).to(self.device), hidden
-
+   
 
     def train_model(self, iterator, args=None):
         """
@@ -1755,8 +1773,8 @@ class FrozenVLSTM(AbstractModel):
         e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
         """
         e_loss = 0
-        e_acc, e_prec, e_rec = 0,0,0
-        e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        e_acc, e_prec_neg, e_prec_pos, e_rec_neg, e_rec_pos = 0,0,0,0,0
+        e_f1_neg, e_f1_pos, e_macrof1, e_microf1, e_wf1 = 0,0,0,0,0
 
         self.train()
 
@@ -1771,9 +1789,12 @@ class FrozenVLSTM(AbstractModel):
             y_true = batch.label.cpu().numpy()
             #metrics
             acc = accuracy_score(y_true, y_pred)
-            prec = precision_score(y_true, y_pred)
-            rec = recall_score(y_true, y_pred)
-            f1 = f1_score(y_true, y_pred)
+            prec_neg = precision_score(y_true, y_pred, pos_label=1)
+            prec_pos = precision_score(y_true, y_pred, pos_label=0)
+            rec_neg = recall_score(y_true, y_pred, pos_label=1)
+            rec_pos = recall_score(y_true, y_pred, pos_label=0)
+            f1_neg = f1_score(y_true, y_pred, pos_label=1)
+            f1_pos = f1_score(y_true, y_pred, pos_label=0)
             macrof1 = f1_score(y_true, y_pred, average='macro')
             microf1 = f1_score(y_true, y_pred, average='micro')
             wf1 = f1_score(y_true, y_pred, average='weighted')
@@ -1783,9 +1804,12 @@ class FrozenVLSTM(AbstractModel):
 
             e_loss += loss.item()
             e_acc += acc
-            e_prec += prec
-            e_rec += rec
-            e_f1 += f1
+            e_prec_neg += prec_neg
+            e_prec_pos += prec_pos
+            e_rec_neg += rec_neg
+            e_rec_pos += rec_pos
+            e_f1_neg += f1_neg
+            e_f1_pos += f1_pos
             e_macrof1 += macrof1
             e_microf1 += microf1
             e_wf1 += wf1
@@ -1794,9 +1818,12 @@ class FrozenVLSTM(AbstractModel):
         size = len(iterator)
         metrics["train_loss"] = e_loss/size
         metrics["train_acc"] = e_acc/size
-        metrics["train_prec"] = e_prec/size
-        metrics["train_rec"] = e_rec/size
-        metrics["train_f1"] = e_f1/size
+        metrics["train_prec_neg"] = e_prec_neg/size
+        metrics["train_prec_pos"] = e_prec_pos/size
+        metrics["train_rec_neg"] = e_rec_neg/size
+        metrics["train_rec_pos"] = e_rec_pos/size
+        metrics["train_f1_neg"] = e_f1_neg/size
+        metrics["train_f1_pos"] = e_f1_pos/size
         metrics["train_macrof1"] = e_macrof1/size
         metrics["train_microf1"] = e_microf1/size
         metrics["train_weightedf1"] = e_wf1/size
@@ -2997,7 +3024,7 @@ try:
 
     parser.add_argument('-decay', metavar='decay', type=float, default=0, help='alpha decay')
 
-    parser.add_argument('-d', metavar='dictionary_type', type=str,
+    parser.add_argument('-d', metavar='dictionary_type', type=str, default=None,
                         help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
 
     parser.add_argument('-m', metavar='model_type', type=str,
@@ -3078,7 +3105,8 @@ try:
         explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, experiment.config)
     elif args.d == "rake-polarity":
         explanations = RakeCorpusPolarityFiltered(f"rake-polarity", dataset, experiment.config)
-
+    elif args.d == None:
+        explanations = None
     print(f"Dict {args.d}")
     d = explanations.get_dict()
     print(str(d.keys()))
@@ -3101,6 +3129,9 @@ try:
         model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-sumloss-c", MODEL_MAPPING, experiment.config, dataset, explanations)
     elif "bilstm_mlp_improve" in args.m:
         model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    elif args.m == "bilstm":
+        model = VLSTM("vanilla-lstm", mapping_file_location, model_args)
+        
 
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
     print(f"Time model training: {str(datetime.now()-start)}")

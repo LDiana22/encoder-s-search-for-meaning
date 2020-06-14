@@ -291,7 +291,7 @@ class AbstractDictionary:
       score_phrases_dict[score] = phrases_with_score
     return score_phrases_dict
 
-  def filter_using_distribution(self, phrases, second_criterion):
+  def filter_using_distribution(self, phrases, second_criterion, max_phrases):
     """
         phrases: list of phrases (score, 'phrase')
         corpus: used for phrase frequency
@@ -299,7 +299,7 @@ class AbstractDictionary:
     """
     # create bins for each phrase score
     score_phrases_dict = self.__get_bins(phrases)
-    bin_counts = {score: len(ph) for score, ph in score_phrases_dict}
+    bin_counts = {score: len(ph) for score, ph in score_phrases_dict.items()}
 
     # get the unique set of scores in reverse order
     bins = list(set(score_phrases_dict.keys()))
@@ -311,16 +311,32 @@ class AbstractDictionary:
     # compute the number of phrases to be extracted for each score, based on the gen distr
     counts_to_be_extracted = {} 
     for i in range(len(sorted_scores)):
-      counts_to_be_extracted[sorted_scores[i]] = int(probability_distr[i]*bin_counts[sorted_scores[i]])
+      # counts_to_be_extracted[sorted_scores[i]] = int(probability_distr[i]*bin_counts[sorted_scores[i]])
 
+      # counts_to_be_extracted[sorted_scores[i]] = min(bin_counts[sorted_scores[i]],int(probability_distr[i]*max_phrases))
+      
+      counts_to_be_extracted[sorted_scores[i]] = int(probability_distr[i]*max_phrases)
+    for i in range(len(sorted_scores)-1):
+      # counts_to_be_extracted[sorted_scores[i]] = int(probability_distr[i]*bin_counts[sorted_scores[i]])
+         
+      diff_passed_on = max(0, counts_to_be_extracted[sorted_scores[i]] - bin_counts[sorted_scores[i]])
+       
+      counts_to_be_extracted[sorted_scores[i]] = min(bin_counts[sorted_scores[i]],int(probability_distr[i]*max_phrases))
+      counts_to_be_extracted[sorted_scores[i+1]] += diff_passed_on 
+      
+    
+    print(f"Counts: {counts_to_be_extracted}")
     # filter out the top phrases based on the second criterion (frequency in the corpus)
     resulting_phrases = []
     for score, score_phrases in score_phrases_dict.items():
       sorted_by_freq = sorted(score_phrases, key=second_criterion, reverse=True)
       filtered = sorted_by_freq[:counts_to_be_extracted[score]]
       resulting_phrases.extend([(score, ph) for ph in filtered])
-
+    print(f"Total: {len(resulting_phrases)}")
     return resulting_phrases
+
+  def remove_duplicates(self, phrases):
+    return [(score, ph) for i, (score, ph) in enumerate(phrases) if not any( p == ph for _, p in phrases[:i])]
 
   def _save_dict(self):
     start = datetime.now()
@@ -369,9 +385,11 @@ class AbstractDictionary:
     }
 
   def print_metrics(self):
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
     if not self.metrics:
       self._compute_metrics()
-    metrics_path = os.path.join(self.path, "metrics.txt")
+    metrics_path = os.path.join(self.path, f"metrics-{formated_date}.txt")
     with open(metrics_path, "w", encoding="utf-8") as f:
       f.write(str(self.metrics))
       f.write("\nOverlapping words:\n")
@@ -427,13 +445,12 @@ class RakeInstanceExplanations(AbstractDictionary):
       if self.args["filterpolarity"]:
         print(f"Filtering by polarity {text_class}...")
         phrases = self.filter_by_sentiment_polarity(phrases)
-      corpus = " ".join(corpus[text_class])
-      phrases = self.filter_using_distribution(phrases, lambda ph: corpus.count(ph))
+      merged_corpus = " ".join(corpus[text_class])
+
       with open(os.path.join(self.path, f"phrases-{text_class}-{formated_date}.txt"), "w", encoding="utf-8") as f:
         f.write("\n".join([str(ph) for ph in phrases]))
-      if max_per_class:
-        phrases = result[:max_per_class]
-      dictionary[text_class] = OrderedDict(ChainMap(*[{ph[1]:" ".join(corpus[text_class]).count(ph[1])} for ph in phrases]))
+      phrases = self.filter_using_distribution(phrases, lambda ph: merged_corpus.count(ph), max_per_class)
+      dictionary[text_class] = OrderedDict(ChainMap(*[{ph[1]:merged_corpus.count(ph[1])} for ph in phrases]))
     return dictionary
 
 ################################# RAKE-CORPUS ################################
@@ -470,6 +487,7 @@ class RakeCorpusExplanations(AbstractDictionary):
         rake = Rake(max_length=self.max_words)
         rake.extract_keywords_from_sentences(corpus[text_class])
         phrases = rake.get_ranked_phrases_with_scores()
+        phrases = self.remove_duplicates(phrases)
         phrases.sort(reverse=True)
         if self.args["filterpolarity"]:
             print(f"Filtering by polarity {text_class}...")
