@@ -281,12 +281,12 @@ class Experiment(object):
 
             training_losses.append(train_metrics["train_loss"])
             training_acc.append(train_metrics["train_acc"])
-            training_raw_acc.append(train_metrics["train_raw_acc"])
-            training_contrib.append(train_metrics["train_avg_contributions"])
+            #training_raw_acc.append(train_metrics["train_raw_acc"])
+            #training_contrib.append(train_metrics["train_avg_contributions"])
             v_losses.append(valid_metrics["valid_loss"])
             v_acc.append(valid_metrics["valid_acc"])
-            v_raw_acc.append(valid_metrics["valid_raw_acc"])
-            v_contrib.append(valid_metrics["valid_avg_contributions"])
+            #v_raw_acc.append(valid_metrics["valid_raw_acc"])
+            #v_contrib.append(valid_metrics["valid_avg_contributions"])
 
             if valid_metrics["valid_loss"] < best_valid_loss:
                 best_valid_loss = valid_metrics["valid_loss"]
@@ -304,8 +304,8 @@ class Experiment(object):
             print(f'Epoch: {epoch+1:02} | Epoch Time: {str(end_time-start_time)}')
             print(f'\tTrain Loss: {train_metrics["train_loss"]:.3f} | Train Acc: {train_metrics["train_acc"]*100:.2f}%')
             print(f'\t Val. Loss: {valid_metrics["valid_loss"]:.3f} |  Val. Acc: {valid_metrics["valid_acc"]*100:.2f}%')
-            print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]} |  Val. avgC: {valid_metrics["valid_avg_contributions"]}')
-            print(f'\tTrain raw_acc: {train_metrics["train_raw_acc"]*100:.2f} | Val. Raw_acc: {valid_metrics["valid_raw_acc"]*100:.2f}%')
+            #print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]} |  Val. avgC: {valid_metrics["valid_avg_contributions"]}')
+            #print(f'\tTrain raw_acc: {train_metrics["train_raw_acc"]*100:.2f} | Val. Raw_acc: {valid_metrics["valid_raw_acc"]*100:.2f}%')
 
 
         print(f'Training Time: {str(datetime.now()-training_start_time)}')
@@ -325,9 +325,9 @@ class Experiment(object):
         plot_path = self.model.get_plot_path("train_plot")
         print(f"Plotting at {plot_path}")
         plot_training_metrics(plot_path, training_losses, v_losses, training_acc, v_acc)
-        plot_path = self.model.get_plot_path("contributions_plot")
-        print(f"Plotting contributions at {plot_path}")
-        plot_contributions(plot_path, training_contrib, v_contrib)
+        #plot_path = self.model.get_plot_path("contributions_plot")
+        #print(f"Plotting contributions at {plot_path}")
+        #plot_contributions(plot_path, training_contrib, v_contrib)
 
         self.model.save_results(metrics, "train")
 
@@ -1781,10 +1781,12 @@ class FrozenVLSTM(AbstractModel):
         for batch in iterator:
             self.optimizer.zero_grad()
             text, text_lengths = batch.text
-            logits = self.forward(text, text_lengths)[0].squeeze()
-            batch.label = batch.label.to(self.device)
-            loss = self.criterion(logits, batch.label)
+            #logits = self.forward(text, text_lengths)[0].squeeze()
+            logits = self.forward(text, text_lengths).squeeze()
 
+
+            batch.label = batch.label.to(self.device)
+            loss = self.criterion(logits, batch.label)       
             y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
             y_true = batch.label.cpu().numpy()
             #metrics
@@ -3022,10 +3024,11 @@ try:
     parser.add_argument('-a', metavar='alpha', type=float, default=CONFIG["alpha"],
                         help='Similarity cost hyperparameter')
     
-    parser.add_argument('-hd', metavar='hidden_dim', type=float, default=CONFIG["hidden_dim"],
+
+    parser.add_argument('-hd', metavar='hidden_dim', type=int, default=256,
                         help='LSTM hidden dim')
 
-    parser.add_argument('-nl', metavar='num_layers', type=float, default=CONFIG["n_layers"],
+    parser.add_argument('-nl', metavar='num_layers', type=int, default=2,
                         help='LSTM num_layers')
 
 
@@ -3044,7 +3047,7 @@ try:
 
     parser.add_argument('-l2', metavar='L2 weight decay', type=float, default=CONFIG["l2_wd"], help='L2 weight decay optimizer')
 
-    parser.add_argument('--td', type=bool, default=CONFIG["toy_data"],
+    parser.add_argument('--td',  action='store_true',
                         help='Toy data (load just a small data subset)')
 
     # parser.add_argument('--train', dest='train', action='store_true')
@@ -3120,12 +3123,12 @@ try:
         print(str(d.keys()))
         print(str(d.items()))
     
-    with open(f"dict/{args.d}-{args.p}-{formated_date}", "w") as f:
-        for key in d.keys():
-            f.write(f"{key}\n**\n")
-            f.write("\n".join([f"{e} ~ {f}" for e,f in d[key].items()]))
-            f.write(f"\n\n------------\n\n")
-    print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()-start)}")
+        with open(f"dict/{args.d}-{args.p}-{formated_date}", "w") as f:
+            for key in d.keys():
+                f.write(f"{key}\n**\n")
+                f.write("\n".join([f"{e} ~ {f}" for e,f in d[key].items()]))
+                f.write(f"\n\n------------\n\n")
+        print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()-start)}")
 
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
@@ -3138,7 +3141,7 @@ try:
     elif "bilstm_mlp_improve" in args.m:
         model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
     elif args.m == "bilstm":
-        model = VLSTM("vanilla-lstm", mapping_file_location, model_args)
+        model = FrozenVLSTM(f"vanilla-lstm-n{experiment.config['n_layers']}-h{experiment.config['hidden_dim']}-dr{experiment.config['dropout']}", MODEL_MAPPING, experiment.config)
         
 
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
