@@ -281,12 +281,12 @@ class Experiment(object):
 
             training_losses.append(train_metrics["train_loss"])
             training_acc.append(train_metrics["train_acc"])
-            #training_raw_acc.append(train_metrics["train_raw_acc"])
-            #training_contrib.append(train_metrics["train_avg_contributions"])
+            training_raw_acc.append(train_metrics["train_raw_acc"])
+            training_contrib.append(train_metrics["train_avg_contributions"])
             v_losses.append(valid_metrics["valid_loss"])
             v_acc.append(valid_metrics["valid_acc"])
-            #v_raw_acc.append(valid_metrics["valid_raw_acc"])
-            #v_contrib.append(valid_metrics["valid_avg_contributions"])
+            v_raw_acc.append(valid_metrics["valid_raw_acc"])
+            v_contrib.append(valid_metrics["valid_avg_contributions"])
 
             if valid_metrics["valid_loss"] < best_valid_loss:
                 best_valid_loss = valid_metrics["valid_loss"]
@@ -304,8 +304,8 @@ class Experiment(object):
             print(f'Epoch: {epoch+1:02} | Epoch Time: {str(end_time-start_time)}')
             print(f'\tTrain Loss: {train_metrics["train_loss"]:.3f} | Train Acc: {train_metrics["train_acc"]*100:.2f}%')
             print(f'\t Val. Loss: {valid_metrics["valid_loss"]:.3f} |  Val. Acc: {valid_metrics["valid_acc"]*100:.2f}%')
-            #print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]} |  Val. avgC: {valid_metrics["valid_avg_contributions"]}')
-            #print(f'\tTrain raw_acc: {train_metrics["train_raw_acc"]*100:.2f} | Val. Raw_acc: {valid_metrics["valid_raw_acc"]*100:.2f}%')
+            print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]} |  Val. avgC: {valid_metrics["valid_avg_contributions"]}')
+            print(f'\tTrain raw_acc: {train_metrics["train_raw_acc"]*100:.2f} | Val. Raw_acc: {valid_metrics["valid_raw_acc"]*100:.2f}%')
 
 
         print(f'Training Time: {str(datetime.now()-training_start_time)}')
@@ -1466,6 +1466,7 @@ class MLPGen(AbstractModel):
                 val.append(nlp_expl_dict)
                 val.append(self.predictions[i])
                 val.append(self.true_labels[i])
+                val.append(self.raw_predictions[i])
                 text_expl[nlp_text] = val
 
             # header text,list of classes
@@ -1969,6 +1970,7 @@ class MLPIndependentOneDict(AbstractModel):
             val.append(nlp_expl_dict)
             val.append(self.predictions[i])
             val.append(self.true_labels[i])
+            val.append(self.raw_predictions[i])
             text_expl[nlp_text] = val
 
             # header text,list of classes
@@ -2645,6 +2647,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             val.append(nlp_expl_dict)
             val.append(self.predictions[i])
             val.append(self.true_labels[i])
+            val.append(self.raw_predictions[i])
             text_expl[nlp_text] = val
 
             # header text,list of classes
@@ -2767,7 +2770,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         save = False # save explanations
         if prefix=="test_f":
             save = True
-            expl = "text, explanation (freq:confidence), prediction, true label\n"
+            expl = "text, explanation (freq:confidence), prediction, true label, raw prediction\n"
             e_list = []
             # distr = [torch.tensor([]).to(self.device) for i in range(len(self.dictionaries.keys()))]
             distr = torch.tensor([]).to(self.device)
@@ -3072,7 +3075,8 @@ try:
         "max_dict": 1000, 
         "cuda": True,
         "restore_v_checkpoint" : True,
-        "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
+        # "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
+        "checkpoint_v_file": "experiments/soa-dicts/bilstm_mlp_improve_soa_pretrained_rake-4-600-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e60-2020-06-07_23-34-22/snapshot/2020-06-08_00-32-09_e5",
         "train": True,
         "max_words_dict": args.p,
         "patience":20,
