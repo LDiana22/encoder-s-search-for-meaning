@@ -291,7 +291,7 @@ class Experiment(object):
                 v_raw_acc.append(valid_metrics["valid_raw_acc"])
                 v_contrib.append(valid_metrics["valid_avg_contributions"])
 
-            if valid_metrics["valid_loss"] < best_valid_loss:
+            if valid_metrics["valid_loss"] <= best_valid_loss:
                 best_valid_loss = valid_metrics["valid_loss"]
                 metrics = train_metrics
                 metrics.update(valid_metrics)
@@ -3081,7 +3081,8 @@ try:
         "cuda": True,
         "restore_v_checkpoint" : True,
         # "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
-        "checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n1-h64-dr0.05/snapshot/2020-06-16_19-33-50_e4",
+        "checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
+        # "checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n1-h64-dr0.05/snapshot/2020-06-16_19-33-50_e4",
         "train": True,
         "max_words_dict": args.p,
         "patience":20,
