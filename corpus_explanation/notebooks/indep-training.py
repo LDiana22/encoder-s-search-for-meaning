@@ -281,12 +281,15 @@ class Experiment(object):
 
             training_losses.append(train_metrics["train_loss"])
             training_acc.append(train_metrics["train_acc"])
-            training_raw_acc.append(train_metrics["train_raw_acc"])
-            training_contrib.append(train_metrics["train_avg_contributions"])
             v_losses.append(valid_metrics["valid_loss"])
             v_acc.append(valid_metrics["valid_acc"])
-            v_raw_acc.append(valid_metrics["valid_raw_acc"])
-            v_contrib.append(valid_metrics["valid_avg_contributions"])
+            
+            if self.config["id"] != "bilstm":
+                training_raw_acc.append(train_metrics["train_raw_acc"])
+                training_contrib.append(train_metrics["train_avg_contributions"])
+            
+                v_raw_acc.append(valid_metrics["valid_raw_acc"])
+                v_contrib.append(valid_metrics["valid_avg_contributions"])
 
             if valid_metrics["valid_loss"] < best_valid_loss:
                 best_valid_loss = valid_metrics["valid_loss"]
@@ -304,8 +307,9 @@ class Experiment(object):
             print(f'Epoch: {epoch+1:02} | Epoch Time: {str(end_time-start_time)}')
             print(f'\tTrain Loss: {train_metrics["train_loss"]:.3f} | Train Acc: {train_metrics["train_acc"]*100:.2f}%')
             print(f'\t Val. Loss: {valid_metrics["valid_loss"]:.3f} |  Val. Acc: {valid_metrics["valid_acc"]*100:.2f}%')
-            print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]} |  Val. avgC: {valid_metrics["valid_avg_contributions"]}')
-            print(f'\tTrain raw_acc: {train_metrics["train_raw_acc"]*100:.2f} | Val. Raw_acc: {valid_metrics["valid_raw_acc"]*100:.2f}%')
+            if self.config["id"] != "bilstm":
+                print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]} |  Val. avgC: {valid_metrics["valid_avg_contributions"]}')
+                print(f'\tTrain raw_acc: {train_metrics["train_raw_acc"]*100:.2f} | Val. Raw_acc: {valid_metrics["valid_raw_acc"]*100:.2f}%')
 
 
         print(f'Training Time: {str(datetime.now()-training_start_time)}')
@@ -325,9 +329,10 @@ class Experiment(object):
         plot_path = self.model.get_plot_path("train_plot")
         print(f"Plotting at {plot_path}")
         plot_training_metrics(plot_path, training_losses, v_losses, training_acc, v_acc)
-        #plot_path = self.model.get_plot_path("contributions_plot")
-        #print(f"Plotting contributions at {plot_path}")
-        #plot_contributions(plot_path, training_contrib, v_contrib)
+        if self.config["id"] != "bilstm":
+            plot_path = self.model.get_plot_path("contributions_plot")
+            print(f"Plotting contributions at {plot_path}")
+            plot_contributions(plot_path, training_contrib, v_contrib)
 
         self.model.save_results(metrics, "train")
 
@@ -3076,7 +3081,7 @@ try:
         "cuda": True,
         "restore_v_checkpoint" : True,
         # "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
-        "checkpoint_v_file": "experiments/soa-dicts/bilstm_mlp_improve_soa_pretrained_rake-4-600-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e60-2020-06-07_23-34-22/snapshot/2020-06-08_00-32-09_e5",
+        "checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n1-h64-dr0.05/snapshot/2020-06-16_19-33-50_e4",
         "train": True,
         "max_words_dict": args.p,
         "patience":20,
@@ -3096,7 +3101,8 @@ try:
         "lr": args.lr,
         "l2_wd": args.l2, 
         "filterpolarity": True,
-        "phrase_len":4
+        "phrase_len":4,
+        "id":args.m
     })
     print(experiment.config)
 
