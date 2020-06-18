@@ -3058,6 +3058,7 @@ try:
     parser.add_argument('--td',  action='store_true',
                         help='Toy data (load just a small data subset)')
 
+    parser.add_argument('--eval', action='store_true')
     # parser.add_argument('--train', dest='train', action='store_true')
     # parser.add_argument('--no_train', dest='train', action='store_false')
     # parser.set_defaults(train=CONFIG["train"])
@@ -3103,7 +3104,10 @@ try:
         "l2_wd": args.l2, 
         "filterpolarity": True,
         "phrase_len":4,
-        "id":args.m
+        "id":args.m,
+        "train": not args.eval,
+        "restore_checkpoint" : args.eval,
+        "checkpoint_file": "experiments/soa-dicts/bilstm_mlp_improve_15-25_l20.1_dr0.5_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn15-1-25-decay0.0-L2-dr0.5-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e30-2020-06-17_14-52-49/snapshot/2020-06-17_16-02-07_e6"
     })
     print(experiment.config)
 
