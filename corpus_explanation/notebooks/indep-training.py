@@ -293,6 +293,7 @@ class Experiment(object):
 
             if valid_metrics["valid_loss"] <= best_valid_loss:
                 best_valid_loss = valid_metrics["valid_loss"]
+                print(f"Best valid at epoch {epoch+1}: {best_valid_loss}")
                 metrics = train_metrics
                 metrics.update(valid_metrics)
                 self.model.checkpoint(epoch+1, metrics)
@@ -2880,7 +2881,6 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
         e_contributions, e_len = 0, 0 
 
-        count = 0
         batch_raw_accs = []
         self.train()
         for batch in iterator:
@@ -2889,13 +2889,6 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             logits, (expl, emb_text) = self.forward(text, text_lengths)
             logits=logits.squeeze()
 
-            if count < 3 and epoch<3:
-               with open(f"debug/batch-{count}-e{epoch}", "w") as f:
-                    f.write(str(text))
-                    f.write("\n~\n")
-                    f.write(str(self.raw_predictions))
-                    f.write("\n\n**\n\n")
-            count += 1
             
             batch.label = batch.label.to(self.device)
             loss = self.criterion(logits, batch.label, expl, emb_text, self.alpha - self.decay * epoch, epoch)
