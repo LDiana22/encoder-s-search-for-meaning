@@ -229,7 +229,7 @@ class AbstractDictionary:
     if not os.path.isdir(self.path):
         os.makedirs(self.path)
     if args["load_dictionary"]:
-        self.dictionary = self.load_dict(args["dict_checkpoint"])
+        self.dictionary = self.load_dict(args["dict_checkpoint_file"])
 
 
   def load_dict(self, file):
