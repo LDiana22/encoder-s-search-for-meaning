@@ -362,6 +362,9 @@ class AbstractDictionary:
     global_count = 0
     class_avg_w = {}
     word_intersection = None
+    sentiment = SentimentIntensityAnalyzer()
+    polarities = {}
+    counts_polarities = {}
     for class_label in self.dictionary.keys():
       instances = list(self.dictionary[class_label].keys())
       no_instances = len(instances)
@@ -371,9 +374,16 @@ class AbstractDictionary:
         word_intersection = set(instances).intersection(word_intersection)
         overlap = len(word_intersection)
       sum_number_of_words = sum([len(instance.split(" ")) for instance in instances])
+      polarities[class_label] = {instance: sentiment.polarity_scores(instance) for instance in instances}
       class_avg_w[class_label] = sum_number_of_words/no_instances
       global_avg_w += sum_number_of_words
       global_count += no_instances
+      counts_polarities[class_label] = {}
+      counts_polarities[class_label] = {"pos":sum([1 for instance in instances if sentiment.polarity_scores(instance)['pos']>0.5])}
+      counts_polarities[class_label] = {"neg":sum([1 for instance in instances if sentiment.polarity_scores(instance)['neg']>0.5])}
+      counts_polarities[class_label] = {"neu":sum([1 for instance in instances if sentiment.polarity_scores(instance)['neu']>0.5])}
+      counts_polarities[class_label] = {"total":len(instances)}
+      
     if global_count:
       global_avg_w = global_avg_w/global_count
     self.metrics = {
@@ -381,7 +391,9 @@ class AbstractDictionary:
       "overlap_count": overlap,
       "global_average_words_per_instance": global_avg_w,
       "class_average": class_avg_w,
-      "overlap_words": word_intersection
+      "overlap_words": word_intersection,
+      "polarities": polarities,
+      "counts" : counts_polarities
     }
 
   def print_metrics(self):
