@@ -379,10 +379,10 @@ class AbstractDictionary:
       global_avg_w += sum_number_of_words
       global_count += no_instances
       counts_polarities[class_label] = {}
-      counts_polarities[class_label] = {"pos":sum([1 for instance in instances if sentiment.polarity_scores(instance)['pos']>0.5])}
-      counts_polarities[class_label] = {"neg":sum([1 for instance in instances if sentiment.polarity_scores(instance)['neg']>0.5])}
-      counts_polarities[class_label] = {"neu":sum([1 for instance in instances if sentiment.polarity_scores(instance)['neu']>0.5])}
-      counts_polarities[class_label] = {"total":len(instances)}
+      counts_polarities[class_label]["pos"] = sum([1 for instance in instances if sentiment.polarity_scores(instance)['pos']>0.5])
+      counts_polarities[class_label]["neg"] = sum([1 for instance in instances if sentiment.polarity_scores(instance)['neg']>0.5])
+      counts_polarities[class_label]["neu"] = sum([1 for instance in instances if sentiment.polarity_scores(instance)['neu']>0.5])
+      counts_polarities[class_label]["total"] =len(instances)
       
     if global_count:
       global_avg_w = global_avg_w/global_count
