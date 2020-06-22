@@ -291,7 +291,7 @@ class Experiment(object):
                 v_raw_acc.append(valid_metrics["valid_raw_acc"])
                 v_contrib.append(valid_metrics["valid_avg_contributions"])
 
-            if valid_metrics["valid_loss"] <= best_valid_loss:
+            if round(valid_metrics["valid_loss"],3) <= round(best_valid_loss,3):
                 best_valid_loss = valid_metrics["valid_loss"]
                 print(f"Best valid at epoch {epoch+1}: {best_valid_loss}")
                 metrics = train_metrics
