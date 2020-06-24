@@ -141,7 +141,9 @@ class AbstractDictionary:
     self.metrics = {}
     if not os.path.isdir(self.path):
         os.makedirs(self.path)
-
+    if args["load_dictionary"]:
+        print("Loading dictionary...")
+        self.dictionary = self.load_dict(args["dict_checkpoint"])
 
   def load_dict(self, file):
     return pickle.load(open(file, "rb"))
@@ -232,8 +234,8 @@ class RakeCorpusPolarityFiltered(AbstractDictionary):
     self.max_dict = args.get("max_dict", None)
     self.max_words = args["max_words_dict"]
     # self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
-    if args["load_dict"]:
-        print(f"Loading RakeCorpusPolarityFiltered from: {args['load_dict']}")
+    if args["load_dictionary"]:
+        print(f"Loading RakeCorpusPolarityFiltered from: {args['load_dictionary']}")
         self.dictionary = self.load_dict(args["dict_checkpoint"])
         print(f"Loaded dict keys: {[f'{key}:{len(self.dictionary[key].keys())}' for key in self.dictionary.keys()]}")
     else:
@@ -1336,7 +1338,7 @@ CONFIG = {
     "emb_dim": 300,
     "batch_size": 32,
     "output_dim": 1,
-    "load_dictionary": False,
+    "load_dictionary": True,
 
     "lr": 0.001,
     "hidden_dim": 256,
@@ -1354,9 +1356,9 @@ CONFIG = {
     "n3": args.n3,
     "alpha_decay": 0,
     "l2_wd":0.1,
-    "load_dict":True,
     #"dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5"
-    "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5"
+    "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
+    "filterpolarity": True
 }
 print(CONFIG)
 
