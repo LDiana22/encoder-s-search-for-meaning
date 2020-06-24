@@ -1256,14 +1256,64 @@ print(CONFIG)
 
 import argparse
 
+
 parser = argparse.ArgumentParser(description='Config params.')
+parser.add_argument('-p', metavar='max_words_dict', type=int, default=CONFIG["max_words_dict"],
+                    help='Max number of words per phrase in explanations dictionary')
+
+parser.add_argument('-n1', metavar='mlp_depth', type=int, default=1,
+                    help='Number of deep layers of the DNN generator - 2*hid->2*hid')
+
+parser.add_argument('-n2', metavar='mlp_depth', type=int, default=1,
+                    help='Number of deep layers of the DNN generator - 2*hid->1*hid')
+
+parser.add_argument('-n3', metavar='mlp_depth', type=int, default=1,
+                    help='Number of deep layers of the DNN generator - 1*hid->1*hid')
+
+
+
+parser.add_argument('-dr', metavar='dropout', type=float, default=CONFIG["dropout"],
+                    help='Dropout value')
+
+parser.add_argument('-a', metavar='alpha', type=float, default=CONFIG["alpha"],
+                    help='Similarity cost hyperparameter')
+
+
+parser.add_argument('-hd', metavar='hidden_dim', type=int, default=256,
+                    help='LSTM hidden dim')
+
+parser.add_argument('-nl', metavar='num_layers', type=int, default=2,
+                    help='LSTM num_layers')
+
+
+parser.add_argument('-decay', metavar='decay', type=float, default=0, help='alpha decay')
+
+parser.add_argument('-d', metavar='dictionary_type', type=str, default=None,
+                    help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
 
 parser.add_argument('-m', metavar='model_type', type=str,
                     help='frozen_mlp_bilstm, frozen_bilstm_mlp, bilstm_mlp_similarity')
 
+parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
+                    help='Number of epochs')
+
+parser.add_argument('-lr', metavar='learning_rate', type=float, default=CONFIG["lr"], help='Optimizer\'s lr')
+
+parser.add_argument('-l2', metavar='L2 weight decay', type=float, default=CONFIG["l2_wd"], help='L2 weight decay optimizer')
+
+parser.add_argument('--td',  action='store_true',
+                    help='Toy data (load just a small data subset)')
+
+parser.add_argument('--eval', action='store_true')
+# parser.add_argument('--train', dest='train', action='store_true')
+# parser.add_argument('--no_train', dest='train', action='store_false')
+# parser.set_defaults(train=CONFIG["train"])
+
+# parser.add_argument('--restore', dest='restore', action='store_true')
+# parser.set_defaults(restore=CONFIG["restore_checkpoint"])
+
+# parser.add_argument('--cuda', type=bool, default=CONFIG["cuda"])
 args = parser.parse_args()
-
-
 
 
 
@@ -1277,6 +1327,7 @@ formated_date = start.strftime(DATE_FORMAT)
 
 checkpoint = "experiments/independent/bilstm_mlp_improve-dnn15-1-30-decay0.0-L2-dr0.3-eval1-textrank-improve100loss-alpha0.5-c-tr10/snapshot/2020-05-17_18-53-24_e18"
 
+print("Loading data...")
 start = datetime.now()
 dataset = IMDBDataset(CONFIG)
 train_iterator, valid_iterator, test_iterator = dataset.iterators()
@@ -1284,7 +1335,7 @@ print(f"Time data load: {str(datetime.now()-start)}")
 
 explanations = RakeCorpusPolarityFiltered(f"rake-polarity", dataset, CONFIG)
 
-if args.m == "mlp_improve":
+if "mlp_improve" in args.m:
 	model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improve100loss-alpha{args.a}-c-tr10", MODEL_MAPPING, CONFIG, dataset, explanations)
 	print(model_args["checkpoint_v_file"])
 	model.load_checkpoint(checkpoint)
