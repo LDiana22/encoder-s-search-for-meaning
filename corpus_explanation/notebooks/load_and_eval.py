@@ -649,10 +649,10 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             self.vanilla = FrozenVLSTM("frozen-bi-lstm", mapping_file_location, vanilla_args)
             print(model_args["checkpoint_v_file"])
             self.vanilla.load_checkpoint(model_args["checkpoint_v_file"])
+            print(f"Vanilla frozen, params {len(list(self.vanilla.parameters()))}: {[name for name, param in self.vanilla.named_parameters()]}")
             for param in self.vanilla.parameters():
                 param.requires_grad=False
             self.vanilla.eval()
-            print("Vanilla frozen")
         else:
             self.vanilla = FrozenVLSTM("bi-lstm", mapping_file_location, model_args)
 
@@ -697,7 +697,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
         self.dropout = nn.Dropout(model_args["dropout"])
 
-        self.optimizer = optim.AdamW(list(set(self.parameters()) - set(self.vanilla.parameters())))
+        self.optimizer = optim.AdamW(list(set(self.parameters()) - set(self.vanilla.parameters())), lr=model_args["lr"], weight_decay=model_args["l2_wd"])
         # self.optimizer = optim.Adam(list(set(self.parameters()) - set(self.vanilla.parameters())))
         self.criterion = self.loss
 
@@ -759,6 +759,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             val.append(nlp_expl_dict)
             val.append(self.predictions[i])
             val.append(self.true_labels[i])
+            val.append(self.raw_predictions[i])
             text_expl[nlp_text] = val
 
             # header text,list of classes
@@ -849,9 +850,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         embedded = self.dropout(self.embedding(text))
 
         #embedded = [sent len, batch size, emb dim]
-
+        self.vanilla.eval()
         output, hidden = self.vanilla.raw_forward(embedded, text_lengths)
-        self.raw_predictions = torch.sigmoid(output).squeeze()
+        self.raw_predictions = torch.sigmoid(output).squeeze().detach()
         #output = [sent len, batch size, hid dim * num directions]
         #output over padding tokens are zero tensors
 
@@ -881,13 +882,14 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         save = False # save explanations
         if prefix=="test_f":
             save = True
-            expl = "text, explanation (freq:confidence), prediction, true label\n"
+            expl = "text, explanation (freq:confidence), prediction, true label, raw prediction\n"
             e_list = []
             # distr = [torch.tensor([]).to(self.device) for i in range(len(self.dictionaries.keys()))]
             distr = torch.tensor([]).to(self.device)
         self.eval()
+        self.vanilla.eval()
         e_loss = 0
-        e_acc, e_prec, e_rec = 0,0,0
+        e_acc, e_raw_acc, e_prec, e_rec = 0,0,0,0
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
         e_contributions, e_len = 0,0
         with torch.no_grad():
@@ -920,6 +922,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                     #     distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
                     distr = torch.cat((distr, self.expl_distributions))
                 acc = accuracy_score(y_true, y_pred)
+                raw_acc = accuracy_score(y_true, torch.round(self.raw_predictions).cpu().numpy())
                 prec = precision_score(y_true, y_pred)
                 rec = recall_score(y_true, y_pred)
                 f1 = f1_score(y_true, y_pred)
@@ -929,6 +932,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
                 e_loss += loss.item()
                 e_acc += acc
+                e_raw_acc += raw_acc
                 e_prec += prec
                 e_rec += rec
                 e_f1 += f1
@@ -943,6 +947,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             with open(e_file, "w") as f:
                 f.write(expl)
                 f.write("".join(e_list))
+                f.write("\n")
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(f"{torch.tensor(distr).shape}\n")
                 f.write(str(distr))
@@ -958,6 +963,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         size = len(iterator)
         metrics[f"{prefix}_loss"] = e_loss/size
         metrics[f"{prefix}_acc"] = e_acc/size
+        metrics[f"{prefix}_raw_acc"] = e_raw_acc/size
         metrics[f"{prefix}_prec"] = e_prec/size
         metrics[f"{prefix}_rec"] = e_rec/size
         metrics[f"{prefix}_f1"] = e_f1/size
@@ -975,11 +981,13 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                         train_microf1, train_weightedf1]
         e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
         """
+        self.vanilla.eval()
         e_loss = 0
-        e_acc, e_prec, e_rec = 0,0,0
+        e_acc, e_raw_acc, e_prec, e_rec = 0,0,0,0
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
         e_contributions, e_len = 0, 0 
 
+        batch_raw_accs = []
         self.train()
         for batch in iterator:
             self.optimizer.zero_grad()
@@ -987,6 +995,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             logits, (expl, emb_text) = self.forward(text, text_lengths)
             logits=logits.squeeze()
 
+            
             batch.label = batch.label.to(self.device)
             loss = self.criterion(logits, batch.label, expl, emb_text, self.alpha - self.decay * epoch, epoch)
             y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
@@ -996,6 +1005,10 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             e_contributions += sum(torch.sign(batch.label - 0.5)*(torch.sigmoid(logits)-self.raw_predictions))
 
             #metrics
+            raw_acc = accuracy_score(y_true, torch.round(self.raw_predictions).cpu().numpy())
+            
+            batch_raw_accs.append(raw_acc)
+            
             acc = accuracy_score(y_true, y_pred)
             prec = precision_score(y_true, y_pred)
             rec = recall_score(y_true, y_pred)
@@ -1009,6 +1022,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
             e_loss += loss.item()
             e_acc += acc
+            e_raw_acc += raw_acc
             e_prec += prec
             e_rec += rec
             e_f1 += f1
@@ -1016,10 +1030,14 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             e_microf1 += microf1
             e_wf1 += wf1
 
+        with open(f"debug/train-raw-accs-{epoch}.txt", "w") as f:
+            f.write(str(batch_raw_accs))
+            f.write("\n\n**\n\n")
         metrics ={}
         size = len(iterator)
         metrics["train_loss"] = e_loss/size
         metrics["train_acc"] = e_acc/size
+        metrics["train_raw_acc"] = e_raw_acc/size
         metrics["train_prec"] = e_prec/size
         metrics["train_rec"] = e_rec/size
         metrics["train_f1"] = e_f1/size
@@ -1042,10 +1060,12 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
       loss = bce(output, target) + torch.mean(semantic_cost)
       return loss
 
+
 class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
 
     def loss(self, output, target, sth, sthelse, alpha=None, epoch=0):
         bce = nn.BCEWithLogitsLoss().to(self.device)
+        simple_bce = nn.BCELoss().to(self.device)
         if not alpha:
             alpha = self.alpha
         # if epoch == 10:
@@ -1053,9 +1073,11 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
         # elif epoch == 15:
         #     alpha = 0
 
-        output = torch.sigmoid(output)
-        min_contributions = 1 - torch.sign(target - 0.5)*(output-self.raw_predictions)
-        return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions)/100)
+        # output = torch.sigmoid(output)
+        min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
+        # min_contributions = abs(output-self.raw_predictions)
+        # print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
+        return alpha*bce(output, target) + (1-alpha)*(torch.mean(min_contributions))
 
 
 class IMDBDataset:
