@@ -1178,6 +1178,49 @@ class IMDBDataset:
 
 
 
+class RakeInstanceExplanations(AbstractDictionary):
+  """ Rake max words per instance"""
+  def __init__(self, id, dataset, args): 
+    super().__init__(id, dataset, args)
+    # self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
+    self.max_dict = args["max_words_dict"]
+    self.max_words = args["phrase_len"]
+    self.dictionary = self.get_dict()
+    self.tokenizer = spacy.load("en")
+    self._save_dict()
+
+  def get_dict(self):
+    """
+    Builds a dictionary of keywords for each label.
+    # {"all":{word:freq}} OR
+    {"pos":{word:freq}, "neg":{word:freq}}
+    """
+    if hasattr(self, 'dictionary') and self.dictionary:
+        return self.dictionary
+    print("Generating new dict rake-inst")
+    dictionary = OrderedDict()
+    corpus = self.dataset.get_training_corpus()
+
+    max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
+    res_phrases = []
+    for text_class in corpus.keys():
+        phrases = []
+        dictionary[text_class] = OrderedDict()
+        for review in corpus[text_class]:
+            rake = Rake(max_length=self.max_words)
+            rake.extract_keywords_from_text(review)
+            phrases += rake.get_ranked_phrases_with_scores()
+        phrases.sort(reverse=True)
+        if self.args["filterpolarity"]:
+            print("Filtering by polarity...")
+            phrases = self.filter_by_sentiment_polarity(phrases)
+        with open(os.path.join(self.path, f"phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join([str(ph) for ph in phrases]))
+        if max_per_class:
+            phrases = phrases[:max_per_class]
+        dictionary[text_class] = OrderedDict(ChainMap(*[{ph[1]:" ".join(corpus[text_class]).count(ph[1])} for ph in phrases]))
+    return dictionary
+
 
 
 VECTOR_CACHE = "../.vector_cache"
@@ -1336,7 +1379,7 @@ dataset = IMDBDataset(CONFIG)
 train_iterator, valid_iterator, test_iterator = dataset.iterators()
 print(f"Time data load: {str(datetime.now()-start)}")
 
-explanations = RakeCorpusPolarityFiltered(f"rake-polarity", dataset, CONFIG)
+explanations = RakeInstanceExplanations(f"rake-polarity", dataset, CONFIG)
 
 if "mlp_improve" in args.m:
 	model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improve100loss-alpha{args.a}-c-tr10", MODEL_MAPPING, CONFIG, dataset, explanations)
