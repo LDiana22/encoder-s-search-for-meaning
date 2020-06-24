@@ -6,35 +6,37 @@ from datetime import datetime
 DATE_FORMAT = '%Y-%m-%d_%H-%M-%S'
 ##################################################################
 def fix_file(path):
-	new_path = path[:path.rindex(".")]+"_fix.txt"
-	print(f"New path {new_path}")
-	with open(new_path, "w") as f:
-		with open(path, "r") as g:
-			line = g.readline()
-			count = 0
-			while line:
-				count += 1
-				if len(line.split("~")) > 3:
-					sublines = re.split('C: ((\+|-)?\d\.\d+(e-)?\d+)', line)
-					count=0
-					f.write(sublines[0] + re.findall(r'((\+|-)?\d\.\d+(e-)?\d+)', line)[0][0])
-					f.write("\n")
-					f.write(sublines[4] + re.findall(r'((\+|-)?\d\.\d+(e-)?\d+)', line)[1][0])
-				else:
-					f.write("".join(line.split("C: ")))
-				f.write("\n")
-				line = g.readline()	
-	return new_path
+    new_path = path[:path.rindex(".")]+"_fix.txt"
+    print(f"New path {new_path}")
+    with open(new_path, "w") as f:
+        with open(path, "r") as g:
+            line = g.readline()
+            count = 0
+            while line:
+                count += 1
+                if len(line.split("~")) > 4:
+                    sublines = re.split('C: ((\+|-)?\d\.\d+(e-)?\d*)', line)
+                    count=0
+                    f.write(sublines[0] + re.findall(r'((\+|-)?\d\.\d+(e-)?\d*)', line)[1][0])
+                    f.write("\n")
+                    f.write(sublines[4] + re.findall(r'((\+|-)?\d\.\d+(e-)?\d*)', line)[3][0])
+                else:
+                    f.write("".join(line.split("C: ")))
+                f.write("\n")
+                line = g.readline()	
+    return new_path
 
 def load_explanations(path):
-	print(f"Loading from {path}")
-	df = pd.read_csv(path, sep="~", header=0, names=["review", "explanation", "contribution"])
-	df["contribution"] = df["contribution"].apply(lambda c: float(str(c).split(":")[0]))
-	df["frequency"] = df["explanation"].apply(lambda f: list(re.findall(r'(\d+)', str(f)))).apply(lambda x: x[0] if x else None)
-	df["confidence_score"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+', str(f))).apply(lambda x: float(x[0]) if x else None)
-	df["prediction"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+',str(f))).apply(lambda x: float(x[1]) if len(x)>1 else None)
-	df["label"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[2]) if len(x)>2 else None)
-	return df
+    print(f"Loading from {path}")
+    df = pd.read_csv(path, sep="~", header=0, names=["review", "explanation", "contribution"])
+    #df["contribution"] = df["contribution"].apply(lambda c: float(str(c).split(":")[0]))
+    df["contribution"] = df["contribution"].apply(lambda c: float(c))
+    df["frequency"] = df["explanation"].apply(lambda f: list(re.findall(r'(\d+)', str(f)))).apply(lambda x: x[0] if x else None)
+    df["confidence_score"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+', str(f))).apply(lambda x: float(x[0]) if x else None)
+    df["prediction"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+',str(f))).apply(lambda x: float(x[1]) if len(x)>1 else None)
+    df["label"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[2]) if len(x)>2 else None)
+    df["raw_pred"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[3]) if len(x)>3 else None)
+    return df
 ##################################################################
 
 
@@ -76,7 +78,7 @@ parser.add_argument('-p', metavar='path', type=str,
                     help='expl path')
 parser.add_argument('-f', metavar='file name', type=str,
                     help='expl file')
-parser.add_argument('--fix', metavar='fix the explanation file format', type=bool, default=False)
+parser.add_argument('--fix', help='fix the explanation file format', action='store_true')
 
 args = parser.parse_args()
 ##################################################################
