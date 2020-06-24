@@ -1346,7 +1346,7 @@ CONFIG = {
     "restore_v_checkpoint" : True,
     "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
     "train": True,
-    "max_words_dict": 5,
+    "phrase_len": 4,
     "patience":20,
     "epochs": 10,
     'alpha': 0.5,
