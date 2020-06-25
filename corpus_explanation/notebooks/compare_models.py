@@ -6,14 +6,14 @@ from datetime import datetime
 DATE_FORMAT = '%Y-%m-%d_%H-%M-%S'
 def load_explanations(path):
     print(f"Loading from {path}")
-    df = pd.read_csv(path, sep="~", header=0, names=["review", "explanation", "contribution"])
+    df = pd.read_csv(path, header=0, names=["id","review","explanation","contribution","frequency","confidence_score","prediction","label","raw_pred"])
     #df["contribution"] = df["contribution"].apply(lambda c: float(str(c).split(":")[0]))
-    df["contribution"] = df["contribution"].apply(lambda c: float(c))
+    df["contribution"] = df["contribution"].astype('float64')
     df["frequency"] = df["explanation"].apply(lambda f: list(re.findall(r'(\d+)', str(f)))).apply(lambda x: x[0] if x else None)
-    df["confidence_score"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+', str(f))).apply(lambda x: float(x[0]) if x else None)
-    df["prediction"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+',str(f))).apply(lambda x: float(x[1]) if len(x)>1 else None)
-    df["label"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[2]) if len(x)>2 else None)
-    df["raw_pred"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[3]) if len(x)>3 else None)
+    df["confidence_score"] = df["confidence_score"].astype('float64')
+    df["prediction"] = df["prediction"].astype('float64')
+    df["label"] = df["label"].astype('float64')
+    df["raw_pred"] = df["raw_pred"]astype('float64')
     return df
 
 
