@@ -1303,7 +1303,6 @@ CONFIG = {
 
     "restore_checkpoint" : False,
     "checkpoint_file": None,
-    "train": True,
 
     "dropout": args.dr,
     "weight_decay": 5e-06,
@@ -1341,13 +1340,14 @@ CONFIG = {
     "load_dictionary": True,
 
     "lr": 0.001,
-    "hidden_dim": 256,
+    "hidden_dim": 64,
     "n_layers": 2,
     "max_dict": 1000, 
     "cuda": True,
     "restore_v_checkpoint" : True,
-    "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
-    "train": True,
+    #"checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
+    "checkpoint_v_file" : "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
+    "train": False,
     "phrase_len": 4,
     "patience":20,
     "epochs": 10,
@@ -1358,7 +1358,8 @@ CONFIG = {
     "l2_wd":0.1,
     #"dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5"
     "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
-    "filterpolarity": True
+    "filterpolarity": True,
+    "toy_data": args.td
 }
 print(CONFIG)
 
@@ -1373,8 +1374,11 @@ start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
 #checkpoint = "experiments/independent/bilstm_mlp_improve-dnn15-1-30-decay0.0-L2-dr0.3-eval1-textrank-improve100loss-alpha0.5-c-tr10/snapshot/2020-05-17_18-53-24_e18"
-checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e20-2020-06-23_15-15-42/snapshot/2020-06-23_16-36-30_e7"
-
+#checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e20-2020-06-23_15-15-42/snapshot/2020-06-23_16-36-30_e7"
+checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4"
+checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-64-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e20-2020-06-24_10-33-00/snapshot/2020-06-24_10-56-52_e3"
+checkpoint=  "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-24_15-27-01/snapshot/2020-06-24_15-50-54_e3"
+#checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-22_15-35-42/snapshot/2020-06-22_16-56-47_e7"
 print("Loading data...")
 start = datetime.now()
 dataset = IMDBDataset(CONFIG)
@@ -1384,11 +1388,13 @@ print(f"Time data load: {str(datetime.now()-start)}")
 explanations = RakeInstanceExplanations(f"rake-polarity", dataset, CONFIG)
 
 if "mlp_improve" in args.m:
-	model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improve100loss-alpha{args.a}-c-tr10", MODEL_MAPPING, CONFIG, dataset, explanations)
-	#print(CONFIG["checkpoint_v_file"])
-	model.load_checkpoint(checkpoint)
-	for param in model.parameters():
-	    param.requires_grad=False
+    print("Load mlp_improve")
+    model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improve100loss-alpha{args.a}-c-tr10", MODEL_MAPPING, CONFIG, dataset, explanations)
+    #print(CONFIG["checkpoint_v_file"])
+    model.load_checkpoint(checkpoint)
+    print(f"Number of params: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
+    for param in model.parameters():
+        param.requires_grad=False
 elif args.m == "frozen":
   vanilla_args = copy.deepcopy(CONFIG)
   vanilla_args["restore_checkpoint"] = True
@@ -1398,18 +1404,22 @@ elif args.m == "frozen":
   for param in model.parameters():
       param.requires_grad=False
 
-print("Evaluating train data...")
-train_metrics = model.evaluate(train_iterator, "train_f")
-print("Train metrics:")
-print(train_metrics)
+#print("Evaluating train data...")
+#train_metrics = model.evaluate(train_iterator, "train_f")
+#print("Train metrics:")
+#print(train_metrics)
 
-print("Evaluating...")
-valid_metrics = model.evaluate(valid_iterator, "valid_f")
-print("Valid metrics:")
-print(valid_metrics)
+#print("Evaluating...")
+#valid_metrics = model.evaluate(valid_iterator, "valid_f")
+#print("Valid metrics:")
+#print(valid_metrics)
 
-print("Evaluating...")
+print(f"Evaluating {checkpoint}...")
+start = datetime.now()
 test_metrics = model.evaluate(test_iterator, "test_f")
+
+print(f"Time test eval: {str(datetime.now()-start)}")
+
 print("Test metrics:")
 print(test_metrics)
 # model.save_results(metrics, "test")
