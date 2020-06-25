@@ -13,11 +13,11 @@ def load_explanations(path):
     df["confidence_score"] = df["confidence_score"].astype('float64')
     df["prediction"] = df["prediction"].astype('float64')
     df["label"] = df["label"].astype('float64')
-    df["raw_pred"] = df["raw_pred"]astype('float64')
+    df["raw_pred"] = df["raw_pred"].astype('float64')
     return df
 
 
-explanations_m1 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-24_15-27-01/explanations/all_instances_metrics.txt" # small
+explanations_m1 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-24_15-27-01/explanations/descending_contribution.txt" # small
 explanations_m2 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e20-2020-06-23_15-15-42/explanations/descending_contribution.txt"
 
 start = datetime.now()
@@ -36,12 +36,5 @@ parser.add_argument('-o', metavar='output path', type=str,
 args = parser.parse_args()
 
 
-e1 = load_explanations(args.p1)
-e2 = load_explanations(args.p2)
-
-print(e1.head())
-print(e2.head())
-print(e1.head().cat(e2.head(), join="merge"))
-print(e1.head().cat(e2.head(), join="merge"))
-print(e1.head().cat(e2.head(), join="left"))
-print(e1.head().cat(e2.head(), join="right"))
+e1 = load_explanations(args.p1)#.sort_values(by="id")
+e2 = load_explanations(args.p2)#.sort_values(by="id")
