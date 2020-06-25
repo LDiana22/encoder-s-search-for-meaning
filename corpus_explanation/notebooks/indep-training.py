@@ -1125,7 +1125,7 @@ class AbstractModel(nn.Module):
     def load_checkpoint(self, path):
         print(f"Loading checkpoint: {path}") 
         checkpoint = torch.load(path)
-        self.load_state_dict(checkpoint['model_state_dict'])
+        self.load_state_dict(checkpoint['model_state_dict'], strict=False)
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.epoch = checkpoint['epoch']
         self.metrics = {}
@@ -1732,7 +1732,7 @@ class FrozenVLSTM(AbstractModel):
         self.lin = nn.Linear(2*model_args["hidden_dim"], model_args["output_dim"])
         self.dropout = nn.Dropout(model_args["dropout"])
 
-        # self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()))
+        #self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()))
         self.optimizer = optim.Adam(self.parameters())
         self.criterion = nn.BCEWithLogitsLoss().to(self.device)
 
@@ -3076,7 +3076,8 @@ try:
         "restore_v_checkpoint" : True,
         # "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
         #"checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
-        "checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n1-h64-dr0.05/snapshot/2020-06-16_19-33-50_e4",
+        #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n1-h64-dr0.05/snapshot/2020-06-16_19-33-50_e4",
+        "checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
         "train": True,
         "max_words_dict": args.p,
         "patience":20,
