@@ -38,3 +38,34 @@ args = parser.parse_args()
 
 e1 = load_explanations(args.p1)#.sort_values(by="id")
 e2 = load_explanations(args.p2)#.sort_values(by="id")
+e2=e2.drop(["review"], axis=1)
+e2.columns = [col +"_M2" if col !="id" else col for col in e2.columns]
+
+e1_correct = e1[e1["prediction"]==e1["label"]]
+e1_incorrect = e1[e1["prediction"]!=e1["label"]]
+print("E1: correct/incorrect")
+print(e1_correct.shape)
+print(e1_incorrect.shape)
+
+
+e2_correct = e2[e2["prediction_M2"]==e2["label_M2"]]
+e2_incorrect = e2[e2["prediction_M2"]!=e2["label_M2"]]
+print("E2: correct/incorrect")
+print(e2_correct.shape)
+print(e2_incorrect.shape)
+
+#import ipdb
+#ipdb.set_trace(context=10)
+
+res1 = pd.merge(left=e1_correct, right=e2_incorrect, left_on="id", right_on="id")
+res2 = pd.merge(left=e1_incorrect, right=e2_correct, left_on="id", right_on="id")
+print(f"E1_C/E2_INC: {res1.shape}")
+print(f"E1_INC/E2_C: {res2.shape}")
+
+#ies2 = pd.concat(columns=e1_correct.columns+e2_correct.columns, join="outer")
+res = pd.concat([res1,res2]) 
+print(f"Together: {res.shape}")
+res.sort_values(["contribution", "contribution_M2"], ascending=[False, False], inplace=True)
+print(res.head())
+print(res.shape)
+res.to_csv(args.o)
