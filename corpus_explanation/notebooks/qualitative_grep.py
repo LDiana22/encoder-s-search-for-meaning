@@ -17,13 +17,13 @@ def fix_file(path):
                 if len(line.split("~")) > 4:
                     sublines = re.split('C: ((\+|-)?\d\.\d+(e-)?\d*)', line)
                     count=0
-                    f.write(sublines[0] + re.findall(r'((\+|-)?\d\.\d+(e-)?\d*)', line)[1][0])
+                    f.write(sublines[0] + sublines[1])
                     f.write("\n")
-                    f.write(sublines[4] + re.findall(r'((\+|-)?\d\.\d+(e-)?\d*)', line)[3][0])
+                    f.write(sublines[4] + sublines[5])
                 else:
                     f.write("".join(line.split("C: ")))
                 f.write("\n")
-                line = g.readline()	
+                line = g.readline() 
     return new_path
 
 def load_explanations(path):
@@ -41,27 +41,27 @@ def load_explanations(path):
 
 
 def plot_hist(contributions, title, path):
-	import matplotlib.pyplot as plt
-	plt.hist(contributions, label="contribution")
-	# plt.hist(df[(df["prediction"]==df["label"])]["contribution"], label="contribution")
-	plt.title(title)
-	plt.legend()
-	plt_path = "experiments\\independent\\bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improve100loss-alpha0.7-c-tr10\\explanations\\" 
-	plt.savefig(plt_path + "contributions_hist_100pn.png") 
+    import matplotlib.pyplot as plt
+    plt.hist(contributions, label="contribution")
+    # plt.hist(df[(df["prediction"]==df["label"])]["contribution"], label="contribution")
+    plt.title(title)
+    plt.legend()
+    plt_path = "experiments\\independent\\bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improve100loss-alpha0.7-c-tr10\\explanations\\" 
+    plt.savefig(plt_path + "contributions_hist_100pn.png") 
 'Contributions distribution of the first 100 correctly classified instances'
 
 ##################################################################
 
 def print_metrics(df, full_path, field="contribution"):
-	mean, min_c, max_c, std = df[field].mean(), df[field].min(), df[field].max(), df[field].std()
-	with open(full_path, "w") as f:
-		f.write(f"Mean: {mean}\n")
-		f.write(f"Min: {min_c}\n")
-		f.write(f"Max: {max_c}\n")
-		f.write(f"StdDev: {std}\n")
-		f.write(f"Positive %: {df[df[field]>0][field].count()*100/df[field].count()}\n\n")
-		f.write(f"Positive contributions count {df[df[field]>0][field].count()}\n")
-		f.write(f"All contributions count {df[field].count()}\n")
+    mean, min_c, max_c, std = df[field].mean(), df[field].min(), df[field].max(), df[field].std()
+    with open(full_path, "w") as f:
+        f.write(f"Mean: {mean}\n")
+        f.write(f"Min: {min_c}\n")
+        f.write(f"Max: {max_c}\n")
+        f.write(f"StdDev: {std}\n")
+        f.write(f"Positive %: {df[df[field]>0][field].count()*100/df[field].count()}\n\n")
+        f.write(f"Positive contributions count {df[df[field]>0][field].count()}\n")
+        f.write(f"All contributions count {df[field].count()}\n")
 
 ##################
 # RUN COMMAND
@@ -85,11 +85,11 @@ args = parser.parse_args()
 
 e_path = os.path.join(args.p, args.f)
 if args.fix:
-	print("Fixing...")
-	path = fix_file(e_path)
-	print(f"Fixed {path}")
+    print("Fixing...")
+    path = fix_file(e_path)
+    print(f"Fixed {path}")
 else:
-	path = e_path # 'experiments\\independent\\bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improve100loss-alpha0.7-c-tr10\\explanations\\e_test-7_2020-05-24_03-16-15_fix.txt'
+    path = e_path # 'experiments\\independent\\bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improve100loss-alpha0.7-c-tr10\\explanations\\e_test-7_2020-05-24_03-16-15_fix.txt'
 
 print("Loading explanations...")
 df = load_explanations(path)
@@ -97,20 +97,20 @@ print("Loaded")
 ##################################################################
 
 def sample_metrics(df, path, sample_count=10):
-	for i in range(10):
-		sample_path = os.path.join(path,f"metrics_sample-{i}.txt")
-		print(sample_path)
-		sample = pd.DataFrame({"contribution":df["contribution"].sample(100)})
-		print_metrics(sample, sample_path)
-		sample.to_pickle(os.path.join(path,f"samples-dump-{i}.h5")) 
+    for i in range(10):
+        sample_path = os.path.join(path,f"metrics_sample-{i}.txt")
+        print(sample_path)
+        sample = pd.DataFrame({"contribution":df["contribution"].sample(100)})
+        print_metrics(sample, sample_path)
+        sample.to_pickle(os.path.join(path,f"samples-dump-{i}.h5")) 
 
-		hist_path = os.path.join(path, f"hist_sample-{i}.png")
-		hist_title = "Sample contribution distribution for correctly classified test instances"
-		plot_hist(sample['contribution'], hist_title, hist_path)
+        hist_path = os.path.join(path, f"hist_sample-{i}.png")
+        hist_title = "Sample contribution distribution for correctly classified test instances"
+        plot_hist(sample['contribution'], hist_title, hist_path)
 
 ##################################################################
 
-sample_metrics(df[df["prediction"]==df["label"]], args.p)
+#sample_metrics(df[df["prediction"]==df["label"]], args.p)
 
 print("all instances...")
 all_metrics_path = os.path.join(args.p, "all_instances_metrics.txt")
