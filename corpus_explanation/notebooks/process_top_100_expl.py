@@ -67,7 +67,7 @@ def load_new_explanations(path):
   return df
 
 
-def merge_and_shuffle(path1, path2):
+def merge_and_shuffle(path1, path2, output):
 	#path = "experiments\\independent\\bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improveloss_mean-alpha0.7-c-e40-2020-05-26_01-06-16\\explanations\\descending_contribution_correct.txt"
 	#path = "experiments\\soa-dicts\\rc_bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.3_pretrained_rake-polarity-4-60-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-polarity-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-29_01-40-17\\explanations\\descending_contribution_correct.txt"
   df1=load_new_explanations(path1)
@@ -77,12 +77,15 @@ def merge_and_shuffle(path1, path2):
 	df = pd.concat([df1.head(50),df2.head(50)])
 	df = df.sample(frac=1).reset_index(drop=True)
 
-	df.to_csv("experiments\\soa-dicts\\rc_bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.3_pretrained_rake-polarity-4-60-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-polarity-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-29_01-40-17\\explanations\\100_posneg_shuffled_contributions.csv")
-
+	# df.to_csv("experiments\\soa-dicts\\rc_bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.3_pretrained_rake-polarity-4-60-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-polarity-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-29_01-40-17\\explanations\\100_posneg_shuffled_contributions.csv")
+	df.to_csv(output)
 	return df
+
 path1 = os.path.join(args.p, args.f1)
 path2 = os.path.join(args.p, args.f2)
-merged = merge_and_shuffle(path1, path2)
+result = os.path.join(args.p, "merged_100c_i.csv")
+merged = merge_and_shuffle(path1, path2, result)
+
 print(merged.shape)
 print("Count polarity=label")
 print(merged[merged["e_polarity"]==merged["label"]].count()["id"])
