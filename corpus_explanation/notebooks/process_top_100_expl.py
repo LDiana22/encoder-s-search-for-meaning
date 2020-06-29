@@ -36,11 +36,13 @@ parser.add_argument('--fix', metavar='fix the explanation file format', type=boo
 args = parser.parse_args()
 
 def merge_and_shuffle():
-	path = "experiments\\independent\\bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improveloss_mean-alpha0.7-c-e40-2020-05-26_01-06-16\\explanations\\descending_contribution_correct.txt"
-	df1=load_explanations(path)
-	path = "experiments\\independent\\bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improveloss_mean-alpha0.7-c-e40-2020-05-26_01-06-16\\explanations\\descending_contribution_incorrect.txt"
-	df2=load_explanations(path)
-	df = pd.concat([df1,df2])
+	#path = "experiments\\independent\\bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improveloss_mean-alpha0.7-c-e40-2020-05-26_01-06-16\\explanations\\descending_contribution_correct.txt"
+	path = "experiments/soa-dicts/rc_bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.3_pretrained_rake-polarity-4-60-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-polarity-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-29_01-40-17/explanations/descending_contribution_correct.txt"
+        df1=load_explanations(path)
+	#path = "experiments\\independent\\bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improveloss_mean-alpha0.7-c-e40-2020-05-26_01-06-16\\explanations\\descending_contribution_incorrect.txt"
+	path = "experiments/soa-dicts/rc_bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.3_pretrained_rake-polarity-4-60-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-polarity-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-29_01-40-17/explanations/descending_contribution_incorrect.txt"
+        df2=load_explanations(path)
+	df = pd.concat([df1.head(50),df2.head(50)])
 	df = df.sample(frac=1).reset_index(drop=True)
 
 	df.to_csv("experiments\\independent\\bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improveloss_mean-alpha0.7-c-e40-2020-05-26_01-06-16\\explanations\\100_posneg_influences_shuffled_contributions.csv")
