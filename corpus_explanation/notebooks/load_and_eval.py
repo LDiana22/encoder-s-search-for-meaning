@@ -652,6 +652,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             print(model_args["checkpoint_v_file"])
             self.vanilla.load_checkpoint(model_args["checkpoint_v_file"])
             print(f"Vanilla frozen, params {len(list(self.vanilla.parameters()))}: {[name for name, param in self.vanilla.named_parameters()]}")
+            print(f"VLSTM Number of params: {sum(p.numel() for p in self.vanilla.parameters() if p.requires_grad)}")
             for param in self.vanilla.parameters():
                 param.requires_grad=False
             self.vanilla.eval()
@@ -1257,7 +1258,7 @@ parser.add_argument('-a', metavar='alpha', type=float, default=0,
                     help='Similarity cost hyperparameter')
 
 
-parser.add_argument('-hd', metavar='hidden_dim', type=int, default=256,
+parser.add_argument('-hd', metavar='hidden_dim', type=int, default=64,
                     help='LSTM hidden dim')
 
 parser.add_argument('-nl', metavar='num_layers', type=int, default=2,
@@ -1340,8 +1341,8 @@ CONFIG = {
     "load_dictionary": True,
 
     "lr": 0.001,
-    "hidden_dim": 64,
-    "n_layers": 2,
+    "hidden_dim": args.hd,
+    "n_layers": args.nl,
     "max_dict": 1000, 
     "cuda": True,
     "restore_v_checkpoint" : True,
@@ -1356,8 +1357,8 @@ CONFIG = {
     "n3": args.n3,
     "alpha_decay": 0,
     "l2_wd":0.1,
-    #"dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5"
-    "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
+    "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
+    #"dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
     "filterpolarity": True,
     "toy_data": args.td
 }
@@ -1374,11 +1375,12 @@ start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
 #checkpoint = "experiments/independent/bilstm_mlp_improve-dnn15-1-30-decay0.0-L2-dr0.3-eval1-textrank-improve100loss-alpha0.5-c-tr10/snapshot/2020-05-17_18-53-24_e18"
-#checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e20-2020-06-23_15-15-42/snapshot/2020-06-23_16-36-30_e7"
-checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4"
-checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-64-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e20-2020-06-24_10-33-00/snapshot/2020-06-24_10-56-52_e3"
-checkpoint=  "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-24_15-27-01/snapshot/2020-06-24_15-50-54_e3"
+checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e20-2020-06-23_15-15-42/snapshot/2020-06-23_16-36-30_e7"
+#checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4"
+#checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-64-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e20-2020-06-24_10-33-00/snapshot/2020-06-24_10-56-52_e3"
+#checkpoint=  "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-24_15-27-01/snapshot/2020-06-24_15-50-54_e3"
 #checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-22_15-35-42/snapshot/2020-06-22_16-56-47_e7"
+checkpoint = "experiments/soa-dicts/rc_bilstm_mlp_improve_30-30_l20.1_dr0.8_lr0.01_soa_vlstm2-64-0.3_pretrained_rake-polarity-4-60-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-polarity-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-29_09-45-14/snapshot/2020-06-29_10-26-40_e5"
 print("Loading data...")
 start = datetime.now()
 dataset = IMDBDataset(CONFIG)
