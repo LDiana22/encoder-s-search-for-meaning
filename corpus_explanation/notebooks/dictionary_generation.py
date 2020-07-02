@@ -617,7 +617,7 @@ parser.add_argument('-p', metavar='phrase_len', type=int, default=CONFIG["phrase
 parser.add_argument('-size', metavar='max_words_dict', type=int, default=CONFIG["max_words_dict"],
                     help='Max number of words per phrase in explanations dictionary')
 
-parser.add_argument('-d', metavar='dictionary_type', type=str,
+parser.add_argument('-d', metavar='dictionary_type', type=str, required=True,
                     help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
 parser.add_argument('-cp', metavar='checkpoint_file', type=str)
 
@@ -655,11 +655,11 @@ try:
     elif args.d=="textrank":
         explanations = TextRank(f"textrank-filtered_{CONFIG['filterpolarity']}-p{CONFIG['phrase_len']}-d{CONFIG['max_words_dict']}", dataset, CONFIG)
     elif args.d == "rake-inst":
-        explanations = RakeInstanceExplanations(f"rake-instance-{CONFIG['max_words_dict']}-{args.p}-filtered{CONFIG ['filterpolarity']}", dataset, CONFIG)
+        explanations = RakeInstanceExplanations(f"test-rake-instance-{CONFIG['max_words_dict']}-{args.p}-filtered{CONFIG ['filterpolarity']}", dataset, CONFIG)
     elif args.d == "rake-corpus":
-        explanations = RakeCorpusExplanations(f"rake-corpus-{CONFIG['max_words_dict']}-{args.p}-filtered{CONFIG ['filterpolarity']}", dataset, CONFIG)
+        explanations = RakeCorpusExplanations(f"test-rake-corpus-{CONFIG['max_words_dict']}-{args.p}-filtered{CONFIG ['filterpolarity']}", dataset, CONFIG)
     elif args.d == "rake-polarity":
-        explanations = RakeCorpusPolarityFiltered(f"rake-polarity", dataset, CONFIG)
+        explanations = RakeCorpusPolarityFiltered(f"test-rake-polarity", dataset, CONFIG)
     print(f"Time explanations: {str(datetime.now()-start)}")
 
 except:
