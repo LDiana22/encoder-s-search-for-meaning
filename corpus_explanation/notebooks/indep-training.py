@@ -394,7 +394,13 @@ class IMDBDataset:
     print(f"Train {len(self.train_data)}")
     print(f"Valid {len(self.valid_data)}")
     print(f"Test {len(self.test_data)}")
-    TEXT.build_vocab(self.train_data,
+    if args.emb == 'gove':
+        TEXT.build_vocab(self.train_data,
+                 max_size = args["max_vocab_size"],
+                 vectors = GloVe(name='6B', dim=args["emb_dim"], cache=VECTOR_CACHE), 
+                 unk_init = torch.Tensor.normal_)
+    else:
+        TEXT.build_vocab(self.train_data,
                  max_size = args["max_vocab_size"])
     LABEL.build_vocab(self.train_data)
 
@@ -3041,6 +3047,9 @@ try:
     parser.add_argument('-cp', type=str, help='vanilla checkpoint')
     parser.add_argument('-m', metavar='model_type', type=str,
                         help='frozen_mlp_bilstm, frozen_bilstm_mlp, bilstm_mlp_similarity')
+    
+    parser.add_argument('-emb', metavar='embedding_type', type=str, default=None,
+                        help='glove')
 
     parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
                         help='Number of epochs')
@@ -3071,6 +3080,7 @@ try:
     formated_date = start.strftime(DATE_FORMAT)
     experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
         "hidden_dim": args.hd,
+        "emb": args.emb,
         "n_layers": args.nl,
         "max_dict": 1000, 
         "cuda": True,
