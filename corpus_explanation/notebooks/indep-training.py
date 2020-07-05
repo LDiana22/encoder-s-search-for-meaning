@@ -88,7 +88,7 @@ CONFIG = {
 
     "patience": 10,
 
-    "epochs": 200,
+    "epochs": 20,
 
     "objective": "cross_entropy",
     "lr": 0.001,
@@ -394,12 +394,14 @@ class IMDBDataset:
     print(f"Train {len(self.train_data)}")
     print(f"Valid {len(self.valid_data)}")
     print(f"Test {len(self.test_data)}")
-    if args.emb == 'gove':
+    if self.args["emb"] == 'glove':
+        print("Glove embeddings")
         TEXT.build_vocab(self.train_data,
                  max_size = args["max_vocab_size"],
                  vectors = GloVe(name='6B', dim=args["emb_dim"], cache=VECTOR_CACHE), 
                  unk_init = torch.Tensor.normal_)
     else:
+        print("Training embeddings")
         TEXT.build_vocab(self.train_data,
                  max_size = args["max_vocab_size"])
     LABEL.build_vocab(self.train_data)
@@ -3092,7 +3094,7 @@ try:
         "checkpoint_v_file": args.cp,
         "train": True,
         "max_words_dict": args.p,
-        "patience":20,
+        "patience": 10,
         "epochs": args.e,
         'alpha': args.a,
         "n1": args.n1,
@@ -3162,7 +3164,8 @@ try:
     elif "bilstm_mlp_improve" in args.m:
         model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
     elif args.m == "bilstm":
-        model = FrozenVLSTM(f"vanilla-lstm-n{experiment.config['n_layers']}-h{experiment.config['hidden_dim']}-dr{experiment.config['dropout']}", MODEL_MAPPING, experiment.config)
+        emb = f"-{args.emb}-" if args.emb else ""
+        model = FrozenVLSTM(f"vanilla-lstm{emb}-n{experiment.config['n_layers']}-h{experiment.config['hidden_dim']}-dr{experiment.config['dropout']}", MODEL_MAPPING, experiment.config)
         
 
     experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
