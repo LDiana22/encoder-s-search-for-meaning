@@ -1730,7 +1730,12 @@ class FrozenVLSTM(AbstractModel):
         # PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
         self.input_size = model_args["max_vocab_size"]
         self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"])
-        nn.init.uniform_(self.embedding.weight.data,-1,1)
+        if model_args["emb"]=="glove":
+            self.embedding.weight.data.copy_(TEXT.vocab.vectors)
+            self.embedding.weight.data[UNK_IDX] = torch.zeros(model_args["emb_dim"])
+            self.embedding.weight.data[PAD_IDX] = torch.zeros(model_args["emb_dim"])
+        else:
+            nn.init.uniform_(self.embedding.weight.data,-1,1)
 
         self.lstm = nn.LSTM(model_args["emb_dim"], 
                            model_args["hidden_dim"], 
