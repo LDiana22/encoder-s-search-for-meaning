@@ -851,7 +851,7 @@ class RakeCorpusPolarityFiltered(AbstractDictionary):
     # {"all":{word:freq}} OR
     {"pos":{word:freq}, "neg":{word:freq}}
     """
-    if hasattr(self, 'dictionary') and not self.dictionary:
+    if hasattr(self, 'dictionary') and self.dictionary:
         return self.dictionary
     dictionary = OrderedDict()
     corpus = self.dataset.get_training_corpus()
