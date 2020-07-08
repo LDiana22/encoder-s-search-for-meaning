@@ -1726,16 +1726,20 @@ class FrozenVLSTM(AbstractModel):
         super().__init__(id, mapping_file_location, model_args)
         self.device = torch.device('cuda' if model_args["cuda"] else 'cpu')
 
-        # UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
-        # PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
+        #UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
+        #PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
+        
+        
         self.input_size = model_args["max_vocab_size"]
         self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"])
         if model_args["emb"]=="glove":
-            self.embedding.weight.data.copy_(TEXT.vocab.vectors)
-            self.embedding.weight.data[UNK_IDX] = torch.zeros(model_args["emb_dim"])
-            self.embedding.weight.data[PAD_IDX] = torch.zeros(model_args["emb_dim"])
+
+            self.embedding.weight.data.copy_(model_args["vectors"])
+            self.embedding.weight.data[model_args["unk_idx"]] = torch.zeros(model_args["emb_dim"])
+            self.embedding.weight.data[model_args["pad_idx"]] = torch.zeros(model_args["emb_dim"])
         else:
             nn.init.uniform_(self.embedding.weight.data,-1,1)
+
 
         self.lstm = nn.LSTM(model_args["emb_dim"], 
                            model_args["hidden_dim"], 
@@ -3093,10 +3097,10 @@ try:
         "cuda": True,
         "restore_v_checkpoint" : True,
         # "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
-        #"checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
+        "checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
         #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n1-h64-dr0.05/snapshot/2020-06-16_19-33-50_e4",
         #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
-        "checkpoint_v_file": args.cp,
+        #"checkpoint_v_file": args.cp,
         "train": True,
         "max_words_dict": args.p,
         "patience": 10,
@@ -3108,7 +3112,8 @@ try:
         "alpha_decay": args.decay,
         "dropout": args.dr, 
         "load_dictionary":True,
-        "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
+        "dict_checkpoint": "experiments/dictionaries_load/dictionaries/test-rake-corpus-600-4-filtered/dictionary-2020-07-07_18-18-56.h5",
+        # "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
         # "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-max-words-instance-300-4/dictionary-2020-06-02_16-00-44.h5",
         #"dict_checkpoint":"experiments/dict_acquisition/dictionaries/textrank-filtered_True-p5-d300/dictionary-2020-06-05_14-56-57.h5",
         #"dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
@@ -3127,7 +3132,13 @@ try:
     start = datetime.now()
     dataset = IMDBDataset(experiment.config)
     print(f"Time data load: {str(datetime.now()-start)}")
-
+    
+    if args.emb == "glove":
+        experiment.override({"vectors": dataset.TEXT.vocab.vectors, 
+            "max_vocab_size": len(dataset.TEXT.vocab),
+            "unk_idx":dataset.TEXT.vocab.stoi[dataset.TEXT.unk_token],
+            "pad_idx":dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token]
+            })
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
     if args.d=="tfidf":
