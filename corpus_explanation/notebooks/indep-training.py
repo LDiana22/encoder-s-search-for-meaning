@@ -590,6 +590,7 @@ class AbstractDictionary:
 
 
   def load_dict(self, file):
+    print(f"Loading dict from {file}")
     return pickle.load(open(file, "rb"))
 
   def filter_by_sentiment_polarity(self, phrases, metric="compound", threshold=0.5):
