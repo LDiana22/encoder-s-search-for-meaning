@@ -271,6 +271,7 @@ class AbstractDictionary:
     return result
 
   def __gen_probability_expo_distribution(self, size):
+    # exponential distribution
     data_expon = expon.rvs(scale=1,loc=0,size=size)
     data_expon = (data_expon-min(data_expon))/(max(data_expon)-min(data_expon))
     s = data_expon.sum()
@@ -437,10 +438,11 @@ class RakeInstanceExplanations(AbstractDictionary):
     {"pos":{word:freq}, "neg":{word:freq}}
     """
 
-    start = datetime.now()
-    formated_date = start.strftime(DATE_FORMAT)
     if hasattr(self, 'dictionary') and self.dictionary:
       return self.dictionary
+    
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
     dictionary = OrderedDict()
     corpus = self.dataset.get_training_corpus()
 
@@ -453,7 +455,7 @@ class RakeInstanceExplanations(AbstractDictionary):
         rake = Rake(max_length=self.max_words)
         rake.extract_keywords_from_text(review)
         phrases += rake.get_ranked_phrases_with_scores()
-      phrases.sort(reverse=True)
+      phrases.sort(reverse=True, key=lambda x: x[1])
       if self.args["filterpolarity"]:
         print(f"Filtering by polarity {text_class}...")
         phrases = self.filter_by_sentiment_polarity(phrases)
