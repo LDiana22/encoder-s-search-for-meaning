@@ -67,7 +67,7 @@ random.seed(0)
 VECTOR_CACHE = "../.vector_cache"
 UCI_PATH = "../.data/uci"
 IMDB_PATH = "../.data/imdb/aclImdb"
-PREFIX_DIR = "experiments/dict_acquisition"
+PREFIX_DIR = "experiments/dictionaries_load"
 
 CONFIG = {
     "toy_data": False, # load only a small subset
@@ -343,9 +343,9 @@ class AbstractDictionary:
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
     file = os.path.join(self.path, f"dictionary-{formated_date}.h5")
+    print(f"Writing dictionary to {file}")
     with open(file, "wb") as f: 
         f.write(pickle.dumps(self.dictionary))
-
     file = os.path.join(self.path, f"dictionary-{formated_date}.txt")
     with open(file, "w", encoding="utf-8") as f:
         for text_class, e_dict in self.dictionary.items():
@@ -403,11 +403,16 @@ class AbstractDictionary:
     if not self.metrics:
       self._compute_metrics()
     metrics_path = os.path.join(self.path, f"metrics-{formated_date}.txt")
+    print(f"Printing metrics at {metrics_path}")
     with open(metrics_path, "w", encoding="utf-8") as f:
       f.write(str(self.metrics))
       f.write("\nOverlapping words:\n")
       f.write("\n".join(self.metrics["overlap_words"]))
-
+    with open(os.path.join(self.path, f"dict-latex-list-{formated_date}.txt"), "w") as f:
+      for class_lbl in self.dictionary.keys():
+        f.write("\n\nLBL: " + class_lbl)
+        expl = sorted(list(self.dictionary[class_lbl].keys()))
+        f.write("\n\\item ".join(expl))
   def get_dict(self):
     """
     Abstract method for building the dictionary
@@ -488,7 +493,6 @@ class RakeCorpusExplanations(AbstractDictionary):
     """
     if hasattr(self, 'dictionary') and self.dictionary:
         return self.dictionary
-    
     start = datetime.now()
     formated_date = start.strftime(DATE_FORMAT)
     dictionary = OrderedDict()
@@ -659,11 +663,11 @@ try:
     elif args.d == "rake-inst":
         explanations = RakeInstanceExplanations(f"test-rake-instance-{CONFIG['max_words_dict']}-{args.p}-filtered{CONFIG ['filterpolarity']}", dataset, CONFIG)
     elif args.d == "rake-corpus":
-        explanations = RakeCorpusExplanations(f"test-rake-corpus-{CONFIG['max_words_dict']}-{args.p}-filtered{CONFIG ['filterpolarity']}", dataset, CONFIG)
-    elif args.d == "rake-polarity":
-        explanations = RakeCorpusPolarityFiltered(f"test-rake-polarity", dataset, CONFIG)
+        filtered= "-filtered" if CONFIG['filterpolarity'] else ''
+        explanations = RakeCorpusExplanations(f"test-rake-corpus-{CONFIG['max_words_dict']}-{args.p}{filtered}", dataset, CONFIG)
     print(f"Time explanations: {str(datetime.now()-start)}")
-
+    explanations.print_metrics()
 except:
     import sys, traceback
     traceback.print_exc(file=sys.stdout)
+
