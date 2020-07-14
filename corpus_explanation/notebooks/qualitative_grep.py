@@ -148,6 +148,7 @@ def sample_metrics(df, path, sample_count=10):
 print("all instances...")
 all_metrics_path = os.path.join(args.p, "all_instances_metrics.txt")
 print_metrics(df, all_metrics_path)
+print_percentages(df, os.path.join(args.p, "percentages-changed-preds.txt"))
 all_hist_path = os.path.join(args.p, "all_instances_hist.png")
 plot_hist(df["contribution"], "Histogram all contributions", all_hist_path)
 
