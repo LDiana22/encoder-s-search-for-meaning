@@ -25,17 +25,29 @@ def fix_file(path):
                 f.write("\n")
                 line = g.readline() 
     return new_path
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
+analyzer = SentimentIntensityAnalyzer()
+
+def polarity(phrase):
+    if analyzer.polarity_scores(phrase)['neg']>0.5:
+        return 1
+    if analyzer.polarity_scores(phrase)['pos']>0.5:
+        return 0
+    return None
 
 def load_explanations(path):
     print(f"Loading from {path}")
-    df = pd.read_csv(path, sep="~", header=0, names=["review", "explanation", "contribution"])
+    df = pd.read_csv(path, header=0, names=["id","review","explanation","contribution","frequency","confidence_score","prediction","label","raw_pred"], encoding="utf-8")
     #df["contribution"] = df["contribution"].apply(lambda c: float(str(c).split(":")[0]))
-    df["contribution"] = df["contribution"].apply(lambda c: float(c))
+    df["contribution"] = df["contribution"].astype('float64')
     df["frequency"] = df["explanation"].apply(lambda f: list(re.findall(r'(\d+)', str(f)))).apply(lambda x: x[0] if x else None)
-    df["confidence_score"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+', str(f))).apply(lambda x: float(x[0]) if x else None)
-    df["prediction"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+',str(f))).apply(lambda x: float(x[1]) if len(x)>1 else None)
-    df["label"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[2]) if len(x)>2 else None)
-    df["raw_pred"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[3]) if len(x)>3 else None)
+    df["confidence_score"] = df["confidence_score"].astype('float64')
+    df["prediction"] = df["prediction"].astype('float64')
+    df["label"] = df["label"].astype('float64')
+    df["raw_pred"] = df["raw_pred"].astype('float64')
+    df["explanation"] = df["explanation"].apply(lambda s: s.split("'")[1])
+    df["e_polarity"] = df["explanation"].apply(polarity)
     return df
 ##################################################################
 
@@ -62,6 +74,27 @@ def print_metrics(df, full_path, field="contribution"):
         f.write(f"Positive %: {df[df[field]>0][field].count()*100/df[field].count()}\n\n")
         f.write(f"Positive contributions count {df[df[field]>0][field].count()}\n")
         f.write(f"All contributions count {df[field].count()}\n")
+
+
+def print_percentages(df, full_path):
+    cp = df[round(df["contribution"]+ df["raw_pred"])!=round(df["raw_pred"])].count()
+    ccp = df[(round(df["contribution"]+ df["raw_pred"])!=round(df["raw_pred"])) & (df["label"]==df["prediction"])].count()
+    icp = df[(round(df["contribution"]+ df["raw_pred"])!=round(df["raw_pred"])) & (df["label"]!=df["prediction"])].count()
+
+    dp = df[round(df["raw_pred"])!=df["prediction"]].count()
+
+    with open(full_path, "w") as f:
+        f.write(f"Changed prediction: {cp}")
+        f.write(f"Different predictions (should be equal to changed pred): {dp}")
+
+        f.write(f"Correctly changed predictions: {ccp}")
+        f.write(f"Correctly changed predictions (out of changed predictions): {ccp*100.0/cp}")
+
+        f.write(f"Incorrectly changed predictions: {icp}")
+        f.write(f"Incorrectly changed predictions (out of changed predictions): {icp*100.0/cp}")
+
+        if df[round(df["contribution"]+ df["raw_pred"])!=round(df["prediction"])].count()!=0:
+            f.write(f"Something's wrong: contribution+raw pred != prediction")
 
 ##################
 # RUN COMMAND
