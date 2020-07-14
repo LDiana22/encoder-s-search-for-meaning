@@ -307,6 +307,7 @@ class AbstractDictionary:
     bins.sort(reverse=True)
     # generate a probability distribution to choose subsets of phrases for each score
     probability_distr = self.__gen_probability_expo_distribution(len(bins))
+    #probability_distr = probability_distr + [ for i in range(len(bins)-len(probability_distr)+1)]
     sorted_scores = sorted(score_phrases_dict.keys(), reverse=True) # scores reverse order
 
     # compute the number of phrases to be extracted for each score, based on the gen distr
@@ -322,7 +323,7 @@ class AbstractDictionary:
          
       diff_passed_on = max(0, counts_to_be_extracted[sorted_scores[i]] - bin_counts[sorted_scores[i]])
        
-      counts_to_be_extracted[sorted_scores[i]] = min(bin_counts[sorted_scores[i]],int(probability_distr[i]*max_phrases))
+      counts_to_be_extracted[sorted_scores[i]] = min(bin_counts[sorted_scores[i]],int(100*probability_distr[i]*max_phrases))
       counts_to_be_extracted[sorted_scores[i+1]] += diff_passed_on 
       
     
@@ -333,6 +334,7 @@ class AbstractDictionary:
       sorted_by_freq = sorted(score_phrases, key=second_criterion, reverse=True)
       filtered = sorted_by_freq[:counts_to_be_extracted[score]]
       resulting_phrases.extend([(score, ph) for ph in filtered])
+      resulting_phrases=resulting_phrases[:min(max_phrases, len(resulting_phrases))]
     print(f"Total: {len(resulting_phrases)}")
     return resulting_phrases
 
@@ -460,7 +462,8 @@ class RakeInstanceExplanations(AbstractDictionary):
         rake = Rake(max_length=self.max_words)
         rake.extract_keywords_from_text(review)
         phrases += rake.get_ranked_phrases_with_scores()
-      phrases.sort(reverse=True, key=lambda x: x[1])
+        # (score, phrase)
+      phrases.sort(reverse=True, key=lambda x: x[0])
       if self.args["filterpolarity"]:
         print(f"Filtering by polarity {text_class}...")
         phrases = self.filter_by_sentiment_polarity(phrases)
@@ -503,6 +506,7 @@ class RakeCorpusExplanations(AbstractDictionary):
         dictionary[text_class] = OrderedDict()
         class_corpus = ".\n".join(corpus[text_class])
         rake = Rake(max_length=self.max_words)
+        #rake = Rake()
         rake.extract_keywords_from_sentences(corpus[text_class])
         phrases = rake.get_ranked_phrases_with_scores()
         phrases = self.remove_duplicates(phrases)
@@ -660,11 +664,11 @@ try:
         explanations = DefaultYAKE(f"yake-nomax-filtered_{CONFIG['filterpolarity']}-p{CONFIG['phrase_len']}-d{CONFIG['max_words_dict']}", dataset, CONFIG)
     elif args.d=="textrank":
         explanations = TextRank(f"textrank-filtered_{CONFIG['filterpolarity']}-p{CONFIG['phrase_len']}-d{CONFIG['max_words_dict']}", dataset, CONFIG)
-    elif args.d == "rake-inst":
-        explanations = RakeInstanceExplanations(f"test-rake-instance-{CONFIG['max_words_dict']}-{args.p}-filtered{CONFIG ['filterpolarity']}", dataset, CONFIG)
+    elif "rake-inst" in args.d:
+        explanations = RakeInstanceExplanations(f"{args.d}-{CONFIG['max_words_dict']}-{args.p}-filtered{CONFIG ['filterpolarity']}", dataset, CONFIG)
     elif args.d == "rake-corpus":
         filtered= "-filtered" if CONFIG['filterpolarity'] else ''
-        explanations = RakeCorpusExplanations(f"test-rake-corpus-{CONFIG['max_words_dict']}-{args.p}{filtered}", dataset, CONFIG)
+        explanations = RakeCorpusExplanations(f"rake-corpus-{CONFIG['max_words_dict']}-{args.p}-{filtered}-{str(datetime.now())}", dataset, CONFIG)
     print(f"Time explanations: {str(datetime.now()-start)}")
     explanations.print_metrics()
 except:
