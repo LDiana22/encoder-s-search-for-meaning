@@ -510,7 +510,7 @@ class RakeCorpusExplanations(AbstractDictionary):
         rake.extract_keywords_from_sentences(corpus[text_class])
         phrases = rake.get_ranked_phrases_with_scores()
         phrases = self.remove_duplicates(phrases)
-        phrases.sort(reverse=True)
+        phrases.sort(reverse=True, key=lambda x: x[0])
         if self.args["filterpolarity"]:
             print(f"Filtering by polarity {text_class}...")
             phrases = self.filter_by_sentiment_polarity(phrases)
