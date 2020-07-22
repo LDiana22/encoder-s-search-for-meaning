@@ -591,7 +591,7 @@ class AbstractDictionary:
 
   def load_dict(self, file):
     print(f"Loading dict from {file}")
-    return pickle.load(open(file, "rb"))
+    return pickle.load(open(file, "rb"))    
 
   def filter_by_sentiment_polarity(self, phrases, metric="compound", threshold=0.5):
     """
@@ -851,7 +851,7 @@ class RakeCorpusPolarityFiltered(AbstractDictionary):
     # {"all":{word:freq}} OR
     {"pos":{word:freq}, "neg":{word:freq}}
     """
-    if hasattr(self, 'dictionary') and self.dictionary:
+    if hasattr(self, 'dictionary') and not self.dictionary:
         return self.dictionary
     dictionary = OrderedDict()
     corpus = self.dataset.get_training_corpus()
@@ -2632,7 +2632,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         dictionary - the dict corresponding to the class of the distribution
         """
         decoded = OrderedDict()
-#         for distr in len(distributions):          
+        #         for distr in len(distributions):          
             # dict phrase:count
             # distribution for each dict/class
             # index sort - top predicted explanations
@@ -2647,18 +2647,18 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         #expl: (count in class, distr value)
         for i, text in enumerate(expl_text):
             decoded[text]= (dictionary[text], distr[most_important_expl_idx[i]].item())
-#         batch_explanations.append(decoded)
+        #         batch_explanations.append(decoded)
         # list of 
         # ordered dict {expl:count} for a given dictionary/class
         return decoded
 
     def get_explanations(self, text, file_name=None):
         text = text.transpose(0,1)
-#             start = datetime.now()
-#             formated_date = start.strftime(DATE_FORMAT)
-#             e_file = f"{self.explanations_path}_{file_name}_{formated_date}.txt"
-#             with open(e_file, "w", encoding="utf-8") as f:
-#                 print("Saving explanations at ", e_file)
+        #             start = datetime.now()
+        #             formated_date = start.strftime(DATE_FORMAT)
+        #             e_file = f"{self.explanations_path}_{file_name}_{formated_date}.txt"
+        #             with open(e_file, "w", encoding="utf-8") as f:
+        #                 print("Saving explanations at ", e_file)
         text_expl = OrderedDict() # text: [expl_c1, expl_c2]           
         # for class_idx, class_batch_dict in enumerate(self.expl_distributions):
         #     #  tensor [batch, dict]
@@ -2675,8 +2675,8 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             text_expl[nlp_text] = val
 
             # header text,list of classes
-#                 f.write("text, " + ", ".join(list(self.dictionaries.keys()))+"\n")
-#                 f.write("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
+        #                 f.write("text, " + ", ".join(list(self.dictionaries.keys()))+"\n")
+        # f.write("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
         return text_expl
 
     def gen(self, activ, batch_size):
@@ -2990,6 +2990,29 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
         # print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
         return alpha*bce(output, target) + (1-alpha)*(torch.mean(min_contributions))
 
+class MLPCos(MLPAfterIndependentOneDictSimilarity):
+
+    def loss(self, output, target, expl, x_emb, alpha=None, epoch=0):
+        bce = nn.BCEWithLogitsLoss().to(self.device)
+        simple_bce = nn.BCELoss().to(self.device)
+        if not alpha:
+            alpha = self.alpha
+        # if epoch == 10:
+        #     alpha = 0.25
+        # elif epoch == 15:
+        #     alpha = 0
+        text = torch.mean(x_emb, dim=1).squeeze()
+        expl = torch.mean(explanation, dim=1).squeeze()
+        cos = nn.CosineSimilarity(dim=1)
+        semantic_cost = 1-cos(text, expl)
+        # output = torch.sigmoid(output)
+        min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
+        # min_contributions = abs(output-self.raw_predictions)
+        # print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
+        return (alpha/2)*bce(output, target) + (alpha/2)*semantic_cost + (1-alpha)*(torch.mean(min_contributions))
+ 
+
+
 
 class LSTMAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
 
@@ -3180,6 +3203,8 @@ try:
         model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-sumloss-c", MODEL_MAPPING, experiment.config, dataset, explanations)
     elif "bilstm_mlp_improve" in args.m:
         model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    elif "mlpcos" in args.m:
+        model = MLPCos(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
     elif args.m == "bilstm":
         emb = f"-{args.emb}-" if args.emb else ""
         model = FrozenVLSTM(f"vanilla-lstm{emb}-n{experiment.config['n_layers']}-h{experiment.config['hidden_dim']}-dr{experiment.config['dropout']}", MODEL_MAPPING, experiment.config)
