@@ -3056,6 +3056,7 @@ try:
     parser.add_argument('-d', metavar='dictionary_type', type=str, default=None,
                         help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
 
+    parser.add_argument('-dcp', type=str, help="dict load")
     parser.add_argument('-cp', type=str, help='vanilla checkpoint')
     parser.add_argument('-m', metavar='model_type', type=str,
                         help='frozen_mlp_bilstm, frozen_bilstm_mlp, bilstm_mlp_similarity')
@@ -3098,9 +3099,9 @@ try:
         "cuda": True,
         "restore_v_checkpoint" : True,
         # "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
-        "checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
+        #"checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
         #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n1-h64-dr0.05/snapshot/2020-06-16_19-33-50_e4",
-        #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
+        "checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
         #"checkpoint_v_file": args.cp,
         "train": True,
         "max_words_dict": args.p,
@@ -3113,7 +3114,8 @@ try:
         "alpha_decay": args.decay,
         "dropout": args.dr, 
         "load_dictionary":True,
-        "dict_checkpoint": "experiments/dictionaries_load/dictionaries/test-rake-corpus-600-4-filtered/dictionary-2020-07-07_18-18-56.h5",
+        "dict_checkpoint": args.dcp,
+        #"dict_checkpoint": "experiments/dictionaries_load/dictionaries/test-rake-corpus-600-4-filtered/dictionary-2020-07-07_18-18-56.h5",
         # "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
         # "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-max-words-instance-300-4/dictionary-2020-06-02_16-00-44.h5",
         #"dict_checkpoint":"experiments/dict_acquisition/dictionaries/textrank-filtered_True-p5-d300/dictionary-2020-06-05_14-56-57.h5",
