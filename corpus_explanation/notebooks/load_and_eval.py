@@ -1296,7 +1296,7 @@ parser.add_argument('-d', metavar='dictionary_type', type=str, default=None,
 parser.add_argument('-m', metavar='model_type', type=str,
                     help='frozen_mlp_bilstm, frozen_bilstm_mlp, bilstm_mlp_similarity')
 
-parser.add_argument('-p', type=str, metavar='path_checkpoint_eval')
+parser.add_argument('-cp', type=str, metavar='path_checkpoint_eval')
 
 parser.add_argument('-e', metavar='epochs', type=int, default=10,
                     help='Number of epochs')
@@ -1383,11 +1383,11 @@ CONFIG = {
     "n3": args.n3,
     "alpha_decay": 0,
     "l2_wd":0.1,
-    "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
+    #"dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
+    "dict_checkpoint": "experiments/dictionaries_load/dictionaries/test-rake-corpus-600-4-filtered/dictionary-2020-07-07_18-18-56.h5",
     #"dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
     "filterpolarity": True,
-    "toy_data": args.td,
-    "checkpoint"
+    "toy_data": args.td
 }
 print(CONFIG)
 
@@ -1434,7 +1434,7 @@ elif args.m == "frozen":
   for param in model.parameters():
       param.requires_grad=False
 elif args.m == "mlpcos":
-    model = MLPCos(f"test-{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPCos(f"test-{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, CONFIG, dataset, explanations)
     model.load_checkpoint(checkpoint)
     for param in model.parameters():
       param.requires_grad=False
