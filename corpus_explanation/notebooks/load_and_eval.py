@@ -1296,6 +1296,8 @@ parser.add_argument('-d', metavar='dictionary_type', type=str, default=None,
 parser.add_argument('-m', metavar='model_type', type=str,
                     help='frozen_mlp_bilstm, frozen_bilstm_mlp, bilstm_mlp_similarity')
 
+parser.add_argument('-p', type=str, metavar='path_checkpoint_eval')
+
 parser.add_argument('-e', metavar='epochs', type=int, default=10,
                     help='Number of epochs')
 
@@ -1406,6 +1408,7 @@ formated_date = start.strftime(DATE_FORMAT)
 #checkpoint=  "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-24_15-27-01/snapshot/2020-06-24_15-50-54_e3"
 #checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-22_15-35-42/snapshot/2020-06-22_16-56-47_e7"
 # checkpoint = "experiments/soa-dicts/rc_bilstm_mlp_improve_30-30_l20.1_dr0.8_lr0.01_soa_vlstm2-64-0.3_pretrained_rake-polarity-4-60-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-polarity-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-29_09-45-14/snapshot/2020-06-29_10-26-40_e5"
+checkpoint = args.p
 print("Loading data...")
 start = datetime.now()
 dataset = IMDBDataset(CONFIG)
