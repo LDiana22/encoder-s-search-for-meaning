@@ -1083,6 +1083,29 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
         return alpha*bce(output, target) + (1-alpha)*(torch.mean(min_contributions))
 
 
+class MLPCos(MLPAfterIndependentOneDictSimilarity):
+
+    def loss(self, output, target, expl, x_emb, alpha=None, epoch=0):
+        bce = nn.BCEWithLogitsLoss().to(self.device)
+        simple_bce = nn.BCELoss().to(self.device)
+        if not alpha:
+            alpha = self.alpha
+        # if epoch == 10:
+        #     alpha = 0.25
+        # elif epoch == 15:
+        #     alpha = 0
+        text = torch.mean(x_emb, dim=1).squeeze()
+        expl = torch.mean(explanation, dim=1).squeeze()
+        cos = nn.CosineSimilarity(dim=1)
+        semantic_cost = 1-cos(text, expl)
+        # output = torch.sigmoid(output)
+        min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
+        # min_contributions = abs(output-self.raw_predictions)
+        # print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
+        return (alpha/2)*bce(output, target) + (alpha/2)*torch.mean(semantic_cost) + (1-alpha)*(torch.mean(min_contributions))
+ 
+
+
 class IMDBDataset:
 
   def __init__(self, args, max_length=250):
@@ -1347,7 +1370,8 @@ CONFIG = {
     "cuda": True,
     "restore_v_checkpoint" : True,
     #"checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
-    "checkpoint_v_file" : "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
+    # "checkpoint_v_file" : "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
+    "checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
     "train": False,
     "phrase_len": 4,
     "patience":20,
@@ -1360,7 +1384,8 @@ CONFIG = {
     "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
     #"dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
     "filterpolarity": True,
-    "toy_data": args.td
+    "toy_data": args.td,
+    "checkpoint"
 }
 print(CONFIG)
 
@@ -1375,12 +1400,12 @@ start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
 #checkpoint = "experiments/independent/bilstm_mlp_improve-dnn15-1-30-decay0.0-L2-dr0.3-eval1-textrank-improve100loss-alpha0.5-c-tr10/snapshot/2020-05-17_18-53-24_e18"
-checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e20-2020-06-23_15-15-42/snapshot/2020-06-23_16-36-30_e7"
+# checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e20-2020-06-23_15-15-42/snapshot/2020-06-23_16-36-30_e7"
 #checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4"
 #checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-64-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e20-2020-06-24_10-33-00/snapshot/2020-06-24_10-56-52_e3"
 #checkpoint=  "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-24_15-27-01/snapshot/2020-06-24_15-50-54_e3"
 #checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-22_15-35-42/snapshot/2020-06-22_16-56-47_e7"
-checkpoint = "experiments/soa-dicts/rc_bilstm_mlp_improve_30-30_l20.1_dr0.8_lr0.01_soa_vlstm2-64-0.3_pretrained_rake-polarity-4-60-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-polarity-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-29_09-45-14/snapshot/2020-06-29_10-26-40_e5"
+# checkpoint = "experiments/soa-dicts/rc_bilstm_mlp_improve_30-30_l20.1_dr0.8_lr0.01_soa_vlstm2-64-0.3_pretrained_rake-polarity-4-60-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-polarity-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-29_09-45-14/snapshot/2020-06-29_10-26-40_e5"
 print("Loading data...")
 start = datetime.now()
 dataset = IMDBDataset(CONFIG)
@@ -1405,7 +1430,11 @@ elif args.m == "frozen":
   model.load_checkpoint(vanilla_args["checkpoint_v_file"])
   for param in model.parameters():
       param.requires_grad=False
-
+elif args.m == "mlpcos":
+    model = MLPCos(f"test-{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model.load_checkpoint(checkpoint)
+    for param in model.parameters():
+      param.requires_grad=False
 #print("Evaluating train data...")
 #train_metrics = model.evaluate(train_iterator, "train_f")
 #print("Train metrics:")
