@@ -652,7 +652,6 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             print(model_args["checkpoint_v_file"])
             self.vanilla.load_checkpoint(model_args["checkpoint_v_file"])
             print(f"Vanilla frozen, params {len(list(self.vanilla.parameters()))}: {[name for name, param in self.vanilla.named_parameters()]}")
-            print(f"VLSTM Number of params: {sum(p.numel() for p in self.vanilla.parameters() if p.requires_grad)}")
             for param in self.vanilla.parameters():
                 param.requires_grad=False
             self.vanilla.eval()
@@ -723,7 +722,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         dictionary - the dict corresponding to the class of the distribution
         """
         decoded = OrderedDict()
-#         for distr in len(distributions):          
+        #         for distr in len(distributions):          
             # dict phrase:count
             # distribution for each dict/class
             # index sort - top predicted explanations
@@ -738,18 +737,18 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         #expl: (count in class, distr value)
         for i, text in enumerate(expl_text):
             decoded[text]= (dictionary[text], distr[most_important_expl_idx[i]].item())
-#         batch_explanations.append(decoded)
+        #         batch_explanations.append(decoded)
         # list of 
         # ordered dict {expl:count} for a given dictionary/class
         return decoded
 
     def get_explanations(self, text, file_name=None):
         text = text.transpose(0,1)
-#             start = datetime.now()
-#             formated_date = start.strftime(DATE_FORMAT)
-#             e_file = f"{self.explanations_path}_{file_name}_{formated_date}.txt"
-#             with open(e_file, "w", encoding="utf-8") as f:
-#                 print("Saving explanations at ", e_file)
+        #             start = datetime.now()
+        #             formated_date = start.strftime(DATE_FORMAT)
+        #             e_file = f"{self.explanations_path}_{file_name}_{formated_date}.txt"
+        #             with open(e_file, "w", encoding="utf-8") as f:
+        #                 print("Saving explanations at ", e_file)
         text_expl = OrderedDict() # text: [expl_c1, expl_c2]           
         # for class_idx, class_batch_dict in enumerate(self.expl_distributions):
         #     #  tensor [batch, dict]
@@ -766,8 +765,8 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             text_expl[nlp_text] = val
 
             # header text,list of classes
-#                 f.write("text, " + ", ".join(list(self.dictionaries.keys()))+"\n")
-#                 f.write("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
+        #                 f.write("text, " + ", ".join(list(self.dictionaries.keys()))+"\n")
+        # f.write("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
         return text_expl
 
     def gen(self, activ, batch_size):
@@ -1383,11 +1382,11 @@ CONFIG = {
     "n3": args.n3,
     "alpha_decay": 0,
     "l2_wd":0.1,
-    #"dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
-    "dict_checkpoint": "experiments/dictionaries_load/dictionaries/test-rake-corpus-600-4-filtered/dictionary-2020-07-07_18-18-56.h5",
+    "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
     #"dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
     "filterpolarity": True,
-    "toy_data": args.td
+    "toy_data": args.td,
+    "checkpoint"
 }
 print(CONFIG)
 
@@ -1434,7 +1433,7 @@ elif args.m == "frozen":
   for param in model.parameters():
       param.requires_grad=False
 elif args.m == "mlpcos":
-    model = MLPCos(f"test-{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, CONFIG, dataset, explanations)
+    model = MLPCos(f"test-{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
     model.load_checkpoint(checkpoint)
     for param in model.parameters():
       param.requires_grad=False
