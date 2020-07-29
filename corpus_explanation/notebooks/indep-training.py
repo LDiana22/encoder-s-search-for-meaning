@@ -292,17 +292,12 @@ class Experiment(object):
                 v_contrib.append(valid_metrics["valid_avg_contributions"])
 
             if round(valid_metrics["valid_loss"],3) <= round(best_valid_loss,3):
+                patience = 0
                 best_valid_loss = valid_metrics["valid_loss"]
                 print(f"Best valid at epoch {epoch+1}: {best_valid_loss}")
                 metrics = train_metrics
                 metrics.update(valid_metrics)
                 self.model.checkpoint(epoch+1, metrics)
-            if prev_loss < valid_metrics["valid_loss"]:
-                patience += 1
-                if patience == self.config["patience"]:
-                    print(f"Patience {patience} break, epoch {epoch+1}")
-                    break
-            prev_loss = valid_metrics["valid_loss"]
 
 
             print(f'Epoch: {epoch+1:02} | Epoch Time: {str(end_time-start_time)}')
@@ -311,6 +306,15 @@ class Experiment(object):
             if self.config["id"] != "bilstm":
                 print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]} |  Val. avgC: {valid_metrics["valid_avg_contributions"]}')
                 print(f'\tTrain raw_acc: {train_metrics["train_raw_acc"]*100:.2f} | Val. Raw_acc: {valid_metrics["valid_raw_acc"]*100:.2f}%')
+            
+            if prev_loss < valid_metrics["valid_loss"]:
+                patience += 1
+                if patience == self.config["patience"]:
+                    print(f"Patience {patience} break, epoch {epoch+1}")
+                    break
+            prev_loss = valid_metrics["valid_loss"]
+
+
 
 
         print(f'Training Time: {str(datetime.now()-training_start_time)}')
@@ -2552,6 +2556,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         """
         super().__init__(id, mapping_file_location, model_args)
         self.alpha = model_args['alpha']
+        self.beta=model_args['beta']
         self.decay = model_args['alpha_decay']
         self.explanations_path = os.path.join(self.model_dir, model_args["dirs"]["explanations"], "e")
 
@@ -2992,7 +2997,7 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
 
 class MLPCos(MLPAfterIndependentOneDictSimilarity):
 
-    def loss(self, output, target, expl, x_emb, alpha=None, epoch=0):
+    def loss(self, output, target, explanation, x_emb, alpha=None, epoch=0):
         bce = nn.BCEWithLogitsLoss().to(self.device)
         simple_bce = nn.BCELoss().to(self.device)
         if not alpha:
@@ -3009,7 +3014,7 @@ class MLPCos(MLPAfterIndependentOneDictSimilarity):
         min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
         # min_contributions = abs(output-self.raw_predictions)
         # print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
-        return (alpha/2)*bce(output, target) + (alpha/2)*semantic_cost + (1-alpha)*(torch.mean(min_contributions))
+        return alpha*bce(output, target) + self.beta*torch.mean(semantic_cost) + (1-alpha)*(torch.mean(min_contributions))
  
 
 
@@ -3065,7 +3070,7 @@ try:
 
     parser.add_argument('-a', metavar='alpha', type=float, default=CONFIG["alpha"],
                         help='Similarity cost hyperparameter')
-    
+    parser.add_argument('-b', type=float)
 
     parser.add_argument('-hd', metavar='hidden_dim', type=int, default=256,
                         help='LSTM hidden dim')
@@ -3122,15 +3127,16 @@ try:
         "cuda": True,
         "restore_v_checkpoint" : True,
         # "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
-        #"checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
+        "checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
         #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n1-h64-dr0.05/snapshot/2020-06-16_19-33-50_e4",
-        "checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
+        #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
         #"checkpoint_v_file": args.cp,
         "train": True,
         "max_words_dict": args.p,
-        "patience": 10,
+        "patience": 5,
         "epochs": args.e,
         'alpha': args.a,
+        'beta':args.b,
         "n1": args.n1,
         "n2": args.n2,
         "n3": args.n3,
@@ -3206,7 +3212,7 @@ try:
     elif "bilstm_mlp_improve" in args.m:
         model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
     elif "mlpcos" in args.m:
-        model = MLPCos(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
+        model = MLPCos(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-b{args.b}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
     elif args.m == "bilstm":
         emb = f"-{args.emb}-" if args.emb else ""
         model = FrozenVLSTM(f"vanilla-lstm{emb}-n{experiment.config['n_layers']}-h{experiment.config['hidden_dim']}-dr{experiment.config['dropout']}", MODEL_MAPPING, experiment.config)
