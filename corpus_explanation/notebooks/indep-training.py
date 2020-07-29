@@ -1657,7 +1657,7 @@ class MLPGen(AbstractModel):
 
                 predictions = torch.round(torch.sigmoid(logits))
 
-                y_pred = predictions.detach().cpu().numpy()
+                y_pred = torch.sigmoid(logits).detach().cpu().numpy()
                 y_true = batch.label.cpu().numpy()
                 self.predictions = y_pred
                 self.true_labels = y_true
@@ -2138,7 +2138,7 @@ class MLPIndependentOneDict(AbstractModel):
 
                 predictions = torch.round(torch.sigmoid(logits))
 
-                y_pred = predictions.detach().cpu().numpy()
+                y_pred = torch.sigmoid(logits).detach().cpu().numpy()
                 y_true = batch.label.cpu().numpy()
                 self.predictions = y_pred
                 self.true_labels = y_true
