@@ -67,10 +67,10 @@ def print_percentages(df, full_path):
     df["c"] = df.apply(lambda x: -1*x["contribution"] if x["label"]==0 else x["contribution"], axis=1)
     dp = df[round(df["c"]+ df["raw_pred"])!=round(df["prediction"])].count()["contribution"]
     
-    ccp = df[(round(df["raw_pred"])!=round(df["prediction"])) & (df["label"]==df["prediction"])].count()["contribution"]
-    icp = df[(round(df["raw_pred"])!=round(df["prediction"])) & (df["label"]!=df["prediction"])].count()["contribution"]
+    ccp = df[(round(df["raw_pred"])!=round(df["prediction"])) & (df["label"]==round(df["prediction"]))].count()["contribution"]
+    icp = df[(round(df["raw_pred"])!=round(df["prediction"])) & (df["label"]!=round(df["prediction"]))].count()["contribution"]
 
-    cp = df[round(df["raw_pred"])!=df["prediction"]].count()["contribution"]
+    cp = df[round(df["raw_pred"])!=round(df["prediction"])].count()["contribution"]
     with open(full_path, "w") as f:
         f.write(f"Changed prediction: {cp}\n")
         f.write(f"Different predictions (should be equal to changed pred): {dp}\n")
@@ -143,13 +143,13 @@ plot_hist(df["contribution"], "Histogram all contributions", all_hist_path)
 
 print("all correct instances...")
 all_metrics_path = os.path.join(args.p, "all_correct_metrics.txt")
-print_metrics(df[df["prediction"]==df["label"]], all_metrics_path)
+print_metrics(df[round(df["prediction"])==df["label"]], all_metrics_path)
 pos_hist_path = os.path.join(args.p, "all_correct_hist.png")
 plot_hist(df["contribution"], "Histogram positives' contributions", pos_hist_path)
 
 print("all incorrect instances...")
 all_metrics_path = os.path.join(args.p, "all_incorrect_metrics.txt")
-print_metrics(df[df["prediction"]!=df["label"]], all_metrics_path)
+print_metrics(df[round(df["prediction"])!=df["label"]], all_metrics_path)
 neg_hist_path = os.path.join(args.p, "all_incorrect_hist.png")
 plot_hist(df["contribution"], "Histogram negatives' contributions", neg_hist_path)
 
@@ -157,10 +157,10 @@ path = os.path.join(args.p, "descending_contribution.txt")
 df.sort_values(by=["contribution"], ascending=False).to_csv(path)
 
 path = os.path.join(args.p, "descending_contribution_correct.txt")
-df[df["label"]==df["prediction"]].sort_values(by=["contribution"], ascending=False).to_csv(path)
+df[df["label"]==round(df["prediction"])].sort_values(by=["contribution"], ascending=False).to_csv(path)
 
 path = os.path.join(args.p, "descending_contribution_incorrect.txt")
-df[df["label"]!=df["prediction"]].sort_values(by=["contribution"], ascending=False).to_csv(path)
+df[df["label"]!=round(df["prediction"])].sort_values(by=["contribution"], ascending=False).to_csv(path)
 
 # print(df.head())
 # print(df[(df["prediction"]==df["label"])].shape)
