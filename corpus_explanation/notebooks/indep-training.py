@@ -2557,6 +2557,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         super().__init__(id, mapping_file_location, model_args)
         self.alpha = model_args['alpha']
         self.beta=model_args['beta']
+        self.gamma = model_args['gamma']
         self.decay = model_args['alpha_decay']
         self.explanations_path = os.path.join(self.model_dir, model_args["dirs"]["explanations"], "e")
 
@@ -3014,7 +3015,7 @@ class MLPCos(MLPAfterIndependentOneDictSimilarity):
         min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
         # min_contributions = abs(output-self.raw_predictions)
         # print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
-        return alpha*bce(output, target) + self.beta*torch.mean(semantic_cost) + (1-alpha)*(torch.mean(min_contributions))
+        return alpha*bce(output, target) + self.beta*(torch.mean(min_contributions)) + self.gamma*torch.mean(semantic_cost)
  
 
 
@@ -3071,6 +3072,7 @@ try:
     parser.add_argument('-a', metavar='alpha', type=float, default=CONFIG["alpha"],
                         help='Similarity cost hyperparameter')
     parser.add_argument('-b', type=float)
+    parser.add_argument('-g', type=float)
 
     parser.add_argument('-hd', metavar='hidden_dim', type=int, default=256,
                         help='LSTM hidden dim')
@@ -3135,8 +3137,9 @@ try:
         "max_words_dict": args.p,
         "patience": 5,
         "epochs": args.e,
-        'alpha': args.a,
-        'beta':args.b,
+        "alpha": args.a,
+        "beta":args.b,
+        "gamma":args.g,
         "n1": args.n1,
         "n2": args.n2,
         "n3": args.n3,
