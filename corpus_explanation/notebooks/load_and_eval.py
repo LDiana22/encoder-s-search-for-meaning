@@ -1382,11 +1382,12 @@ CONFIG = {
     "n3": args.n3,
     "alpha_decay": 0,
     "l2_wd":0.1,
-    "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
+    #"dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
     #"dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
+    
+    "dict_checkpoint": "experiments/dictionaries_load/dictionaries/test-rake-corpus-600-4-filtered/dictionary-2020-07-07_18-18-56.h5",
     "filterpolarity": True,
-    "toy_data": args.td,
-    "checkpoint"
+    "toy_data": args.td
 }
 print(CONFIG)
 
@@ -1407,14 +1408,14 @@ formated_date = start.strftime(DATE_FORMAT)
 #checkpoint=  "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-24_15-27-01/snapshot/2020-06-24_15-50-54_e3"
 #checkpoint = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-22_15-35-42/snapshot/2020-06-22_16-56-47_e7"
 # checkpoint = "experiments/soa-dicts/rc_bilstm_mlp_improve_30-30_l20.1_dr0.8_lr0.01_soa_vlstm2-64-0.3_pretrained_rake-polarity-4-60-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-polarity-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-29_09-45-14/snapshot/2020-06-29_10-26-40_e5"
-checkpoint = args.p
+checkpoint = args.cp
 print("Loading data...")
 start = datetime.now()
 dataset = IMDBDataset(CONFIG)
 train_iterator, valid_iterator, test_iterator = dataset.iterators()
 print(f"Time data load: {str(datetime.now()-start)}")
 
-explanations = RakeInstanceExplanations(f"rake-polarity", dataset, CONFIG)
+explanations = RakeInstanceExplanations(f"load-rake-polarity", dataset, CONFIG)
 
 if "mlp_improve" in args.m:
     print("Load mlp_improve")
@@ -1433,7 +1434,7 @@ elif args.m == "frozen":
   for param in model.parameters():
       param.requires_grad=False
 elif args.m == "mlpcos":
-    model = MLPCos(f"test-{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    model = MLPCos(f"test-{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, CONFIG, dataset, explanations)
     model.load_checkpoint(checkpoint)
     for param in model.parameters():
       param.requires_grad=False
