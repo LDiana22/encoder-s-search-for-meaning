@@ -64,24 +64,25 @@ def print_metrics(df, full_path, field="contribution"):
         f.write(f"All contributions count {df[field].count()}\n")
 
 def print_percentages(df, full_path):
-    cp = df[round(df["contribution"]+ df["raw_pred"])!=round(df["raw_pred"])].count()
-    ccp = df[(round(df["contribution"]+ df["raw_pred"])!=round(df["raw_pred"])) & (df["label"]==df["prediction"])].count()
-    icp = df[(round(df["contribution"]+ df["raw_pred"])!=round(df["raw_pred"])) & (df["label"]!=df["prediction"])].count()
+    df["c"] = df.apply(lambda x: -1*x["contribution"] if x["label"]==0 else x["contribution"], axis=1)
+    dp = df[round(df["c"]+ df["raw_pred"])!=round(df["prediction"])].count()["contribution"]
+    
+    ccp = df[(round(df["raw_pred"])!=round(df["prediction"])) & (df["label"]==df["prediction"])].count()["contribution"]
+    icp = df[(round(df["raw_pred"])!=round(df["prediction"])) & (df["label"]!=df["prediction"])].count()["contribution"]
 
-    dp = df[round(df["raw_pred"])!=df["prediction"]].count()
-
+    cp = df[round(df["raw_pred"])!=df["prediction"]].count()["contribution"]
     with open(full_path, "w") as f:
-        f.write(f"Changed prediction: {cp}")
-        f.write(f"Different predictions (should be equal to changed pred): {dp}")
+        f.write(f"Changed prediction: {cp}\n")
+        f.write(f"Different predictions (should be equal to changed pred): {dp}\n")
 
-        f.write(f"Correctly changed predictions: {ccp}")
-        f.write(f"Correctly changed predictions (out of changed predictions): {ccp*100.0/cp}")
+        f.write(f"Correctly changed predictions: {ccp}\n")
+        f.write(f"Correctly changed predictions (out of changed predictions): {ccp*100.0/cp}\n")
 
-        f.write(f"Incorrectly changed predictions: {icp}")
-        f.write(f"Incorrectly changed predictions (out of changed predictions): {icp*100.0/cp}")
+        f.write(f"Incorrectly changed predictions: {icp}\n")
+        f.write(f"Incorrectly changed predictions (out of changed predictions): {icp*100.0/cp}\n")
 
-        if df[round(df["contribution"]+ df["raw_pred"])!=round(df["prediction"])].count()!=0:
-            f.write(f"Something's wrong: contribution+raw pred != prediction")
+       
+        f.write(f"Round prediction != prediction: {dp}\nC+raw_pred != pred {df[round(df['c']+ df['raw_pred'])!=round(df['prediction'])].count()['contribution']}")
 
 ##################
 # RUN COMMAND
