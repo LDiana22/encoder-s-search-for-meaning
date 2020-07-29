@@ -47,6 +47,7 @@ import yake
 from summa import keywords
 from rake_nltk import Rake
 
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
@@ -62,8 +63,10 @@ random.seed(0)
 VECTOR_CACHE = "../.vector_cache"
 UCI_PATH = "../.data/uci"
 IMDB_PATH = "../.data/imdb/aclImdb"
-PREFIX_DIR = "experiments/independent"
-MODEL_MAPPING = "experiments/model_mappings/independent"
+#PREFIX_DIR = "experiments/independent"
+#MODEL_MAPPING = "experiments/model_mappings/independent"
+PREFIX_DIR = "experiments/soa-dicts"
+MODEL_MAPPING = "experiments/soa-dicts/model_mapping"
 
 MODEL_NAME = "mlp+frozen_bilstm_gumb-emb-one-dict-long"
 
@@ -75,7 +78,7 @@ CONFIG = {
     "embedding": "glove",
 
     "restore_checkpoint" : False,
-    "checkpoint_file": None,
+    "checkpoint_file": None, #"experiments/independent/bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improveloss_mean-alpha0.0-c-e25-2020-05-25_19-22-13/snapshot/2020-05-25_e20",
     "train": True,
 
     "dropout": 0.05,
@@ -85,10 +88,11 @@ CONFIG = {
 
     "patience": 10,
 
-    "epochs": 200,
+    "epochs": 20,
 
     "objective": "cross_entropy",
-    "init_lr": 0.0001,
+    "lr": 0.001,
+    "l2_wd": 0,
 
     "gumbel_decay": 1e-5,
 
@@ -111,6 +115,7 @@ CONFIG = {
     "emb_dim": 300,
     "batch_size": 32,
     "output_dim": 1,
+    "load_dictionary": False
 }
 
 
@@ -258,8 +263,8 @@ class Experiment(object):
     def train_model(self):
         training_start_time = datetime.now()
 
-        training_losses, training_acc = [], []
-        v_losses, v_acc = [], []
+        training_losses, training_acc, training_raw_acc = [], [], []
+        v_losses, v_acc, v_raw_acc = [], [], []
         training_contrib, v_contrib = [], []
 
         best_valid_loss = float('inf')
@@ -276,13 +281,19 @@ class Experiment(object):
 
             training_losses.append(train_metrics["train_loss"])
             training_acc.append(train_metrics["train_acc"])
-            training_contrib.append(train_metrics["train_avg_contributions"])
             v_losses.append(valid_metrics["valid_loss"])
             v_acc.append(valid_metrics["valid_acc"])
-            v_contrib.append(valid_metrics["valid_avg_contributions"])
+            
+            if self.config["id"] != "bilstm":
+                training_raw_acc.append(train_metrics["train_raw_acc"])
+                training_contrib.append(train_metrics["train_avg_contributions"])
+            
+                v_raw_acc.append(valid_metrics["valid_raw_acc"])
+                v_contrib.append(valid_metrics["valid_avg_contributions"])
 
-            if valid_metrics["valid_loss"] < best_valid_loss:
+            if round(valid_metrics["valid_loss"],3) <= round(best_valid_loss,3):
                 best_valid_loss = valid_metrics["valid_loss"]
+                print(f"Best valid at epoch {epoch+1}: {best_valid_loss}")
                 metrics = train_metrics
                 metrics.update(valid_metrics)
                 self.model.checkpoint(epoch+1, metrics)
@@ -297,7 +308,9 @@ class Experiment(object):
             print(f'Epoch: {epoch+1:02} | Epoch Time: {str(end_time-start_time)}')
             print(f'\tTrain Loss: {train_metrics["train_loss"]:.3f} | Train Acc: {train_metrics["train_acc"]*100:.2f}%')
             print(f'\t Val. Loss: {valid_metrics["valid_loss"]:.3f} |  Val. Acc: {valid_metrics["valid_acc"]*100:.2f}%')
-            print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]} |  Val. avgC: {valid_metrics["valid_avg_contributions"]}')
+            if self.config["id"] != "bilstm":
+                print(f'\tTrain avgC: {train_metrics["train_avg_contributions"]} |  Val. avgC: {valid_metrics["valid_avg_contributions"]}')
+                print(f'\tTrain raw_acc: {train_metrics["train_raw_acc"]*100:.2f} | Val. Raw_acc: {valid_metrics["valid_raw_acc"]*100:.2f}%')
 
 
         print(f'Training Time: {str(datetime.now()-training_start_time)}')
@@ -309,15 +322,18 @@ class Experiment(object):
             "training_time":  str(datetime.now()-training_start_time),
             "training_loss": training_losses,
             "training_acc": training_acc,
+            "training_raw_acc": training_raw_acc,
             "valid_loss": v_losses,
-            "valid_acc": v_acc
+            "valid_acc": v_acc,
+            "valid_raw_acc": v_raw_acc
          }
         plot_path = self.model.get_plot_path("train_plot")
         print(f"Plotting at {plot_path}")
         plot_training_metrics(plot_path, training_losses, v_losses, training_acc, v_acc)
-        plot_path = self.model.get_plot_path("contributions_plot")
-        print(f"Plotting contributions at {plot_path}")
-        plot_contributions(plot_path, training_contrib, v_contrib)
+        if self.config["id"] != "bilstm":
+            plot_path = self.model.get_plot_path("contributions_plot")
+            print(f"Plotting contributions at {plot_path}")
+            plot_contributions(plot_path, training_contrib, v_contrib)
 
         self.model.save_results(metrics, "train")
 
@@ -364,11 +380,29 @@ class IMDBDataset:
     self.test_data = self._load_data(TEXT, LABEL, IMDB_PATH, "test")
 #     self.train_data, self.test_data =  datasets.IMDB.splits(TEXT, LABEL)
     self.train_data, self.valid_data = self.train_data.split(random_state=random.getstate())
+
+    # start = datetime.now()
+    # formated_date = start.strftime(DATE_FORMAT)
+    # with open(f"train-imdb-{formated_date}", "w") as f:
+    #     f.write("\n".join([f"{' '.join(self.train_data[i].text)} ~  {self.train_data[i].label}" for i in range(len(self.train_data))]))
+    # with open(f"val-imdb-{formated_date}", "w") as f:
+    #     f.write("\n".join([f"{' '.join(self.valid_data[i].text)} ~  {self.valid_data[i].label}" for i in range(len(self.valid_data))]))
+    # with open(f"test-imdb-{formated_date}", "w") as f:
+    #     f.write("\n".join([f"{' '.join(self.test_data[i].text)} ~  {self.test_data[i].label}" for i in range(len(self.test_data))]))
+
     print("IMDB...")
     print(f"Train {len(self.train_data)}")
     print(f"Valid {len(self.valid_data)}")
     print(f"Test {len(self.test_data)}")
-    TEXT.build_vocab(self.train_data,
+    if self.args["emb"] == 'glove':
+        print("Glove embeddings")
+        TEXT.build_vocab(self.train_data,
+                 max_size = args["max_vocab_size"],
+                 vectors = GloVe(name='6B', dim=args["emb_dim"], cache=VECTOR_CACHE), 
+                 unk_init = torch.Tensor.normal_)
+    else:
+        print("Training embeddings")
+        TEXT.build_vocab(self.train_data,
                  max_size = args["max_vocab_size"])
     LABEL.build_vocab(self.train_data)
 
@@ -416,6 +450,9 @@ class IMDBDataset:
     return self.train_data
 
   def get_training_corpus(self):
+    """
+    Returns a dictionary: {class: list of instances for that class}
+    """
     self.corpus = {"pos":[], "neg":[]}
     self.corpus["pos"] = [" ".join(example.text) for example in self.train_data if example.label == "pos"]
     self.corpus["neg"] = [" ".join(example.text) for example in self.train_data if example.label == "neg"]
@@ -534,8 +571,6 @@ class UCIDataset:
 ## Abstract
 """
 
-
-
 class AbstractDictionary:
   def __init__(self, id, dataset, args):
     """
@@ -549,6 +584,24 @@ class AbstractDictionary:
     self.metrics = {}
     if not os.path.isdir(self.path):
         os.makedirs(self.path)
+    if args["load_dictionary"]:
+        print("Loading dictionary...")
+        self.dictionary = self.load_dict(args["dict_checkpoint"])
+
+
+  def load_dict(self, file):
+    print(f"Loading dict from {file}")
+    return pickle.load(open(file, "rb"))    
+
+  def filter_by_sentiment_polarity(self, phrases, metric="compound", threshold=0.5):
+    """
+    in: list of phrases  [(score, "phrase")]
+    metric: compound, pos, neg
+    out: list of fitered phrases
+    """
+    sentiment = SentimentIntensityAnalyzer()
+    return [(score, phrase) for score, phrase in phrases if abs(sentiment.polarity_scores(phrase)[metric])>threshold]
+
 
   def filter_phrases_max_words_by_occurence(self, phrases, corpus, max_phrases):
     """
@@ -568,12 +621,13 @@ class AbstractDictionary:
     return result
 
   def _save_dict(self):
-
-    file = os.path.join(self.path, "dictionary.h5")
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
+    file = os.path.join(self.path, f"dictionary-{formated_date}.h5")
     with open(file, "wb") as f: 
         f.write(pickle.dumps(self.dictionary))
 
-    file = os.path.join(self.path, "dictionary.txt")
+    file = os.path.join(self.path, f"dictionary-{formated_date}.txt")
     with open(file, "w", encoding="utf-8") as f:
         for text_class, e_dict in self.dictionary.items():
             f.write("**************\n")
@@ -744,8 +798,6 @@ class RakeMaxWordsExplanations(AbstractDictionary):
     # {"all":{word:freq}} OR
     {"pos":{word:freq}, "neg":{word:freq}}
     """
-#     import ipdb
-#     ipdb.set_trace(context=20)
     if hasattr(self, 'dictionary') and not self.dictionary:
         return self.dictionary
     dictionary = OrderedDict()
@@ -776,17 +828,115 @@ class RakeMaxWordsExplanations(AbstractDictionary):
 
     return dictionary
 
-"""## TextRank"""
 
-# pip install summa
-
-
-class TextRank(AbstractDictionary):
+class RakeCorpusPolarityFiltered(AbstractDictionary):
 
   def __init__(self, id, dataset, args): 
     super().__init__(id, dataset, args)
     self.max_dict = args.get("max_dict", None)
     self.max_words = args["max_words_dict"]
+    # self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
+    if args["load_dictionary"]:
+        print(f"Loading RakeCorpusPolarityFiltered from: {args['dict_checkpoint']}")
+        self.dictionary = self.load_dict(args["dict_checkpoint"])
+        print(f"Loaded dict keys: {[f'{key}:{len(self.dictionary[key].keys())}' for key in self.dictionary.keys()]}")
+    else:
+        self.dictionary = self.get_dict()
+        self._save_dict()
+    self.tokenizer = spacy.load("en")
+
+  def get_dict(self):
+    """
+    Builds a dictionary of keywords for each label.
+    # {"all":{word:freq}} OR
+    {"pos":{word:freq}, "neg":{word:freq}}
+    """
+    if hasattr(self, 'dictionary') and not self.dictionary:
+        return self.dictionary
+    dictionary = OrderedDict()
+    corpus = self.dataset.get_training_corpus()
+    
+    sentiment = SentimentIntensityAnalyzer()
+    
+    max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
+    for text_class in corpus.keys():
+        dictionary[text_class] = OrderedDict()
+        class_corpus = ".\n".join(corpus[text_class])
+        phrases = []
+        for i in range(1, self.max_words+1):
+            rake = Rake(max_length=self.max_words)
+            rake.extract_keywords_from_sentences(corpus[text_class])
+            phrases += rake.get_ranked_phrases()
+#         with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
+#             f.write("\n".join(phrases))
+        # extract only phrases with a night polarity degree
+        ph_polarity = [(phrase, abs(sentiment.polarity_scores(phrase)['compound'])) for phrase in phrases if abs(sentiment.polarity_scores(phrase)['compound'])>0.5]
+        ph_polarity.sort(reverse=True, key=lambda x: x[1])
+        # rank based on ferquency and eliminate freq 0
+        if not max_per_class:
+            max_per_class = len(ph_polarity)
+        result = [{phrase[0]: class_corpus.count(phrase[0])} for phrase in ph_polarity[:max_per_class] if class_corpus.count(phrase[0])>0]
+        
+        # tok_words = self.tokenizer(class_corpus)
+        # word_freq = Counter([token.text for token in tok_words if not token.is_punct])
+        dictionary[text_class] = OrderedDict(ChainMap(*result)) # len(re.findall(".*".join(phrase.split()), class_corpus))
+
+    return dictionary
+
+class RakeInstanceExplanations(AbstractDictionary):
+  """ Rake max words per instance"""
+  def __init__(self, id, dataset, args): 
+    super().__init__(id, dataset, args)
+    # self.rake = Rake() # Uses stopwords for english from NLTK, and all puntuation characters.
+    self.max_dict = args["max_words_dict"]
+    self.max_words = args["phrase_len"]
+    self.dictionary = self.get_dict()
+    self.tokenizer = spacy.load("en")
+    self._save_dict()
+
+  def get_dict(self):
+    """
+    Builds a dictionary of keywords for each label.
+    # {"all":{word:freq}} OR
+    {"pos":{word:freq}, "neg":{word:freq}}
+    """
+    if hasattr(self, 'dictionary') and self.dictionary:
+        return self.dictionary
+    print("Generating new dict rake-inst")
+    dictionary = OrderedDict()
+    corpus = self.dataset.get_training_corpus()
+
+    max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
+    res_phrases = []
+    for text_class in corpus.keys():
+        phrases = []
+        dictionary[text_class] = OrderedDict()
+        for review in corpus[text_class]:
+            rake = Rake(max_length=self.max_words)
+            rake.extract_keywords_from_text(review)
+            phrases += rake.get_ranked_phrases_with_scores()
+        phrases.sort(reverse=True)
+        if self.args["filterpolarity"]:
+            print("Filtering by polarity...")
+            phrases = self.filter_by_sentiment_polarity(phrases)
+        with open(os.path.join(self.path, f"phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join([str(ph) for ph in phrases]))
+        if max_per_class:
+            phrases = phrases[:max_per_class]
+        dictionary[text_class] = OrderedDict(ChainMap(*[{ph[1]:" ".join(corpus[text_class]).count(ph[1])} for ph in phrases]))
+    return dictionary
+
+
+"""## TextRank"""
+
+# pip install summa
+
+class TextRank(AbstractDictionary):
+
+  def __init__(self, id, dataset, args): 
+    super().__init__(id, dataset, args)
+    self.max_dict = args["max_words_dict"]
+    self.max_words = args["phrase_len"]
     self.dictionary = self.get_dict()
     self.tokenizer = spacy.load("en")
     self._save_dict()
@@ -802,17 +952,24 @@ class TextRank(AbstractDictionary):
     dictionary = OrderedDict()
     corpus = self.dataset.get_training_corpus()
 
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
     max_per_class = int(self.max_dict / len(corpus.keys())) if self.max_dict else None
     for text_class in corpus.keys():
         dictionary[text_class] = OrderedDict()
         phrases = [keywords.keywords(review, scores=True) for review in corpus[text_class]]
         phrases = list(itertools.chain.from_iterable(phrases))
         phrases.sort(reverse=True, key=lambda x: x[1])
-        with open(os.path.join(self.path, f"raw-phrases-{text_class}.txt"), "w", encoding="utf-8") as f:
-            f.write("\n".join([str(ph) for ph in phrases]))
-        phrases = list(set([" ".join(ph[0].split()[:self.max_words]) for ph in phrases]))
+        rev_phrases = [(score, phrase) for phrase, score in phrases]
+        if self.args["filterpolarity"]:
+            print(f"Filtering by polarity {text_class}...")
+            rev_phrases = self.filter_by_sentiment_polarity(rev_phrases)
+        with open(os.path.join(self.path, f"raw-phrases-{text_class}-{formated_date}.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join([str(ph) for ph in rev_phrases]))
+        phrases = list(set([" ".join(ph[1].split()[:self.max_words]) for ph in rev_phrases]))
         dictionary[text_class] = OrderedDict(ChainMap(*[{phrases[i]:" ".join(corpus[text_class]).count(phrases[i])} for i in range(min(max_per_class,len(phrases)))]))
     return dictionary
+
 
 """## TF-IDF"""
 
@@ -948,7 +1105,7 @@ class AbstractModel(nn.Module):
         """
         Saves the hyperparameters 
         """
-        mapping_file = os.path.join(self.mapping_location, self.id)        
+        mapping_file = os.path.join(self.mapping_location, f"{self.id}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")        
         with open(mapping_file, "w") as map_file:
             print(self.delim, file=map_file)
             print(self.args, file=map_file)
@@ -977,7 +1134,7 @@ class AbstractModel(nn.Module):
     def load_checkpoint(self, path):
         print(f"Loading checkpoint: {path}") 
         checkpoint = torch.load(path)
-        self.load_state_dict(checkpoint['model_state_dict'])
+        self.load_state_dict(checkpoint['model_state_dict'], strict=False)
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.epoch = checkpoint['epoch']
         self.metrics = {}
@@ -1010,8 +1167,8 @@ class AbstractModel(nn.Module):
         e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
         """
         e_loss = 0
-        e_acc, e_prec, e_rec = 0,0,0
-        e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        e_acc, e_prec_neg, e_prec_pos, e_rec_neg, e_rec_pos = 0,0,0,0,0
+        e_f1_neg, e_f1_pos, e_macrof1, e_microf1, e_wf1 = 0,0,0,0,0
 
         self.train()
 
@@ -1026,9 +1183,12 @@ class AbstractModel(nn.Module):
             y_true = batch.label.cpu().numpy()
             #metrics
             acc = accuracy_score(y_true, y_pred)
-            prec = precision_score(y_true, y_pred)
-            rec = recall_score(y_true, y_pred)
-            f1 = f1_score(y_true, y_pred)
+            prec_neg = precision_score(y_true, y_pred, pos_label=1)
+            prec_pos = precision_score(y_true, y_pred, pos_label=0)
+            rec_neg = recall_score(y_true, y_pred, pos_label=1)
+            rec_pos = recall_score(y_true, y_pred, pos_label=0)
+            f1_neg = f1_score(y_true, y_pred, pos_label=1)
+            f1_pos = f1_score(y_true, y_pred, pos_label=0)
             macrof1 = f1_score(y_true, y_pred, average='macro')
             microf1 = f1_score(y_true, y_pred, average='micro')
             wf1 = f1_score(y_true, y_pred, average='weighted')
@@ -1038,9 +1198,12 @@ class AbstractModel(nn.Module):
 
             e_loss += loss.item()
             e_acc += acc
-            e_prec += prec
-            e_rec += rec
-            e_f1 += f1
+            e_prec_neg += prec_neg
+            e_prec_pos += prec_pos
+            e_rec_neg += rec_neg
+            e_rec_pos += rec_pos
+            e_f1_neg += f1_neg
+            e_f1_pos += f1_pos
             e_macrof1 += macrof1
             e_microf1 += microf1
             e_wf1 += wf1
@@ -1049,9 +1212,12 @@ class AbstractModel(nn.Module):
         size = len(iterator)
         metrics["train_loss"] = e_loss/size
         metrics["train_acc"] = e_acc/size
-        metrics["train_prec"] = e_prec/size
-        metrics["train_rec"] = e_rec/size
-        metrics["train_f1"] = e_f1/size
+        metrics["train_prec_neg"] = e_prec_neg/size
+        metrics["train_prec_pos"] = e_prec_pos/size
+        metrics["train_rec_neg"] = e_rec_neg/size
+        metrics["train_rec_pos"] = e_rec_pos/size
+        metrics["train_f1_neg"] = e_f1_neg/size
+        metrics["train_f1_pos"] = e_f1_pos/size
         metrics["train_macrof1"] = e_macrof1/size
         metrics["train_microf1"] = e_microf1/size
         metrics["train_weightedf1"] = e_wf1/size
@@ -1067,8 +1233,8 @@ class AbstractModel(nn.Module):
         self.eval()
 
         e_loss = 0
-        e_acc, e_prec, e_rec = 0,0,0
-        e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        e_acc, e_prec_neg, e_prec_pos, e_rec_neg, e_rec_pos = 0,0,0,0,0
+        e_f1_neg, e_f1_pos, e_macrof1, e_microf1, e_wf1 = 0,0,0,0,0
         with torch.no_grad():
             for batch in iterator:
                 text, text_lengths = batch.text
@@ -1082,18 +1248,24 @@ class AbstractModel(nn.Module):
                 y_true = batch.label.cpu().numpy()
 
                 acc = accuracy_score(y_true, y_pred)
-                prec = precision_score(y_true, y_pred)
-                rec = recall_score(y_true, y_pred)
-                f1 = f1_score(y_true, y_pred)
+                prec_neg = precision_score(y_true, y_pred, pos_label=1)
+                prec_pos = precision_score(y_true, y_pred, pos_label=0)
+                rec_neg = recall_score(y_true, y_pred, pos_label=1)
+                rec_pos = recall_score(y_true, y_pred, pos_label=0)
+                f1_neg = f1_score(y_true, y_pred, pos_label=1)
+                f1_pos = f1_score(y_true, y_pred, pos_label=0)
                 macrof1 = f1_score(y_true, y_pred, average='macro')
                 microf1 = f1_score(y_true, y_pred, average='micro')
                 wf1 = f1_score(y_true, y_pred, average='weighted')
 
                 e_loss += loss.item()
                 e_acc += acc
-                e_prec += prec
-                e_rec += rec
-                e_f1 += f1
+                e_prec_neg += prec_neg
+                e_prec_pos += prec_pos
+                e_rec_neg += rec_neg
+                e_rec_pos += rec_pos
+                e_f1_neg += f1_neg
+                e_f1_pos += f1_pos
                 e_macrof1 += macrof1
                 e_microf1 += microf1
                 e_wf1 += wf1
@@ -1102,9 +1274,12 @@ class AbstractModel(nn.Module):
         size = len(iterator)
         metrics[f"{prefix}_loss"] = e_loss/size
         metrics[f"{prefix}_acc"] = e_acc/size
-        metrics[f"{prefix}_prec"] = e_prec/size
-        metrics[f"{prefix}_rec"] = e_rec/size
-        metrics[f"{prefix}_f1"] = e_f1/size
+        metrics[f"{prefix}_prec_neg"] = e_prec_neg/size
+        metrics[f"{prefix}_prec_pos"] = e_prec_pos/size
+        metrics[f"{prefix}_rec_neg"] = e_rec_neg/size
+        metrics[f"{prefix}_rec_pos"] = e_rec_pos/size
+        metrics[f"{prefix}_f1_neg"] = e_f1_neg/size
+        metrics[f"{prefix}_f1_pos"] = e_f1_pos/size
         metrics[f"{prefix}_macrof1"] = e_macrof1/size
         metrics[f"{prefix}_microf1"] = e_microf1/size
         metrics[f"{prefix}_weightedf1"] = e_wf1/size
@@ -1306,6 +1481,7 @@ class MLPGen(AbstractModel):
                 val.append(nlp_expl_dict)
                 val.append(self.predictions[i])
                 val.append(self.true_labels[i])
+                val.append(self.raw_predictions[i])
                 text_expl[nlp_text] = val
 
             # header text,list of classes
@@ -1510,6 +1686,7 @@ class MLPGen(AbstractModel):
             with open(e_file, "w") as f:
                 f.write(expl)
                 f.write("".join(e_list))
+                f.write("\n")
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(str(distr))
                 f.write("\nSUMs\n")
@@ -1550,11 +1727,20 @@ class FrozenVLSTM(AbstractModel):
         super().__init__(id, mapping_file_location, model_args)
         self.device = torch.device('cuda' if model_args["cuda"] else 'cpu')
 
-        # UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
-        # PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
+        #UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
+        #PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
+        
+        
         self.input_size = model_args["max_vocab_size"]
         self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"])
-        nn.init.uniform_(self.embedding.weight.data,-1,1)
+        if model_args["emb"]=="glove":
+
+            self.embedding.weight.data.copy_(model_args["vectors"])
+            self.embedding.weight.data[model_args["unk_idx"]] = torch.zeros(model_args["emb_dim"])
+            self.embedding.weight.data[model_args["pad_idx"]] = torch.zeros(model_args["emb_dim"])
+        else:
+            nn.init.uniform_(self.embedding.weight.data,-1,1)
+
 
         self.lstm = nn.LSTM(model_args["emb_dim"], 
                            model_args["hidden_dim"], 
@@ -1564,6 +1750,7 @@ class FrozenVLSTM(AbstractModel):
         self.lin = nn.Linear(2*model_args["hidden_dim"], model_args["output_dim"])
         self.dropout = nn.Dropout(model_args["dropout"])
 
+        #self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()))
         self.optimizer = optim.Adam(self.parameters())
         self.criterion = nn.BCEWithLogitsLoss().to(self.device)
 
@@ -1611,25 +1798,30 @@ class FrozenVLSTM(AbstractModel):
         e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
         """
         e_loss = 0
-        e_acc, e_prec, e_rec = 0,0,0
-        e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        e_acc, e_prec_neg, e_prec_pos, e_rec_neg, e_rec_pos = 0,0,0,0,0
+        e_f1_neg, e_f1_pos, e_macrof1, e_microf1, e_wf1 = 0,0,0,0,0
 
         self.train()
 
         for batch in iterator:
             self.optimizer.zero_grad()
             text, text_lengths = batch.text
-            logits = self.forward(text, text_lengths)[0].squeeze()
-            batch.label = batch.label.to(self.device)
-            loss = self.criterion(logits, batch.label)
+            #logits = self.forward(text, text_lengths)[0].squeeze()
+            logits = self.forward(text, text_lengths).squeeze()
 
+
+            batch.label = batch.label.to(self.device)
+            loss = self.criterion(logits, batch.label)       
             y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
             y_true = batch.label.cpu().numpy()
             #metrics
             acc = accuracy_score(y_true, y_pred)
-            prec = precision_score(y_true, y_pred)
-            rec = recall_score(y_true, y_pred)
-            f1 = f1_score(y_true, y_pred)
+            prec_neg = precision_score(y_true, y_pred, pos_label=1)
+            prec_pos = precision_score(y_true, y_pred, pos_label=0)
+            rec_neg = recall_score(y_true, y_pred, pos_label=1)
+            rec_pos = recall_score(y_true, y_pred, pos_label=0)
+            f1_neg = f1_score(y_true, y_pred, pos_label=1)
+            f1_pos = f1_score(y_true, y_pred, pos_label=0)
             macrof1 = f1_score(y_true, y_pred, average='macro')
             microf1 = f1_score(y_true, y_pred, average='micro')
             wf1 = f1_score(y_true, y_pred, average='weighted')
@@ -1639,9 +1831,12 @@ class FrozenVLSTM(AbstractModel):
 
             e_loss += loss.item()
             e_acc += acc
-            e_prec += prec
-            e_rec += rec
-            e_f1 += f1
+            e_prec_neg += prec_neg
+            e_prec_pos += prec_pos
+            e_rec_neg += rec_neg
+            e_rec_pos += rec_pos
+            e_f1_neg += f1_neg
+            e_f1_pos += f1_pos
             e_macrof1 += macrof1
             e_microf1 += microf1
             e_wf1 += wf1
@@ -1650,9 +1845,12 @@ class FrozenVLSTM(AbstractModel):
         size = len(iterator)
         metrics["train_loss"] = e_loss/size
         metrics["train_acc"] = e_acc/size
-        metrics["train_prec"] = e_prec/size
-        metrics["train_rec"] = e_rec/size
-        metrics["train_f1"] = e_f1/size
+        metrics["train_prec_neg"] = e_prec_neg/size
+        metrics["train_prec_pos"] = e_prec_pos/size
+        metrics["train_rec_neg"] = e_rec_neg/size
+        metrics["train_rec_pos"] = e_rec_pos/size
+        metrics["train_f1_neg"] = e_f1_neg/size
+        metrics["train_f1_pos"] = e_f1_pos/size
         metrics["train_macrof1"] = e_macrof1/size
         metrics["train_microf1"] = e_microf1/size
         metrics["train_weightedf1"] = e_wf1/size
@@ -1736,7 +1934,7 @@ class MLPIndependentOneDict(AbstractModel):
         self.dropout = nn.Dropout(model_args["dropout"])
 
         self.optimizer = optim.Adam(list(set(self.parameters()) - set(self.vanilla.parameters())))
-        self.criterion = nn.BCEWithLogitsLoss().to(self.device)
+        #self.criterion = nn.BCEWithLogitsLoss().to(self.device)
 
         self = self.to(self.device)
         super().save_model_type(self)
@@ -1796,6 +1994,7 @@ class MLPIndependentOneDict(AbstractModel):
             val.append(nlp_expl_dict)
             val.append(self.predictions[i])
             val.append(self.true_labels[i])
+            val.append(self.raw_predictions[i])
             text_expl[nlp_text] = val
 
             # header text,list of classes
@@ -1969,6 +2168,7 @@ class MLPIndependentOneDict(AbstractModel):
             with open(e_file, "w") as f:
                 f.write(expl)
                 f.write("".join(e_list))
+                f.write("\n")
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(f"{torch.tensor(distr).shape}\n")
                 f.write(str(distr))
@@ -2001,106 +2201,332 @@ class MLPIndependentOneDict(AbstractModel):
 ############################################ MLP before frozen bi-LSTM ##################################
 ##########################################################################################################
 class MLPBefore(MLPIndependentOneDict):
-  """
-  MLP + pretrained bi-LSTM
-  """
-  def __init__(self, id, mapping_file_location, model_args, dataset, explanations):
-    super().__init__(id, mapping_file_location, model_args, dataset, explanations)
-    self.lin_pos = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
-
+    """
+    MLP + pretrained bi-LSTM
+    """
+    def __init__(self, id, mapping_file_location, model_args, dataset, explanations):
+        super().__init__(id, mapping_file_location, model_args, dataset, explanations)
+        self.relu = nn.ReLU() 
+        self.lin1s = [nn.Linear(2*model_args["hidden_dim"], 2*model_args["hidden_dim"]).to(self.device) for i in range(model_args["n1"])]
   
-  def forward(self, text, text_lengths, expl_file=None):
+        self.lin2 = nn.Linear(2*model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device)
+        self.lin3s = [nn.Linear(model_args["hidden_dim"], model_args["hidden_dim"]).to(self.device) for i in range(model_args["n3"])]
+        self.lin4 = nn.Linear(model_args["hidden_dim"], len(self.dictionary.keys())).to(self.device)
+        self.max_words_dict = explanations.max_words
+        self.alpha = model_args['alpha']
+        self.decay = model_args['alpha_decay']
+        self.criterion = self.loss
 
-    batch_size = text.size()[1]
-
-    #text = [sent len, batch size]
-
-    embedded = self.dropout(self.embedding(text))
-
-    #embedded = [sent len, batch size, emb dim]
-    expl_activ = self.lin(embedded)
-    # expl_activ = self.lin21(embedded)
-    expl_activ = self.relu(expl_activ)
-    expl_activ = self.dropout(expl_activ)
-    # expl_activ = self.lin2(expl_activ)
-    # expl_activ = self.relu(expl_activ)
-    # # expl_activ = nn.Dropout(0.2)(expl_activ)
-
-    final_dict, expl_distributions = self.gen(expl_activ, batch_size)
-    final_expl = final_dict[0]
-
-    x = torch.transpose(embedded,0,1)
-    # [batch, sent_len+2*len(final_dict), emb_dim]
-    concat_input = torch.cat((x,final_dict),1)
-    #[sent_len+len(final_dict), batch, emb_dim]
-    final_input = torch.transpose(concat_input,0,1)
+        self.lin = nn.Linear(self.emb_dim, 2*model_args["hidden_dim"]).to(self.device)
 
 
-    output, hidden = self.vanilla.raw_forward(final_input, text_lengths+2)
-    #output = [sent len, batch size, hid dim * num directions]
-    #output over padding tokens are zero tensors
+    def forward(self, text, text_lengths, expl_file=None):
 
-    #hidden = [num layers * num directions, batch size, hid dim]
-    #cell = [num layers * num directions, batch size, hid dim]
+        batch_size = text.size()[1]
 
-    self.expl_distributions = expl_distributions
+        #text = [sent len, batch size]
 
-    return output
+        embedded = self.dropout(self.embedding(text))
+        #embedded = [sent len, batch size, emb dim]
+        expl_activ = self.lin(embedded)
+        # # expl_activ = self.lin21(embedded)
+        expl_activ = self.relu(expl_activ)
+        expl_activ = self.dropout(expl_activ)
+        # expl_activ = self.lin2(expl_activ)
+        # expl_activ = self.relu(expl_activ)
+        # # expl_activ = nn.Dropout(0.2)(expl_activ)
 
-  def gen(self, activ, batch_size):
-    context_vector, final_dict, expl_distributions = [], [], []
-    # [dict_size, max_words, emb_dim]
-    # explanations[i] -> [dict_size, max_words, emb_dim]
-    v_emb_pos = self.embedding(self.explanations)
-    #[batch,dict_size, max_words, emd_dim
-    vocab_emb_pos = v_emb_pos.repeat(batch_size,1,1,1)
+        expl, expl_distributions = self.gen(expl_activ, batch_size)
+        # final_expl = final_dict[0]
 
-    #[batch,dict_size, max_words* emd_dim]
-    vocab_emb_pos = vocab_emb_pos.reshape(vocab_emb_pos.size(0),vocab_emb_pos.size(1),-1)
-
-    # [sent, batch, dict_size]
-    expl_activ_pos = self.lin_pos(activ)
-
-    # [batch, sent, dict_size]
-    expl_distribution_pos = torch.transpose(expl_activ_pos, 0, 1)
-    
-    # [batch, max_sent, dict_size] (pad right)
-    size1, size2, size3 = expl_distribution_pos.shape[0], expl_distribution_pos.shape[1], expl_distribution_pos.shape[2]
-    if self.max_sent_len>=size2:
-        # 0-padding
-        expl_distribution_pos = torch.cat([expl_distribution_pos, expl_distribution_pos.new(size1, self.max_sent_len-size2, size3).zero_()],1).to(self.device)
-    else:
-        # trimming
-        expl_distribution_pos = expl_distribution_pos[:,:self.max_sent_len,:]
-    
+        #embedded = self.lin(embedded)
+        #embedded = self.relu(embedded)
+        #embedded = self.dropout(embedded)
 
 
-    # [batch,dict_size, sent]
-    e_pos = torch.transpose(expl_distribution_pos,1,2)
-    # [batch, dict, 1]
-    expl_distribution_pos = self.aggregation_pos(e_pos).squeeze()
-    # expl_distribution = self.sigmoid(expl_distribution) # on dim 1
-    expl_distribution_pos = F.gumbel_softmax(expl_distribution_pos, hard=True)
-
-    # expl_distribution_pos = self.softmax(expl_distribution_pos)
-    # expl_distribution_neg = self.softmax(expl_distribution_neg)
-    #[batch, dict]
-    # expl_distributions.append(torch.squeeze(expl_distribution_pos))
-
-    # [batch,1, dict]
-    e_dist_pos = torch.transpose(expl_distribution_pos.unsqueeze(-1),1,2)
-    # batch, 1, dict x batch, dict, emb (max_words*emb_dim)
-    expl_pos = torch.bmm(e_dist_pos, vocab_emb_pos)
-
-    # #[batch,max_words,emb_dim]
-    context_vector.append(torch.max(expl_pos, dim=1).values.reshape(batch_size, v_emb_pos.size(1),-1))
+        x = torch.transpose(embedded,0,1)
+        sep = torch.zeros((batch_size,1,self.emb_dim), device=self.device)
+        concat_input = torch.cat((x,torch.cat((sep, expl), 1)),1) 
+        
+        # [batch, sent_len+2*len(final_dict), emb_dim]
+        # concat_input = torch.cat((x,final_dict),1)
+        #[sent_len+len(final_dict), batch, emb_dim]
+        final_input = torch.transpose(concat_input,0,1)
 
 
-    sep = torch.zeros((batch_size,1,self.emb_dim), device=self.device)
-    # [batch, 1+1, emb_dim]
-    # final_dict.append(torch.cat((sep, context_vector[0]), 1))
+        output, hidden = self.vanilla.raw_forward(final_input, text_lengths+1+self.max_words_dict)
+        
+        self.raw_predictions = torch.sigmoid(output).squeeze().detach()
+        #output = [sent len, batch size, hid dim * num directions]
+        #output over padding tokens are zero tensors
 
-    return torch.cat((sep, context_vector[0]), 1), torch.squeeze(expl_distribution_pos)
+        #hidden = [num layers * num directions, batch size, hid dim]
+        #cell = [num layers * num directions, batch size, hid dim]
+
+        self.expl_distributions = expl_distributions
+
+        return output, (expl, x)
+
+    def gen(self, activ, batch_size):
+        context_vector, final_dict, expl_distributions = [], [], []
+        # [dict_size, max_words, emb_dim]
+        # explanations[i] -> [dict_size, max_words, emb_dim]
+        v_emb_pos = self.embedding(self.explanations)
+        #[batch,dict_size, max_words, emd_dim
+        vocab_emb_pos = v_emb_pos.repeat(batch_size,1,1,1)
+
+        #[batch,dict_size, max_words* emd_dim]
+        vocab_emb_pos = vocab_emb_pos.reshape(vocab_emb_pos.size(0),vocab_emb_pos.size(1),-1)
+
+        # activ [max_sent, batch, hid]
+
+        for lin in self.lin1s:
+            activ = lin(activ)
+            activ = self.relu(activ)
+            activ = self.dropout(activ)
+        activ = self.lin2(activ)
+        activ = self.relu(activ)
+        activ = self.dropout(activ)
+        for lin in self.lin3s:
+            activ = lin(activ)
+            activ = self.relu(activ)
+            activ = self.dropout(activ)
+
+        #maxsent, batch,dict
+        expl_distribution_pos = self.lin4(activ)
+
+        # expl_dist_pos -  sent, batch,dict -> dict batch sent
+        expl_dist_pos = torch.transpose(expl_distribution_pos, 0,2)
+
+        # dict, batch, sent
+        expl_dist_pos = F.pad(expl_dist_pos, (0, self.max_sent_len-expl_distribution_pos.shape[2]))
+
+        #  sent, batch, dict 
+        expl_dist_pos = torch.transpose(expl_dist_pos, 0, 2)
+        #  batch, sent, dict 
+        expl_distribution_pos = torch.transpose(expl_dist_pos, 0, 1)
+
+        # [batch, max_sent, dict_size] (pad right)
+        size1, size2, size3 = expl_distribution_pos.shape[0], expl_distribution_pos.shape[1], expl_distribution_pos.shape[2]
+        if self.max_sent_len>=size2:
+            # 0-padding
+            expl_distribution_pos = torch.cat([expl_distribution_pos, expl_distribution_pos.new(size1, self.max_sent_len-size2, size3).zero_()],1).to(self.device)
+        else:
+            # trimming
+            expl_distribution_pos = expl_distribution_pos[:,:self.max_sent_len,:]
+        #batch, max_sent, dict
+
+        expl_distribution_pos = torch.transpose(expl_distribution_pos, 1, 2)
+
+        #batch dict 1
+        expl_distribution_pos = self.aggregation_pos(expl_distribution_pos).squeeze()
+
+        expl_distribution_pos = F.gumbel_softmax(expl_distribution_pos, hard=True)
+
+        # batch, 1, dict x batch, dict, emb (max_words*emb_dim)
+
+        expl_distribution_pos = torch.unsqueeze(expl_distribution_pos, 1)
+        expl_pos = torch.bmm(expl_distribution_pos, vocab_emb_pos)
+
+        # #[batch,max_words,emb_dim]
+        # context_vector.append(torch.max(expl_pos, dim=1).values.reshape(batch_size, v_emb_pos.size(1),-1))
+
+        expl = expl_pos.reshape(batch_size, v_emb_pos.size(1),-1)
+
+        return expl, expl_distribution_pos.squeeze()
+
+
+    def loss(self, output, target, sth, sthelse, alpha=None, epoch=0):
+        bce = nn.BCEWithLogitsLoss().to(self.device)
+        simple_bce = nn.BCELoss().to(self.device)
+        if not alpha:
+            alpha = self.alpha
+        # if epoch == 10:
+        #     alpha = 0.25
+        # elif epoch == 15:
+        #     alpha = 0
+
+        # output = torch.sigmoid(output)
+        min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
+        # min_contributions = abs(output-self.raw_predictions)
+        # print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
+        return alpha*bce(output, target) + (1-alpha)*(torch.mean(min_contributions))
+
+
+    def evaluate(self, iterator, prefix="test"):
+        save = False # save explanations
+        if prefix=="test_f":
+            save = True
+            expl = "text, explanation (freq:confidence), prediction, true label\n"
+            e_list = []
+            # distr = [torch.tensor([]).to(self.device) for i in range(len(self.dictionaries.keys()))]
+            distr = torch.tensor([]).to(self.device)
+        self.eval()
+        e_loss = 0
+        e_acc, e_raw_acc, e_prec, e_rec = 0,0,0,0
+        e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        e_contributions, e_len = 0,0
+        with torch.no_grad():
+            for batch in iterator:
+                text, text_lengths = batch.text
+                logits, (expl_emb, text_emb) = self.forward(text, text_lengths, prefix)
+                logits = logits.squeeze()
+                predictions = torch.sigmoid(logits)
+
+                e_len += len(text)
+                contributions = torch.sign(batch.label - 0.5)*(predictions-self.raw_predictions)
+                e_contributions += sum(contributions)
+
+
+                batch.label = batch.label.to(self.device)
+
+
+                loss = self.criterion(logits, batch.label, expl_emb, text_emb)
+
+
+                predictions = torch.round(predictions)
+                y_pred = predictions.detach().cpu().numpy()
+                y_true = batch.label.cpu().numpy()
+                self.predictions = y_pred
+                self.true_labels = y_true
+                if save:
+                    text_expl= self.get_explanations(text)
+                    e_list.append("\n".join([f"{review} ~ {text_expl[review]} ~ C: {contributions[i].data}" for i, review in enumerate(text_expl.keys())]))
+                    # for class_idx in range(len(distr)):
+                    #     distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
+                    distr = torch.cat((distr, self.expl_distributions))
+                acc = accuracy_score(y_true, y_pred)
+                raw_acc = accuracy_score(y_true, torch.round(self.raw_predictions).cpu().numpy())
+                prec = precision_score(y_true, y_pred)
+                rec = recall_score(y_true, y_pred)
+                f1 = f1_score(y_true, y_pred)
+                macrof1 = f1_score(y_true, y_pred, average='macro')
+                microf1 = f1_score(y_true, y_pred, average='micro')
+                wf1 = f1_score(y_true, y_pred, average='weighted')
+
+                e_loss += loss.item()
+                e_acc += acc
+                e_raw_acc += raw_acc
+                e_prec += prec
+                e_rec += rec
+                e_f1 += f1
+                e_macrof1 += macrof1
+                e_microf1 += microf1
+                e_wf1 += wf1
+        if save:
+            start = datetime.now()
+            formated_date = start.strftime(DATE_FORMAT)
+            e_file = f"{self.explanations_path}_test-{self.epoch}_{formated_date}.txt"
+            print(f"Saving explanations at {e_file}")
+            with open(e_file, "w") as f:
+                f.write(expl)
+                f.write("".join(e_list))
+                f.write("\n")
+            with open(f"{self.explanations_path}_distr.txt", "w") as f:
+                f.write(f"{torch.tensor(distr).shape}\n")
+                f.write(str(distr))
+                f.write("\nSUMs\n")
+                f.write(str(torch.sum(torch.tensor(distr), dim=1)))
+                f.write("\nHard sums\n")
+                f.write(str([torch.sum(torch.where(d>0.5, torch.ones(d.shape).to(self.device), torch.zeros(d.shape).to(self.device))).item() for d in distr]))
+                f.write("\nIndices\n")
+                f.write(str(distr.nonzero().data[:,1]))
+
+
+        metrics ={}
+        size = len(iterator)
+        metrics[f"{prefix}_loss"] = e_loss/size
+        metrics[f"{prefix}_acc"] = e_acc/size
+        metrics[f"{prefix}_raw_acc"] = e_raw_acc/size
+        metrics[f"{prefix}_prec"] = e_prec/size
+        metrics[f"{prefix}_rec"] = e_rec/size
+        metrics[f"{prefix}_f1"] = e_f1/size
+        metrics[f"{prefix}_macrof1"] = e_macrof1/size
+        metrics[f"{prefix}_microf1"] = e_microf1/size
+        metrics[f"{prefix}_weightedf1"] = e_wf1/size
+        metrics[f"{prefix}_avg_contributions"] = (e_contributions/e_len).item()
+        return metrics
+
+    def train_model(self, iterator, epoch):
+        """
+        metrics.keys(): [train_acc, train_loss, train_prec,
+                        train_rec, train_f1, train_macrof1,
+                        train_microf1, train_weightedf1]
+        e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
+        """
+        e_loss = 0
+        e_acc, e_raw_acc, e_prec, e_rec = 0,0,0,0
+        e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        e_contributions, e_len = 0, 0 
+
+        count = 0
+        batch_raw_accs = []
+        self.train()
+        for batch in iterator:
+            self.optimizer.zero_grad()
+            text, text_lengths = batch.text
+            logits, (expl, emb_text) = self.forward(text, text_lengths)
+            logits=logits.squeeze()
+
+            if count < 3 and epoch<3:
+               with open(f"debug/batch-{count}-e{epoch}", "w") as f:
+                    f.write(str(text))
+                    f.write("\n~\n")
+                    f.write(str(self.raw_predictions))
+                    f.write("\n\n**\n\n")
+            count += 1
+            
+            batch.label = batch.label.to(self.device)
+            loss = self.criterion(logits, batch.label, expl, emb_text, self.alpha - self.decay * epoch, epoch)
+            y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
+            y_true = batch.label.cpu().numpy()
+
+            e_len += len(text)
+            e_contributions += sum(torch.sign(batch.label - 0.5)*(torch.sigmoid(logits)-self.raw_predictions))
+
+            #metrics
+            raw_acc = accuracy_score(y_true, torch.round(self.raw_predictions).cpu().numpy())
+            
+            batch_raw_accs.append(raw_acc)
+            
+            acc = accuracy_score(y_true, y_pred)
+            prec = precision_score(y_true, y_pred)
+            rec = recall_score(y_true, y_pred)
+            f1 = f1_score(y_true, y_pred)
+            macrof1 = f1_score(y_true, y_pred, average='macro')
+            microf1 = f1_score(y_true, y_pred, average='micro')
+            wf1 = f1_score(y_true, y_pred, average='weighted')
+
+            loss.backward()
+            self.optimizer.step()
+
+            e_loss += loss.item()
+            e_acc += acc
+            e_raw_acc += raw_acc
+            e_prec += prec
+            e_rec += rec
+            e_f1 += f1
+            e_macrof1 += macrof1
+            e_microf1 += microf1
+            e_wf1 += wf1
+
+        with open(f"debug/train-raw-accs-{epoch}.txt", "w") as f:
+            f.write(str(batch_raw_accs))
+            f.write("\n\n**\n\n")
+        metrics ={}
+        size = len(iterator)
+        metrics["train_loss"] = e_loss/size
+        metrics["train_acc"] = e_acc/size
+        metrics["train_raw_acc"] = e_raw_acc/size
+        metrics["train_prec"] = e_prec/size
+        metrics["train_rec"] = e_rec/size
+        metrics["train_f1"] = e_f1/size
+        metrics["train_macrof1"] = e_macrof1/size
+        metrics["train_microf1"] = e_microf1/size
+        metrics["train_weightedf1"] = e_wf1/size
+        metrics["train_avg_contributions"] = (e_contributions/e_len).item()
+
+        return metrics
 
 
 
@@ -2135,10 +2561,10 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             self.vanilla = FrozenVLSTM("frozen-bi-lstm", mapping_file_location, vanilla_args)
             print(model_args["checkpoint_v_file"])
             self.vanilla.load_checkpoint(model_args["checkpoint_v_file"])
+            print(f"Vanilla frozen, params {len(list(self.vanilla.parameters()))}: {[name for name, param in self.vanilla.named_parameters()]}")
             for param in self.vanilla.parameters():
                 param.requires_grad=False
             self.vanilla.eval()
-            print("Vanilla frozen")
         else:
             self.vanilla = FrozenVLSTM("bi-lstm", mapping_file_location, model_args)
 
@@ -2157,8 +2583,12 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
 
         dictionaries = explanations.get_dict()
+        start = datetime.now()
+        formated_date = start.strftime(DATE_FORMAT)
         self.dictionary = copy.deepcopy(dictionaries['pos'])
         self.dictionary.update(dictionaries['neg'])
+        with open(f"dict-{formated_date}", "w") as f:
+            f.write(f"{dictionaries}")
         print("Dict size", len(self.dictionary.keys()))
         self.lin1s = [nn.Linear(2*model_args["hidden_dim"], 2*model_args["hidden_dim"]).to(self.device) for i in range(model_args["n1"])]
         self.relu = nn.ReLU() 
@@ -2170,9 +2600,16 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 torch.tensor([self.TEXT.vocab.stoi[word] for word in phrase.split()]).to(self.device)
                 for phrase in self.dictionary.keys()], explanations.max_words)
 
+        start = datetime.now()
+        formated_date = start.strftime(DATE_FORMAT)
+        with open(f"explanations_dict-MLPAfterIndependentOneDictSimilarity-{formated_date}", "w") as f:
+            f.write(str(self.dictionary.keys()))
+            f.write("\n\n\n**\n\n\n")
+            print("explanations file")
+
         self.dropout = nn.Dropout(model_args["dropout"])
 
-        self.optimizer = optim.AdamW(list(set(self.parameters()) - set(self.vanilla.parameters())))
+        self.optimizer = optim.AdamW(list(set(self.parameters()) - set(self.vanilla.parameters())), lr=model_args["lr"], weight_decay=model_args["l2_wd"])
         # self.optimizer = optim.Adam(list(set(self.parameters()) - set(self.vanilla.parameters())))
         self.criterion = self.loss
 
@@ -2195,7 +2632,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         dictionary - the dict corresponding to the class of the distribution
         """
         decoded = OrderedDict()
-#         for distr in len(distributions):          
+        #         for distr in len(distributions):          
             # dict phrase:count
             # distribution for each dict/class
             # index sort - top predicted explanations
@@ -2210,18 +2647,18 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         #expl: (count in class, distr value)
         for i, text in enumerate(expl_text):
             decoded[text]= (dictionary[text], distr[most_important_expl_idx[i]].item())
-#         batch_explanations.append(decoded)
+        #         batch_explanations.append(decoded)
         # list of 
         # ordered dict {expl:count} for a given dictionary/class
         return decoded
 
     def get_explanations(self, text, file_name=None):
         text = text.transpose(0,1)
-#             start = datetime.now()
-#             formated_date = start.strftime(DATE_FORMAT)
-#             e_file = f"{self.explanations_path}_{file_name}_{formated_date}.txt"
-#             with open(e_file, "w", encoding="utf-8") as f:
-#                 print("Saving explanations at ", e_file)
+        #             start = datetime.now()
+        #             formated_date = start.strftime(DATE_FORMAT)
+        #             e_file = f"{self.explanations_path}_{file_name}_{formated_date}.txt"
+        #             with open(e_file, "w", encoding="utf-8") as f:
+        #                 print("Saving explanations at ", e_file)
         text_expl = OrderedDict() # text: [expl_c1, expl_c2]           
         # for class_idx, class_batch_dict in enumerate(self.expl_distributions):
         #     #  tensor [batch, dict]
@@ -2234,11 +2671,12 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             val.append(nlp_expl_dict)
             val.append(self.predictions[i])
             val.append(self.true_labels[i])
+            val.append(self.raw_predictions[i])
             text_expl[nlp_text] = val
 
             # header text,list of classes
-#                 f.write("text, " + ", ".join(list(self.dictionaries.keys()))+"\n")
-#                 f.write("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
+        #                 f.write("text, " + ", ".join(list(self.dictionaries.keys()))+"\n")
+        # f.write("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
         return text_expl
 
     def gen(self, activ, batch_size):
@@ -2324,9 +2762,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         embedded = self.dropout(self.embedding(text))
 
         #embedded = [sent len, batch size, emb dim]
-
+        self.vanilla.eval()
         output, hidden = self.vanilla.raw_forward(embedded, text_lengths)
-        self.raw_predictions = torch.sigmoid(output).squeeze()
+        self.raw_predictions = torch.sigmoid(output).squeeze().detach()
         #output = [sent len, batch size, hid dim * num directions]
         #output over padding tokens are zero tensors
 
@@ -2356,13 +2794,14 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         save = False # save explanations
         if prefix=="test_f":
             save = True
-            expl = "text, explanation (freq:confidence), prediction, true label\n"
+            expl = "text, explanation (freq:confidence), prediction, true label, raw prediction\n"
             e_list = []
             # distr = [torch.tensor([]).to(self.device) for i in range(len(self.dictionaries.keys()))]
             distr = torch.tensor([]).to(self.device)
         self.eval()
+        self.vanilla.eval()
         e_loss = 0
-        e_acc, e_prec, e_rec = 0,0,0
+        e_acc, e_raw_acc, e_prec, e_rec = 0,0,0,0
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
         e_contributions, e_len = 0,0
         with torch.no_grad():
@@ -2395,6 +2834,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                     #     distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
                     distr = torch.cat((distr, self.expl_distributions))
                 acc = accuracy_score(y_true, y_pred)
+                raw_acc = accuracy_score(y_true, torch.round(self.raw_predictions).cpu().numpy())
                 prec = precision_score(y_true, y_pred)
                 rec = recall_score(y_true, y_pred)
                 f1 = f1_score(y_true, y_pred)
@@ -2404,6 +2844,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
                 e_loss += loss.item()
                 e_acc += acc
+                e_raw_acc += raw_acc
                 e_prec += prec
                 e_rec += rec
                 e_f1 += f1
@@ -2418,6 +2859,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             with open(e_file, "w") as f:
                 f.write(expl)
                 f.write("".join(e_list))
+                f.write("\n")
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(f"{torch.tensor(distr).shape}\n")
                 f.write(str(distr))
@@ -2433,6 +2875,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         size = len(iterator)
         metrics[f"{prefix}_loss"] = e_loss/size
         metrics[f"{prefix}_acc"] = e_acc/size
+        metrics[f"{prefix}_raw_acc"] = e_raw_acc/size
         metrics[f"{prefix}_prec"] = e_prec/size
         metrics[f"{prefix}_rec"] = e_rec/size
         metrics[f"{prefix}_f1"] = e_f1/size
@@ -2450,11 +2893,13 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                         train_microf1, train_weightedf1]
         e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
         """
+        self.vanilla.eval()
         e_loss = 0
-        e_acc, e_prec, e_rec = 0,0,0
+        e_acc, e_raw_acc, e_prec, e_rec = 0,0,0,0
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
         e_contributions, e_len = 0, 0 
 
+        batch_raw_accs = []
         self.train()
         for batch in iterator:
             self.optimizer.zero_grad()
@@ -2462,8 +2907,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             logits, (expl, emb_text) = self.forward(text, text_lengths)
             logits=logits.squeeze()
 
+            
             batch.label = batch.label.to(self.device)
-            loss = self.criterion(logits, batch.label, expl, emb_text, self.alpha - self.decay * epoch)
+            loss = self.criterion(logits, batch.label, expl, emb_text, self.alpha - self.decay * epoch, epoch)
             y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
             y_true = batch.label.cpu().numpy()
 
@@ -2471,6 +2917,10 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             e_contributions += sum(torch.sign(batch.label - 0.5)*(torch.sigmoid(logits)-self.raw_predictions))
 
             #metrics
+            raw_acc = accuracy_score(y_true, torch.round(self.raw_predictions).cpu().numpy())
+            
+            batch_raw_accs.append(raw_acc)
+            
             acc = accuracy_score(y_true, y_pred)
             prec = precision_score(y_true, y_pred)
             rec = recall_score(y_true, y_pred)
@@ -2484,6 +2934,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
             e_loss += loss.item()
             e_acc += acc
+            e_raw_acc += raw_acc
             e_prec += prec
             e_rec += rec
             e_f1 += f1
@@ -2491,10 +2942,14 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             e_microf1 += microf1
             e_wf1 += wf1
 
+        with open(f"debug/train-raw-accs-{epoch}.txt", "w") as f:
+            f.write(str(batch_raw_accs))
+            f.write("\n\n**\n\n")
         metrics ={}
         size = len(iterator)
         metrics["train_loss"] = e_loss/size
         metrics["train_acc"] = e_acc/size
+        metrics["train_raw_acc"] = e_raw_acc/size
         metrics["train_prec"] = e_prec/size
         metrics["train_rec"] = e_rec/size
         metrics["train_f1"] = e_f1/size
@@ -2505,7 +2960,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
         return metrics
 
-    def loss(self, output, target, explanation, x_emb, alpha=None):
+    def loss(self, output, target, explanation, x_emb, alpha=None, epoch=0):
       bce = nn.BCEWithLogitsLoss().to(self.device)
       if not alpha:
         alpha = self.alpha
@@ -2519,13 +2974,62 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
 
 class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
 
-    def loss(self, output, target, sth, sthelse, alpha=None):
+    def loss(self, output, target, sth, sthelse, alpha=None, epoch=0):
+        bce = nn.BCEWithLogitsLoss().to(self.device)
+        simple_bce = nn.BCELoss().to(self.device)
+        if not alpha:
+            alpha = self.alpha
+        # if epoch == 10:
+        #     alpha = 0.25
+        # elif epoch == 15:
+        #     alpha = 0
+
+        # output = torch.sigmoid(output)
+        min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
+        # min_contributions = abs(output-self.raw_predictions)
+        # print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
+        return alpha*bce(output, target) + (1-alpha)*(torch.mean(min_contributions))
+
+class MLPCos(MLPAfterIndependentOneDictSimilarity):
+
+    def loss(self, output, target, expl, x_emb, alpha=None, epoch=0):
+        bce = nn.BCEWithLogitsLoss().to(self.device)
+        simple_bce = nn.BCELoss().to(self.device)
+        if not alpha:
+            alpha = self.alpha
+        # if epoch == 10:
+        #     alpha = 0.25
+        # elif epoch == 15:
+        #     alpha = 0
+        text = torch.mean(x_emb, dim=1).squeeze()
+        expl = torch.mean(explanation, dim=1).squeeze()
+        cos = nn.CosineSimilarity(dim=1)
+        semantic_cost = 1-cos(text, expl)
+        # output = torch.sigmoid(output)
+        min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
+        # min_contributions = abs(output-self.raw_predictions)
+        # print(f"Raw BCELoss in Epoch {epoch}: {simple_bce(output, self.raw_predictions)}")
+        return (alpha/2)*bce(output, target) + (alpha/2)*semantic_cost + (1-alpha)*(torch.mean(min_contributions))
+ 
+
+
+
+class LSTMAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
+
+    def loss(self, output, target, sth, sthelse, alpha=None, epoch=0):
         bce = nn.BCEWithLogitsLoss().to(self.device)
         if not alpha:
             alpha = self.alpha
-        output = torch.sigmoid(output)
-        min_contributions = 1 - torch.sign(target - 0.5)*(output-self.raw_predictions)
-        return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions)/100)
+        # if epoch == 10:
+        #     alpha = 0.25
+        # elif epoch == 15:
+        #     alpha = 0
+
+        # output = torch.sigmoid(output)
+        min_contributions = 1 - torch.sign(target - 0.5)*(torch.sigmoid(output)-self.raw_predictions)
+        # min_contributions = abs(output-self.raw_predictions)
+        return alpha*bce(output, target) + (1-alpha)*(mean(min_contributions))
+        # return alpha*bce(output, target) + (1-alpha)*(sum(min_contributions)/10)
 
 ##########################################################################################################
 ############################################End of MLP before training ##################################
@@ -2536,116 +3040,187 @@ class MLPAfterIndependentOneDictImprove(MLPAfterIndependentOneDictSimilarity):
 import argparse
 from datetime import datetime
 
-
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
-
-
-parser = argparse.ArgumentParser(description='Config params.')
-parser.add_argument('-p', metavar='max_words_dict', type=int, default=CONFIG["max_words_dict"],
-                    help='Max number of words per phrase in explanations dictionary')
-
-parser.add_argument('-n1', metavar='mlp_depth', type=int, default=1,
-                    help='Number of deep layers of the DNN generator - 2*hid->2*hid')
-
-parser.add_argument('-n2', metavar='mlp_depth', type=int, default=1,
-                    help='Number of deep layers of the DNN generator - 2*hid->1*hid')
-
-parser.add_argument('-n3', metavar='mlp_depth', type=int, default=1,
-                    help='Number of deep layers of the DNN generator - 1*hid->1*hid')
+try:
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
 
 
+    parser = argparse.ArgumentParser(description='Config params.')
+    parser.add_argument('-p', metavar='max_words_dict', type=int, default=CONFIG["max_words_dict"],
+                        help='Max number of words per phrase in explanations dictionary')
 
-parser.add_argument('-dr', metavar='dropout', type=float, default=CONFIG["dropout"],
-                    help='Dropout value')
+    parser.add_argument('-n1', metavar='mlp_depth', type=int, default=1,
+                        help='Number of deep layers of the DNN generator - 2*hid->2*hid')
 
-parser.add_argument('-a', metavar='alpha', type=float, default=CONFIG["alpha"],
-                    help='Similarity cost hyperparameter')
+    parser.add_argument('-n2', metavar='mlp_depth', type=int, default=1,
+                        help='Number of deep layers of the DNN generator - 2*hid->1*hid')
 
-parser.add_argument('-decay', metavar='decay', type=float, default=0, help='alpha decay')
-
-parser.add_argument('-d', metavar='dictionary_type', type=str,
-                    help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
-
-parser.add_argument('-m', metavar='model_type', type=str,
-                    help='frozen_mlp_bilstm, frozen_bilstm_mlp, bilstm_mlp_similarity')
-
-# parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
-#                     help='Number of epochs')
-
-# parser.add_argument('--td', type=bool, default=CONFIG["toy_data"],
-#                     help='Toy data (load just a small data subset)')
-
-# parser.add_argument('--train', dest='train', action='store_true')
-# parser.add_argument('--no_train', dest='train', action='store_false')
-# parser.set_defaults(train=CONFIG["train"])
-
-# parser.add_argument('--restore', dest='restore', action='store_true')
-# parser.set_defaults(restore=CONFIG["restore_checkpoint"])
-
-# parser.add_argument('--cuda', type=bool, default=CONFIG["cuda"])
-args = parser.parse_args()
+    parser.add_argument('-n3', metavar='mlp_depth', type=int, default=1,
+                        help='Number of deep layers of the DNN generator - 1*hid->1*hid')
 
 
-"""# Main"""
+
+    parser.add_argument('-dr', metavar='dropout', type=float, default=CONFIG["dropout"],
+                        help='Dropout value')
+
+    parser.add_argument('-a', metavar='alpha', type=float, default=CONFIG["alpha"],
+                        help='Similarity cost hyperparameter')
+    
+
+    parser.add_argument('-hd', metavar='hidden_dim', type=int, default=256,
+                        help='LSTM hidden dim')
+
+    parser.add_argument('-nl', metavar='num_layers', type=int, default=2,
+                        help='LSTM num_layers')
 
 
-start = datetime.now()
-formated_date = start.strftime(DATE_FORMAT)
-experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-    "hidden_dim": 256,
-    "n_layers": 2,
-    "max_dict": 300, 
-    "cuda": True,
-    "restore_v_checkpoint" : True,
-    "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
-    "train": True,
-    "max_words_dict": args.p,
-    "patience":20,
-    "epochs":20,
-    'alpha': args.a,
-    "n1": args.n1,
-    "n2": args.n2,
-    "n3": args.n3,
-    "alpha_decay": args.decay,
-    "dropout": args.dr
-})
-print(experiment.config)
+    parser.add_argument('-decay', metavar='decay', type=float, default=0, help='alpha decay')
 
-start = datetime.now()
-dataset = IMDBDataset(experiment.config)
-print(f"Time data load: {str(datetime.now()-start)}")
+    parser.add_argument('-d', metavar='dictionary_type', type=str, default=None,
+                        help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
 
-start = datetime.now()
+    parser.add_argument('-dcp', type=str, help="dict load")
+    parser.add_argument('-cp', type=str, help='vanilla checkpoint')
+    parser.add_argument('-m', metavar='model_type', type=str,
+                        help='frozen_mlp_bilstm, frozen_bilstm_mlp, bilstm_mlp_similarity')
+    
+    parser.add_argument('-emb', metavar='embedding_type', type=str, default=None,
+                        help='glove')
 
-if args.d=="tfidf":
-    explanations = TFIDF("tfidf", dataset, experiment.config)
-elif args.d=="yake":
-    explanations = DefaultYAKE("default-yake", dataset, experiment.config)
-elif args.d=="textrank":
-    explanations = TextRank(f"textrank-300-5", dataset, experiment.config)
-elif args.d == "rake-inst":
-    explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.p}", dataset, experiment.config)
-elif args.d == "rake-corpus":
-    explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, experiment.config)
+    parser.add_argument('-e', metavar='epochs', type=int, default=CONFIG["epochs"],
+                        help='Number of epochs')
 
-print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()-start)}")
+    parser.add_argument('-lr', metavar='learning_rate', type=float, default=CONFIG["lr"], help='Optimizer\'s lr')
 
-start = datetime.now()
-if args.m == "frozen_mlp_bilstm":
-    model = MLPBefore(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
-elif args.m =="frozen_bilstm_mlp":
-    model = MLPIndependentOneDict(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
-elif args.m =="bilstm_mlp_similarity":
-    model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-sumloss-c", MODEL_MAPPING, experiment.config, dataset, explanations)
-elif args.m=="bilstm_mlp_improve":
-    model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-improve100loss-alpha{args.a}-c", MODEL_MAPPING, experiment.config, dataset, explanations)
+    parser.add_argument('-l2', metavar='L2 weight decay', type=float, default=CONFIG["l2_wd"], help='L2 weight decay optimizer')
 
-experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
-print(f"Time model training: {str(datetime.now()-start)}")
-# start = datetime.now()
-# formated_date = start.strftime(DATE_FORMAT)
-# model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config)
-# experiment.with_data(dataset).with_model(model).run()
+    parser.add_argument('--td',  action='store_true',
+                        help='Toy data (load just a small data subset)')
 
-# print(f"Time: {str(datetime.now()-start)}")
+    parser.add_argument('--eval', action='store_true')
+    # parser.add_argument('--train', dest='train', action='store_true')
+    # parser.add_argument('--no_train', dest='train', action='store_false')
+    # parser.set_defaults(train=CONFIG["train"])
+
+    # parser.add_argument('--restore', dest='restore', action='store_true')
+    # parser.set_defaults(restore=CONFIG["restore_checkpoint"])
+
+    # parser.add_argument('--cuda', type=bool, default=CONFIG["cuda"])
+    args = parser.parse_args()
+
+
+    """# Main"""
+
+
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
+    experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
+        "hidden_dim": args.hd,
+        "emb": args.emb,
+        "n_layers": args.nl,
+        "max_dict": 1000, 
+        "cuda": True,
+        "restore_v_checkpoint" : True,
+        # "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
+        #"checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
+        #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n1-h64-dr0.05/snapshot/2020-06-16_19-33-50_e4",
+        "checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
+        #"checkpoint_v_file": args.cp,
+        "train": True,
+        "max_words_dict": args.p,
+        "patience": 10,
+        "epochs": args.e,
+        'alpha': args.a,
+        "n1": args.n1,
+        "n2": args.n2,
+        "n3": args.n3,
+        "alpha_decay": args.decay,
+        "dropout": args.dr, 
+        "load_dictionary":True,
+        "dict_checkpoint": args.dcp,
+        #"dict_checkpoint": "experiments/dictionaries_load/dictionaries/test-rake-corpus-600-4-filtered/dictionary-2020-07-07_18-18-56.h5",
+        # "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
+        # "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-max-words-instance-300-4/dictionary-2020-06-02_16-00-44.h5",
+        #"dict_checkpoint":"experiments/dict_acquisition/dictionaries/textrank-filtered_True-p5-d300/dictionary-2020-06-05_14-56-57.h5",
+        #"dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
+        "toy_data": args.td,
+        "lr": args.lr,
+        "l2_wd": args.l2, 
+        "filterpolarity": True,
+        "phrase_len":4,
+        "id":args.m,
+        "train": not args.eval,
+        "restore_checkpoint" : args.eval,
+        "checkpoint_file": "experiments/soa-dicts/bilstm_mlp_improve_15-25_l20.1_dr0.5_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn15-1-25-decay0.0-L2-dr0.5-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e30-2020-06-17_14-52-49/snapshot/2020-06-17_16-02-07_e6"
+    })
+    print(experiment.config)
+
+    start = datetime.now()
+    dataset = IMDBDataset(experiment.config)
+    print(f"Time data load: {str(datetime.now()-start)}")
+    
+    if args.emb == "glove":
+        experiment.override({"vectors": dataset.TEXT.vocab.vectors, 
+            "max_vocab_size": len(dataset.TEXT.vocab),
+            "unk_idx":dataset.TEXT.vocab.stoi[dataset.TEXT.unk_token],
+            "pad_idx":dataset.TEXT.vocab.stoi[dataset.TEXT.pad_token]
+            })
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
+    if args.d=="tfidf":
+        explanations = TFIDF("tfidf", dataset, experiment.config)
+    elif args.d=="yake":
+        explanations = DefaultYAKE("default-yake", dataset, experiment.config)
+    elif args.d=="textrank":
+        explanations = TextRank(f"textrank-filtered", dataset, experiment.config)
+    elif args.d == "rake-inst":
+        explanations = RakeInstanceExplanations(f"rake-max-words-instance-{CONFIG['max_words_dict']}-{args.p}-filtered", dataset, experiment.config)
+        # explanations = RakeMaxWordsPerInstanceExplanations(f"rake-max-words-instance-300-{args.p}", dataset, experiment.config)
+    elif args.d == "rake-corpus":
+        explanations = RakeMaxWordsExplanations(f"rake-max-words-corpus-300-{args.p}", dataset, experiment.config)
+    elif args.d == "rake-polarity":
+        explanations = RakeCorpusPolarityFiltered(f"rake-polarity", dataset, experiment.config)
+    elif args.d == None:
+        explanations = None
+    print(f"Dict {args.d}")
+    if explanations:
+        d = explanations.get_dict()
+        print(str(d.keys()))
+        print(str(d.items()))
+    
+        with open(f"dict/{args.d}-{args.p}-{formated_date}", "w") as f:
+            for key in d.keys():
+                f.write(f"{key}\n**\n")
+                f.write("\n".join([f"{e} ~ {f}" for e,f in d[key].items()]))
+                f.write(f"\n\n------------\n\n")
+        print(f"Time expl dictionary {args.d} - max-phrase {args.p}: {str(datetime.now()-start)}")
+
+    start = datetime.now()
+    formated_date = start.strftime(DATE_FORMAT)
+    if "mlp_bilstm" in args.m:
+        model = MLPBefore(f"{args.m}-d{args.d}-p{args.p}dnn{args.n1}-{args.n3}-decay{args.decay}-L2{args.l2}-lr{args.lr}-dr{args.dr}-improveloss_mean-alpha{args.a}-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    elif args.m =="frozen_bilstm_mlp":
+        model = MLPIndependentOneDict(f"{args.m}-super-patient-{args.d}-{args.p}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    elif args.m =="bilstm_mlp_similarity":
+        model = MLPAfterIndependentOneDictSimilarity(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-sumloss-c", MODEL_MAPPING, experiment.config, dataset, explanations)
+    elif "bilstm_mlp_improve" in args.m:
+        model = MLPAfterIndependentOneDictImprove(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    elif "mlpcos" in args.m:
+        model = MLPCos(f"{args.m}-dnn{args.n1}-{args.n2}-{args.n3}-decay{args.decay}-L2-dr{args.dr}-eval1-{args.d}-4-600-improveloss_mean-alpha{args.a}-c-e{args.e}-{formated_date}", MODEL_MAPPING, experiment.config, dataset, explanations)
+    elif args.m == "bilstm":
+        emb = f"-{args.emb}-" if args.emb else ""
+        model = FrozenVLSTM(f"vanilla-lstm{emb}-n{experiment.config['n_layers']}-h{experiment.config['hidden_dim']}-dr{experiment.config['dropout']}", MODEL_MAPPING, experiment.config)
+        
+
+    experiment.with_data(dataset).with_dictionary(explanations).with_model(model).run()
+    print(f"Time model training: {str(datetime.now()-start)}")
+    # start = datetime.now()
+    # formated_date = start.strftime(DATE_FORMAT)
+    # model = VLSTM("v-lstm", MODEL_MAPPING, experiment.config)
+    # experiment.with_data(dataset).with_model(model).run()
+
+    # print(f"Time: {str(datetime.now()-start)}")
+
+except:
+    import sys, traceback
+    traceback.print_exc(file=sys.stdout)
