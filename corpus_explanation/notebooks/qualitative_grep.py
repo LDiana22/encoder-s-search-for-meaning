@@ -8,10 +8,38 @@ DATE_FORMAT = '%Y-%m-%d_%H-%M-%S'
 checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5"
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
-experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
-        "hidden_dim": args.hd,
-        "emb": args.emb,
-        "n_layers": args.nl,
+PREFIX_DIR = "experiments/soa-dicts"
+MODEL_MAPPING = "experiments/soa-dicts/model_mapping"
+CONFIG={
+
+    "cuda": True,
+
+    "weight_decay": 5e-06,
+
+    "patience": 10,
+
+    "objective": "cross_entropy",
+    "lr": 0.001,
+    "l2_wd": 0,
+
+    "gumbel_decay": 1e-5,
+
+    "prefix_dir" : PREFIX_DIR,
+
+    "dirs": {
+        "metrics": "metrics",
+        "checkpoint": "snapshot",
+        "dictionary": "dictionaries",
+        "explanations": "explanations",
+        "plots": "plots"
+        },
+
+    "max_vocab_size": 100000,
+    "emb_dim": 300,
+    "batch_size": 32,
+        "hidden_dim": 256,
+        "emb": None,
+        "n_layers": 2,
         "max_dict": 1000, 
         "cuda": True,
         "restore_v_checkpoint" : True,
@@ -39,16 +67,16 @@ experiment = Experiment(f"e-v-{formated_date}").with_config(CONFIG).override({
         # "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-max-words-instance-300-4/dictionary-2020-06-02_16-00-44.h5",
         #"dict_checkpoint":"experiments/dict_acquisition/dictionaries/textrank-filtered_True-p5-d300/dictionary-2020-06-05_14-56-57.h5",
         #"dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
-        "toy_data": args.td,
-        "lr": args.lr,
-        "l2_wd": args.l2, 
+        "toy_data": False,
+        "lr": 0.01,
+        "l2_wd": 0.01, 
         "filterpolarity": True,
         "phrase_len":4,
-        "id":args.m,
-        "train": not args.eval,
-        "restore_checkpoint" : args.eval,
+        "id": "vanilla",
+        "train": False,
+        "restore_checkpoint" : True,
         "checkpoint_file": "experiments/soa-dicts/bilstm_mlp_improve_15-25_l20.1_dr0.5_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn15-1-25-decay0.0-L2-dr0.5-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e30-2020-06-17_14-52-49/snapshot/2020-06-17_16-02-07_e6"
-    })
+    }
 class AbstractModel(nn.Module):
     """
     Abstract Model
