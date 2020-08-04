@@ -5,6 +5,14 @@ import argparse
 from datetime import datetime
 DATE_FORMAT = '%Y-%m-%d_%H-%M-%S'
 ##################### LOAD RAW PREDICTOR #########################
+import torch
+
+from torch import nn
+from torch.utils import data as utils
+
+import torch.nn.functional as F
+
+import torch.optim as optim
 checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5"
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
