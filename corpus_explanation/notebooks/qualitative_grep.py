@@ -13,6 +13,21 @@ from torch.utils import data as utils
 import torch.nn.functional as F
 
 import torch.optim as optim
+
+from torchtext import datasets
+from torchtext import data as data
+from torchtext.vocab import GloVe
+from torchtext.data import Pipeline
+torch.manual_seed(0)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark=False
+torch.backends.cudnn.enabled = False 
+torch.cuda.manual_seed_all(0)
+
+torch.cuda.manual_seed(0)
+np.random.seed(0)
+random.seed(0)
+
 checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5"
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
@@ -86,6 +101,22 @@ CONFIG={
         "restore_checkpoint" : True,
         "checkpoint_file": "experiments/soa-dicts/bilstm_mlp_improve_15-25_l20.1_dr0.5_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn15-1-25-decay0.0-L2-dr0.5-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e30-2020-06-17_14-52-49/snapshot/2020-06-17_16-02-07_e6"
     }
+
+
+def remove_br_tag(token):
+    return re.sub(r"br|(/><.*)|(</?(.*)/?>)|(<?(.*)/?>)|(<?/?(.*?)/?>?)", "", token)
+
+def remove_non_alpha(token):
+    if token.isalpha():
+        return token
+    return ""
+
+def preprocess(token):
+    token = remove_br_tag(token)
+    token = remove_non_alpha(token)
+    return token
+
+preprocess_pipeline = Pipeline(preprocess)
 
 class IMDBDataset:
 
