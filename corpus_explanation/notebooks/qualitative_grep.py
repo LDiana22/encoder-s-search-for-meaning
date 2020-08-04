@@ -46,6 +46,7 @@ CONFIG={
     "emb_dim": 300,
     "batch_size": 32,
         "hidden_dim": 256,
+        "output_dim":1,
         "emb": None,
         "n_layers": 2,
         "max_dict": 1000, 
@@ -457,7 +458,7 @@ class FrozenVLSTM(AbstractModel):
 
         return metrics
 
-model = FrozenVLSTM(f"raw-pred-vanilla-lstm", MODEL_MAPPING, experiment.config)
+model = FrozenVLSTM(f"raw-pred-vanilla-lstm", MODEL_MAPPING, CONFIG)
 
 vanilla = model.load_checkpoint(checkpoint)
 
@@ -493,6 +494,8 @@ def load_explanations(path):
     df["prediction"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+',str(f))).apply(lambda x: float(x[1]) if len(x)>1 else None)
     df["label"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[2]) if len(x)>2 else None)
     df["raw_pred"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[3]) if len(x)>3 else None)
+    import ipdb
+    ipdb.set_trace(context=10)
     df["vanilla_prediction"] = vanilla(df["review"])
     return df
 ##################################################################
