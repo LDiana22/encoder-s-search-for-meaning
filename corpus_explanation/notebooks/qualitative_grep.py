@@ -644,15 +644,16 @@ def load_explanations(path):
     i,batch=0,32
     #results = [model(texts[i].unsqueeze(1), torch.tensor([len_texts[i]])) for i in range(0, instances)]
     results=[]
-    for i in range(0, instances, batch):
-        try:
-            ipdb.set_trace(context=10)
-            results.append(torch.sigmoid(model(texts[i], torch.tensor([len_texts[i]]))))
-            torch.cuda.empty_cache()
-        except:
-            ipdb.set_trace(context=10)
-            import sys, traceback
-            traceback.print_exc(file=sys.stdout)
+    with torch.no_grad():
+        for i in range(0, instances, batch):
+            try:
+                ipdb.set_trace(context=10)
+                results.append(torch.sigmoid(model(texts[i], torch.tensor([len_texts[i]]))))
+                torch.cuda.empty_cache()
+            except:
+                ipdb.set_trace(context=10)
+                import sys, traceback
+                traceback.print_exc(file=sys.stdout)
     #results = [model(texts[i:min(i+batch, instances)], len_texts[i:min(i+batch, instances)]) for i in range(0,instances, batch)]
     #import itertools
     #results = list(itertools.chain.from_iterable(results))
