@@ -18,6 +18,9 @@ from torchtext import datasets
 from torchtext import data as data
 from torchtext.vocab import GloVe
 from torchtext.data import Pipeline
+import numpy as np
+import random
+import io
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark=False
@@ -33,6 +36,8 @@ start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 PREFIX_DIR = "experiments/soa-dicts"
 MODEL_MAPPING = "experiments/soa-dicts/model_mapping"
+
+IMDB_PATH = "../.data/imdb/aclImdb"
 CONFIG={
 
     "cuda": True,
@@ -590,11 +595,12 @@ dataset = IMDBDataset(CONFIG)
 model = FrozenVLSTM(f"raw-pred-vanilla-lstm", MODEL_MAPPING, CONFIG)
 
 model.load_checkpoint(checkpoint)
+model.eval()
 import spacy
 nlp = spacy.load('en')
 
 def prepare_text_for_classification(texts):
-    return [torch.LongTensor([dataset.TEXT.vocab.stoi[t] for t in [tok.text for tok in nlp.tokenizer(sentence)]]).to(CONFIG["device"]).unsqueeze(1) for text in texts]
+    return [torch.LongTensor([dataset.TEXT.vocab.stoi[t] for t in [tok.text for tok in nlp.tokenizer(text)]]) for text in texts]
 
 ##################################################################
 def fix_file(path):
@@ -629,8 +635,30 @@ def load_explanations(path):
     df["label"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[2]) if len(x)>2 else None)
     df["raw_pred"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[3]) if len(x)>3 else None)
     import ipdb
+    texts = prepare_text_for_classification(df["review"].values)
+    lens = [x.shape[0] for x in texts]
+    max_len = max(lens)
+    len_texts = torch.LongTensor(lens)
+    texts = torch.stack([F.pad(t, (0, max_len - t.shape[0])).unsqueeze(1) for t in texts])
+    instances = len_texts.shape[0]
+    i,batch=0,32
+    #results = [model(texts[i].unsqueeze(1), torch.tensor([len_texts[i]])) for i in range(0, instances)]
+    results=[]
+    for i in range(0, instances, batch):
+        try:
+            ipdb.set_trace(context=10)
+            results.append(torch.sigmoid(model(texts[i], torch.tensor([len_texts[i]]))))
+            torch.cuda.empty_cache()
+        except:
+            ipdb.set_trace(context=10)
+            import sys, traceback
+            traceback.print_exc(file=sys.stdout)
+    #results = [model(texts[i:min(i+batch, instances)], len_texts[i:min(i+batch, instances)]) for i in range(0,instances, batch)]
+    #import itertools
+    #results = list(itertools.chain.from_iterable(results))
+    print(len(results))
     ipdb.set_trace(context=10)
-    df["vanilla_prediction"] = vanilla(torch.tensor(prepare_text_for_classification(df["review"])))
+    df["vanilla_prediction"] = results
     return df
 ##################################################################
 
