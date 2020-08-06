@@ -624,7 +624,7 @@ def fix_file(path):
                 line = g.readline() 
     return new_path
 
-def load_explanations(path):
+def load_explanations(path, raw_path=""):
     print(f"Loading from {path}")
     df = pd.read_csv(path, sep="~", header=0, names=["review", "explanation", "contribution"])
     #df["contribution"] = df["contribution"].apply(lambda c: float(str(c).split(":")[0]))
@@ -644,11 +644,14 @@ def load_explanations(path):
     i,batch=0,32
     #results = [model(texts[i].unsqueeze(1), torch.tensor([len_texts[i]])) for i in range(0, instances)]
     results=[]
+    print("Vanilla predicting")
     with torch.no_grad():
-        for i in range(0, instances, batch):
+        for i in range(0, instances):
+            if i%5000==0:
+                print(i)
             try:
-                ipdb.set_trace(context=10)
-                results.append(torch.sigmoid(model(texts[i], torch.tensor([len_texts[i]]))))
+                #ipdb.set_trace(context=10)
+                results.append(torch.sigmoid(model(texts[i], torch.tensor([len_texts[i]]))).tolist()[0][0])
                 torch.cuda.empty_cache()
             except:
                 ipdb.set_trace(context=10)
@@ -658,8 +661,11 @@ def load_explanations(path):
     #import itertools
     #results = list(itertools.chain.from_iterable(results))
     print(len(results))
-    ipdb.set_trace(context=10)
-    df["vanilla_prediction"] = results
+    #ipdb.set_trace(context=10)
+    df["vanilla_prediction"] = pd.Series(results)
+    cache = os.path.join(raw_path, f"vanilla-{formated_date}")
+    print(f"Caching to {cache}")
+    df[["review", "vanilla_prediction"]].to_csv(cache, sep="~")
     return df
 ##################################################################
 
@@ -691,11 +697,13 @@ def print_percentages(df, full_path):
     df["c"] = df.apply(lambda x: -1*x["contribution"] if x["label"]==0 else x["contribution"], axis=1)
     dp = df[round(df["c"]+ df["raw_pred"])!=round(df["prediction"])].count()["contribution"]
     
-    ccp = df[(round(df["raw_pred"])!=round(df["prediction"])) & (df["label"]==round(df["prediction"]))].count()["contribution"]
-    icp = df[(round(df["raw_pred"])!=round(df["prediction"])) & (df["label"]!=round(df["prediction"]))].count()["contribution"]
+    ccp = df[(round(df["vanilla_prediction"])!=round(df["prediction"])) & (df["label"]==round(df["prediction"]))].count()["contribution"]
+    icp = df[(round(df["vanilla_prediction"])!=round(df["prediction"])) & (df["label"]!=round(df["prediction"]))].count()["contribution"]
 
-    cp = df[round(df["raw_pred"])!=round(df["prediction"])].count()["contribution"]
+    cp = df[round(df["vanilla_prediction"])!=round(df["prediction"])].count()["contribution"]
     with open(full_path, "w") as f:
+        v_acc = df[round(df['vanilla_prediction'])==df['label']].count()['prediction']*100/df.count()['prediction']
+        f.write(f"Vanilla acc: {v_acc}\n")
         f.write(f"Changed prediction: {cp}\n")
         f.write(f"Different predictions (should be equal to changed pred): {dp}\n")
 
