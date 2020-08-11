@@ -2129,9 +2129,11 @@ class MLPIndependentOneDict(AbstractModel):
         e_loss = 0
         e_acc, e_prec, e_rec = 0,0,0
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        total_eval, total_explained = 0,0
         with torch.no_grad():
             for batch in iterator:
                 text, text_lengths = batch.text
+                total_eval += len(text_lengths)
                 logits = self.forward(text, text_lengths, prefix).squeeze()
                 batch.label = batch.label.to(self.device)
                 loss = self.criterion(logits, batch.label)
@@ -2144,6 +2146,7 @@ class MLPIndependentOneDict(AbstractModel):
                 self.true_labels = y_true
                 if save:
                     text_expl= self.get_explanations(text)
+                    total_explained += len(text_expl.keys())
                     e_list.append("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
                     # for class_idx in range(len(distr)):
                     #     distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
@@ -2171,7 +2174,8 @@ class MLPIndependentOneDict(AbstractModel):
             print(f"Saving explanations at {e_file}")
             with open(e_file, "w") as f:
                 f.write(expl)
-                print(f"Number of eval reviews: {len(e_list)}")
+                print(f"Number of evaluated reviews: {total_eval}")
+                print(f"Number of explained reviews: {total_explained}")
                 f.write("\n".join(e_list))
                 f.write("\n")
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
