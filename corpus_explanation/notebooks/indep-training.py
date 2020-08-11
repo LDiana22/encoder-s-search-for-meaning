@@ -1959,7 +1959,7 @@ class MLPIndependentOneDict(AbstractModel):
         dictionary - the dict corresponding to the class of the distribution
         """
         decoded = OrderedDict()
-#         for distr in len(distributions):          
+            #         for distr in len(distributions):          
             # dict phrase:count
             # distribution for each dict/class
             # index sort - top predicted explanations
@@ -1974,18 +1974,18 @@ class MLPIndependentOneDict(AbstractModel):
         #expl: (count in class, distr value)
         for i, text in enumerate(expl_text):
             decoded[text]= (dictionary[text], distr[most_important_expl_idx[i]].item())
-#         batch_explanations.append(decoded)
+        #         batch_explanations.append(decoded)
         # list of 
         # ordered dict {expl:count} for a given dictionary/class
         return decoded
 
     def get_explanations(self, text, file_name=None):
         text = text.transpose(0,1)
-#             start = datetime.now()
-#             formated_date = start.strftime(DATE_FORMAT)
-#             e_file = f"{self.explanations_path}_{file_name}_{formated_date}.txt"
-#             with open(e_file, "w", encoding="utf-8") as f:
-#                 print("Saving explanations at ", e_file)
+        #             start = datetime.now()
+        #             formated_date = start.strftime(DATE_FORMAT)
+        #             e_file = f"{self.explanations_path}_{file_name}_{formated_date}.txt"
+        #             with open(e_file, "w", encoding="utf-8") as f:
+        #                 print("Saving explanations at ", e_file)
         text_expl = OrderedDict() # text: [expl_c1, expl_c2]           
         # for class_idx, class_batch_dict in enumerate(self.expl_distributions):
         #     #  tensor [batch, dict]
@@ -2002,8 +2002,8 @@ class MLPIndependentOneDict(AbstractModel):
             text_expl[nlp_text] = val
 
             # header text,list of classes
-#                 f.write("text, " + ", ".join(list(self.dictionaries.keys()))+"\n")
-#                 f.write("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
+            # f.write("text, " + ", ".join(list(self.dictionaries.keys()))+"\n")
+            # f.write("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
         return text_expl
 
     def gen(self, activ, batch_size):
@@ -2129,9 +2129,11 @@ class MLPIndependentOneDict(AbstractModel):
         e_loss = 0
         e_acc, e_prec, e_rec = 0,0,0
         e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
+        total_eval, total_explained = 0,0
         with torch.no_grad():
             for batch in iterator:
                 text, text_lengths = batch.text
+                total_eval += len(text_lengths)
                 logits = self.forward(text, text_lengths, prefix).squeeze()
                 batch.label = batch.label.to(self.device)
                 loss = self.criterion(logits, batch.label)
@@ -2144,6 +2146,7 @@ class MLPIndependentOneDict(AbstractModel):
                 self.true_labels = y_true
                 if save:
                     text_expl= self.get_explanations(text)
+                    total_explained += len(text_expl.keys())
                     e_list.append("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
                     # for class_idx in range(len(distr)):
                     #     distr[class_idx] = torch.cat((distr[class_idx], self.expl_distributions[class_idx]))
@@ -2171,7 +2174,9 @@ class MLPIndependentOneDict(AbstractModel):
             print(f"Saving explanations at {e_file}")
             with open(e_file, "w") as f:
                 f.write(expl)
-                f.write("".join(e_list))
+                print(f"Number of evaluated reviews: {total_eval}")
+                print(f"Number of explained reviews: {total_explained}")
+                f.write("\n".join(e_list))
                 f.write("\n")
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(f"{torch.tensor(distr).shape}\n")
