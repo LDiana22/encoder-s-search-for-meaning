@@ -1959,7 +1959,7 @@ class MLPIndependentOneDict(AbstractModel):
         dictionary - the dict corresponding to the class of the distribution
         """
         decoded = OrderedDict()
-#         for distr in len(distributions):          
+            #         for distr in len(distributions):          
             # dict phrase:count
             # distribution for each dict/class
             # index sort - top predicted explanations
@@ -1974,18 +1974,18 @@ class MLPIndependentOneDict(AbstractModel):
         #expl: (count in class, distr value)
         for i, text in enumerate(expl_text):
             decoded[text]= (dictionary[text], distr[most_important_expl_idx[i]].item())
-#         batch_explanations.append(decoded)
+        #         batch_explanations.append(decoded)
         # list of 
         # ordered dict {expl:count} for a given dictionary/class
         return decoded
 
     def get_explanations(self, text, file_name=None):
         text = text.transpose(0,1)
-#             start = datetime.now()
-#             formated_date = start.strftime(DATE_FORMAT)
-#             e_file = f"{self.explanations_path}_{file_name}_{formated_date}.txt"
-#             with open(e_file, "w", encoding="utf-8") as f:
-#                 print("Saving explanations at ", e_file)
+        #             start = datetime.now()
+        #             formated_date = start.strftime(DATE_FORMAT)
+        #             e_file = f"{self.explanations_path}_{file_name}_{formated_date}.txt"
+        #             with open(e_file, "w", encoding="utf-8") as f:
+        #                 print("Saving explanations at ", e_file)
         text_expl = OrderedDict() # text: [expl_c1, expl_c2]           
         # for class_idx, class_batch_dict in enumerate(self.expl_distributions):
         #     #  tensor [batch, dict]
@@ -2002,8 +2002,8 @@ class MLPIndependentOneDict(AbstractModel):
             text_expl[nlp_text] = val
 
             # header text,list of classes
-#                 f.write("text, " + ", ".join(list(self.dictionaries.keys()))+"\n")
-#                 f.write("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
+            # f.write("text, " + ", ".join(list(self.dictionaries.keys()))+"\n")
+            # f.write("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
         return text_expl
 
     def gen(self, activ, batch_size):
@@ -2171,7 +2171,8 @@ class MLPIndependentOneDict(AbstractModel):
             print(f"Saving explanations at {e_file}")
             with open(e_file, "w") as f:
                 f.write(expl)
-                f.write("".join(e_list))
+                print(f"Number of eval reviews: {len(e_list)}")
+                f.write("\n".join(e_list))
                 f.write("\n")
             with open(f"{self.explanations_path}_distr.txt", "w") as f:
                 f.write(f"{torch.tensor(distr).shape}\n")
