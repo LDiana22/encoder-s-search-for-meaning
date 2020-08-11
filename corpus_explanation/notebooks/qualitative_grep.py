@@ -599,6 +599,15 @@ model.eval()
 import spacy
 nlp = spacy.load('en')
 
+VANILLA_CACHE = "vanilla-predictions.csv"
+
+def compute_vanilla_preds(df):
+    df.to_csv(VANILLA_CACHE, sep="~")
+
+def load_vanilla():
+    return pd.read_csv(VANILLA_CACHE, sep="~", names=["review", "vanilla_prediction"])
+
+
 def prepare_text_for_classification(texts):
     return [torch.LongTensor([dataset.TEXT.vocab.stoi[t] for t in [tok.text for tok in nlp.tokenizer(text)]]) for text in texts]
 
@@ -624,7 +633,7 @@ def fix_file(path):
                 line = g.readline() 
     return new_path
 
-def load_explanations(path):
+def load_explanations(path, args=None):
     print(f"Loading from {path}")
     df = pd.read_csv(path, sep="~", header=0, names=["review", "explanation", "contribution"])
     #df["contribution"] = df["contribution"].apply(lambda c: float(str(c).split(":")[0]))
@@ -634,7 +643,6 @@ def load_explanations(path):
     df["prediction"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+',str(f))).apply(lambda x: float(x[1]) if len(x)>1 else None)
     df["label"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[2]) if len(x)>2 else None)
     df["raw_pred"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[3]) if len(x)>3 else None)
-    import ipdb
     texts = prepare_text_for_classification(df["review"].values)
     lens = [x.shape[0] for x in texts]
     max_len = max(lens)
