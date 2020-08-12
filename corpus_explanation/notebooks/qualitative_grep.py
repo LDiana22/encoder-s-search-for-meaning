@@ -590,17 +590,19 @@ class FrozenVLSTM(AbstractModel):
 
         return metrics
 
-dataset = IMDBDataset(CONFIG)
-
-model = FrozenVLSTM(f"raw-pred-vanilla-lstm", MODEL_MAPPING, CONFIG)
-
-model.load_checkpoint(checkpoint)
-model.eval()
-import spacy
-nlp = spacy.load('en')
-
 VANILLA_CACHE = "vanilla-2020-08-11_11-16-07"
 LOAD = True
+
+if not LOAD:
+    dataset = IMDBDataset(CONFIG)
+
+    model = FrozenVLSTM(f"raw-pred-vanilla-lstm", MODEL_MAPPING, CONFIG)
+
+    model.load_checkpoint(checkpoint)
+    model.eval()
+    import spacy
+    nlp = spacy.load('en')
+
 
 def compute_vanilla_preds(df):
 
