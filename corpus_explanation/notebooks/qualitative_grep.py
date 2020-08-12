@@ -642,7 +642,8 @@ def load_vanilla():
     print(f"Loading vanilla preds from {VANILLA_CACHE}")
     df = pd.read_csv(VANILLA_CACHE, sep="~")
     df["vanilla_prediction"] = df["vanilla_prediction"].astype(float)
-    return df
+    print(df.count())
+    return df[["review", "vanilla_prediction"]]
 
 def prepare_text_for_classification(texts):
     return [torch.LongTensor([dataset.TEXT.vocab.stoi[t] for t in [tok.text for tok in nlp.tokenizer(text)]]) for text in texts]
@@ -680,7 +681,11 @@ def load_explanations(path, raw_path=""):
     df["label"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[2]) if len(x)>2 else None)
     df["raw_pred"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[3]) if len(x)>3 else None)
     vanilla = load_vanilla() if LOAD else compute_vanilla_preds()
+    print("Before merge:")
+    print(df.count())
     df = df.merge(vanilla, on="review", how="left")
+    print("After merge")
+    print(df.count())
     return df
 ##################################################################
 
