@@ -639,8 +639,10 @@ def compute_vanilla_preds(df):
     return result
 
 def load_vanilla():
-    return pd.read_csv(VANILLA_CACHE, sep="~", names=["rid", "review", "vanilla_prediction"])
-
+    print(f"Loading vanilla preds from {VANILLA_CACHE}")
+    df = pd.read_csv(VANILLA_CACHE, sep="~")
+    df["vanilla_prediction"] = df["vanilla_prediction"].astype(float)
+    return df
 
 def prepare_text_for_classification(texts):
     return [torch.LongTensor([dataset.TEXT.vocab.stoi[t] for t in [tok.text for tok in nlp.tokenizer(text)]]) for text in texts]
