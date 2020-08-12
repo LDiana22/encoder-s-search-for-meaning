@@ -599,13 +599,45 @@ model.eval()
 import spacy
 nlp = spacy.load('en')
 
-VANILLA_CACHE = "vanilla-predictions.csv"
+VANILLA_CACHE = "vanilla-2020-08-11_11-16-07"
+LOAD = True
 
 def compute_vanilla_preds(df):
-    df.to_csv(VANILLA_CACHE, sep="~")
+
+    texts = prepare_text_for_classification(df["review"].values)
+    lens = [x.shape[0] for x in texts]
+    max_len = max(lens)
+    len_texts = torch.LongTensor(lens)
+    texts = torch.stack([F.pad(t, (0, max_len - t.shape[0])).unsqueeze(1) for t in texts])
+    instances = len_texts.shape[0]
+    i,batch=0,32
+    #results = [model(texts[i].unsqueeze(1), torch.tensor([len_texts[i]])) for i in range(0, instances)]
+    results=[]
+    print("Vanilla predicting")
+    with torch.no_grad():
+        for i in range(0, instances):
+            if i%5000==0:
+                print(i)
+            try:
+                #ipdb.set_trace(context=10)
+                results.append(torch.sigmoid(model(texts[i], torch.tensor([len_texts[i]]))).tolist()[0][0])
+                torch.cuda.empty_cache()
+            except:
+                ipdb.set_trace(context=10)
+                import sys, traceback
+                traceback.print_exc(file=sys.stdout)
+    #results = [model(texts[i:min(i+batch, instances)], len_texts[i:min(i+batch, instances)]) for i in range(0,instances, batch)]
+    #import itertools
+    #results = list(itertools.chain.from_iterable(results))
+    print(len(results))
+    result=  pd.DataFrame(data={"review": df["review"].values, "vanilla_prediction": results})
+    cache = os.path.join(raw_path, f"vanilla-{formated_date}")
+    print(f"Caching to {cache}")
+    result.to_csv(cache, sep="~")
+    return result
 
 def load_vanilla():
-    return pd.read_csv(VANILLA_CACHE, sep="~", names=["review", "vanilla_prediction"])
+    return pd.read_csv(VANILLA_CACHE, sep="~", names=["rid", "review", "vanilla_prediction"])
 
 
 def prepare_text_for_classification(texts):
@@ -633,7 +665,7 @@ def fix_file(path):
                 line = g.readline() 
     return new_path
 
-def load_explanations(path, args=None):
+def load_explanations(path, raw_path=""):
     print(f"Loading from {path}")
     df = pd.read_csv(path, sep="~", header=0, names=["review", "explanation", "contribution"])
     #df["contribution"] = df["contribution"].apply(lambda c: float(str(c).split(":")[0]))
@@ -643,31 +675,8 @@ def load_explanations(path, args=None):
     df["prediction"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+',str(f))).apply(lambda x: float(x[1]) if len(x)>1 else None)
     df["label"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[2]) if len(x)>2 else None)
     df["raw_pred"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[3]) if len(x)>3 else None)
-    texts = prepare_text_for_classification(df["review"].values)
-    lens = [x.shape[0] for x in texts]
-    max_len = max(lens)
-    len_texts = torch.LongTensor(lens)
-    texts = torch.stack([F.pad(t, (0, max_len - t.shape[0])).unsqueeze(1) for t in texts])
-    instances = len_texts.shape[0]
-    i,batch=0,32
-    #results = [model(texts[i].unsqueeze(1), torch.tensor([len_texts[i]])) for i in range(0, instances)]
-    results=[]
-    with torch.no_grad():
-        for i in range(0, instances, batch):
-            try:
-                ipdb.set_trace(context=10)
-                results.append(torch.sigmoid(model(texts[i], torch.tensor([len_texts[i]]))))
-                torch.cuda.empty_cache()
-            except:
-                ipdb.set_trace(context=10)
-                import sys, traceback
-                traceback.print_exc(file=sys.stdout)
-    #results = [model(texts[i:min(i+batch, instances)], len_texts[i:min(i+batch, instances)]) for i in range(0,instances, batch)]
-    #import itertools
-    #results = list(itertools.chain.from_iterable(results))
-    print(len(results))
-    ipdb.set_trace(context=10)
-    df["vanilla_prediction"] = results
+    vanilla = load_vanilla() if LOAD else compute_vanilla_preds()
+    df = df.merge(vanilla, on="review", how="left")
     return df
 ##################################################################
 
@@ -699,11 +708,13 @@ def print_percentages(df, full_path):
     df["c"] = df.apply(lambda x: -1*x["contribution"] if x["label"]==0 else x["contribution"], axis=1)
     dp = df[round(df["c"]+ df["raw_pred"])!=round(df["prediction"])].count()["contribution"]
     
-    ccp = df[(round(df["raw_pred"])!=round(df["prediction"])) & (df["label"]==round(df["prediction"]))].count()["contribution"]
-    icp = df[(round(df["raw_pred"])!=round(df["prediction"])) & (df["label"]!=round(df["prediction"]))].count()["contribution"]
+    ccp = df[(round(df["vanilla_prediction"])!=round(df["prediction"])) & (df["label"]==round(df["prediction"]))].count()["contribution"]
+    icp = df[(round(df["vanilla_prediction"])!=round(df["prediction"])) & (df["label"]!=round(df["prediction"]))].count()["contribution"]
 
-    cp = df[round(df["raw_pred"])!=round(df["prediction"])].count()["contribution"]
+    cp = df[round(df["vanilla_prediction"])!=round(df["prediction"])].count()["contribution"]
     with open(full_path, "w") as f:
+        v_acc = df[round(df['vanilla_prediction'])==df['label']].count()['prediction']*100/df.count()['prediction']
+        f.write(f"Vanilla acc: {v_acc}\n")
         f.write(f"Changed prediction: {cp}\n")
         f.write(f"Different predictions (should be equal to changed pred): {dp}\n")
 
