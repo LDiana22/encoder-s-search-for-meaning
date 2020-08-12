@@ -723,7 +723,9 @@ def print_percentages(df, full_path):
     cp = df[round(df["vanilla_prediction"])!=round(df["prediction"])].count()["contribution"]
     with open(full_path, "w") as f:
         v_acc = df[round(df['vanilla_prediction'])==df['label']].count()['prediction']*100/df.count()['prediction']
+        m_acc = df[round(df['prediction'])==df['label'].count()['prediction']]*100/df.count()['prediction']
         f.write(f"Vanilla acc: {v_acc}\n")
+        f.write(f"Model acc: {m_acc}\n")
         f.write(f"Changed prediction: {cp}\n")
         f.write(f"Different predictions (should be equal to changed pred): {dp}\n")
 
