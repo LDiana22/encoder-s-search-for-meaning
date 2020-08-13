@@ -115,7 +115,8 @@ while i <len(a):
 		phrase = f"{phrase} {c_word}"
 		i+=1
 		c_word = a[i]
-	vocab +=phrase
+        vocab +=phrase
+        i=i+1
 
 print(vocab)
 
