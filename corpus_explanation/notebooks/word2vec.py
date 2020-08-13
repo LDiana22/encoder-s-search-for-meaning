@@ -97,7 +97,7 @@ print("PageRank...")
 pagerank_values = powerMethod(cosine, x0, m, 130)
 
 srt = numpy.argsort(-pagerank_values)
-a = srt[0:10]
+a = srt[0:300]
 print("Printing wordlist")
 keywords_list = []
 
@@ -105,3 +105,18 @@ for words in a:
     keywords_list.append(clean_train_text[words])
     
 print(keywords_list)
+
+vocab = []
+i = 1
+while i <len(a):
+	phrase = a[i-1]
+	c_word = a[i]
+	while f"{phrase} {c_word}" in text_review and i+1 < len(a):
+		phrase = f"{phrase} {c_word}"
+		i+=1
+		c_word = a[i]
+	vocab +=phrase
+
+print(vocab)
+
+
