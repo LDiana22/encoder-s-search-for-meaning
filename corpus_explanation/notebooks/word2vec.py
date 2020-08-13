@@ -1,14 +1,18 @@
 import re
 import numpy
-from gensim.models import word2vec
+from gensim.models import KeyedVectors
 from nltk.corpus import stopwords
 from numpy import *
-
-with open("Text.txt") as file:
+from gensim.test.utils import datapath
+import gensim.downloader as api
+DATA_PATH = "../.data/imdb/aclImdb/train/pos/pos.txt"
+with open(DATA_PATH) as file:
     text_review = file.read()
 
+model = api.load("word2vec-google-news-300")  # download the model and return as object ready for use
+word_vectors = model.wv
 #if you want to use Google original vectors from Google News corpora
-model = word2vec.Word2Vec.load_word2vec_format('/Users/Downloads/GoogleNews-vectors-negative300.bin', binary=True)
+#model = KeyedVectors.load_word2vec_format('googlenewswv.bin.gz', binary=True)
 #if you want to use your own vector
 #model = word2vec.Word2Vec.load("w2v")
 
@@ -27,7 +31,8 @@ def text_to_wordlist(text, remove_stopwords=True):
 def get_feature_vec(words, model):
     # Index2word is a list that contains the names of the words in
     # the model's vocabulary. Convert it to a set, for speed 
-    index2word_set = set(model.index2word)
+    #index2word_set = set(model.index2wordword2vec.Word2Vec.load_word2vec_format)
+    index2word_set = model.wv
     clean_text = []
     # vocabulary, add its feature vector to the total
     for word in words:
@@ -36,7 +41,7 @@ def get_feature_vec(words, model):
 
     return clean_text
 
-
+print("Cleaning text...")
 # bag of word list without stopwords
 clean_train_text = (text_to_wordlist(text_review, remove_stopwords=True))
 
@@ -47,7 +52,7 @@ for words in clean_train_text:
         words = +1
     else:
         clean_train.append(words)
-
+print("Getting feature vectors")
 trainDataVecs = get_feature_vec(clean_train, model)
 trainData = numpy.asarray(trainDataVecs)
 
@@ -88,15 +93,15 @@ def powerMethod(A, x0, m, iter):
 n = cosine.shape[1]  # A is n x n
 m = 0.15
 x0 = [1] * n
-
+print("PageRank...")
 pagerank_values = powerMethod(cosine, x0, m, 130)
 
 srt = numpy.argsort(-pagerank_values)
 a = srt[0:10]
-
+print("Printing wordlist")
 keywords_list = []
 
 for words in a:
     keywords_list.append(clean_train_text[words])
     
-print keywords_list
+print(keywords_list)
