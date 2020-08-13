@@ -2544,7 +2544,7 @@ class MLPBefore(MLPIndependentOneDict):
 ##########################################################################################################
 
 from math import log
-
+import ipdb
 class MLPAfterIndependentOneDictSimilarity(AbstractModel):
     """
     pretrained bi-LSTM + MLP
@@ -2675,6 +2675,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         #     #  tensor [batch, dict]
         # label = list(self.dictionary.keys())
         # dictionary = self.dictionaries[label]
+        #ipdb.set_trace(context=10)
         for i in range(len(self.expl_distributions)):
             nlp_expl_dict = self._decode_expl_distr(self.expl_distributions[i], self.dictionary)
             nlp_text = " ".join([self.TEXT.vocab.itos[idx] for idx in (text[i])])
@@ -2684,8 +2685,9 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
             val.append(self.true_labels[i])
             val.append(self.raw_predictions[i])
             text_expl[nlp_text] = val
+            
 
-            # header text,list of classes
+        # header text,list of classes
         #                 f.write("text, " + ", ".join(list(self.dictionaries.keys()))+"\n")
         # f.write("\n".join([f"{review} ~ {text_expl[review]}" for review in text_expl.keys()]))
         return text_expl
@@ -2841,6 +2843,7 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
                 self.predictions = y_pred
                 self.true_labels = y_true
                 if save:
+                    #ipdb.set_trace(context=10)
                     text_expl= self.get_explanations(text)
                     total_explained += len(text_expl.keys())
                     e_list.append("\n".join([f"{review} ~ {text_expl[review]} ~ C: {contributions[i].data}" for i, review in enumerate(text_expl.keys())]))
