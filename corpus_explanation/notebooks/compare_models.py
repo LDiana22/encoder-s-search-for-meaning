@@ -6,7 +6,7 @@ from datetime import datetime
 DATE_FORMAT = '%Y-%m-%d_%H-%M-%S'
 def load_explanations(path):
     print(f"Loading from {path}")
-    df = pd.read_csv(path, header=0, names=["id","review","explanation","contribution","frequency","confidence_score","prediction","label","raw_pred"], encoding="utf-8")
+    df = pd.read_csv(path, header=0, names=["id","review","explanation","contribution","frequency","confidence_score","prediction","label","raw_pred", "vanilla_prediction", "c"], encoding="utf-8")
     #df["contribution"] = df["contribution"].apply(lambda c: float(str(c).split(":")[0]))
     df["contribution"] = df["contribution"].astype('float64')
     df["frequency"] = df["explanation"].apply(lambda f: list(re.findall(r'(\d+)', str(f)))).apply(lambda x: x[0] if x else None)
