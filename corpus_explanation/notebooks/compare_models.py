@@ -43,12 +43,14 @@ def print_model_metrics(e1,e2):
     print(top[top["label"]==top["prediction"]].count())
     print(top[top["label"]==top["prediction"]]["explanation"].value_counts())
 
-explanations_m1 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e20-2020-06-23_15-15-42/explanations/descending_contribution.txt"
+# explanations_m1 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e20-2020-06-23_15-15-42/explanations/descending_contribution.txt"
+explanations_m1 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_rake-inst-distr100-4-300-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-07-10_08-52-54/explanations/new/descending_contribution.txt"
 explanations_m2 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-24_15-27-01/explanations/descending_contribution.txt" # small
 
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
+# python compare_models.py -p1 P:\uottawa\Thesis\text_nn-master\corpus_explanation\notebooks\out\large\descending_contribution.txt -p2 P:\uottawa\Thesis\text_nn-master\corpus_explanation\notebooks\out\small\descending_contribution.txt -o P:\uottawa\Thesis\text_nn-master\corpus_explanation\notebooks\out\sample_with_polarity.csv
 parser = argparse.ArgumentParser(description='Config params.')
 
 # experiments\independent\bilstm_mlp_improve-dnn15-1-25-decay0.0-L2-dr0.3-eval1-rake-polarity-improve100loss-alpha0.7-c-tr10\explanations\e_test-7_2020-05-24_03-16-15.txt
