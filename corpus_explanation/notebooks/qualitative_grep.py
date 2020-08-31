@@ -723,7 +723,7 @@ def print_percentages(df, full_path):
     cp = df[round(df["vanilla_prediction"])!=round(df["prediction"])].count()["contribution"]
     with open(full_path, "w") as f:
         v_acc = df[round(df['vanilla_prediction'])==df['label']].count()['prediction']*100/df.count()['prediction']
-        m_acc = df[round(df['prediction'])==df['label'].count()['prediction']]*100/df.count()['prediction']
+        m_acc = df[round(df['prediction'])==df['label']].count()['prediction']*100/df.count()['prediction']
         f.write(f"Vanilla acc: {v_acc}\n")
         f.write(f"Model acc: {m_acc}\n")
         f.write(f"Changed prediction: {cp}\n")
@@ -786,34 +786,36 @@ def sample_metrics(df, path, sample_count=10):
 ##################################################################
 
 #sample_metrics(df[df["prediction"]==df["label"]], args.p)
-
+base_path = os.path.join(args.p, 'new')
+if not os.path.exists(base_path):
+    os.makedirs(base_path)
 print("all instances...")
-all_metrics_path = os.path.join(args.p, "all_instances_metrics.txt")
+all_metrics_path = os.path.join(base_path, "all_instances_metrics.txt")
 print_metrics(df, all_metrics_path)
-print_percentages(df, os.path.join(args.p, "percentages-changed-preds.txt"))
+print_percentages(df, os.path.join(base_path, "percentages-changed-preds.txt"))
 
-all_hist_path = os.path.join(args.p, "all_instances_hist.png")
+all_hist_path = os.path.join(base_path, "all_instances_hist.png")
 plot_hist(df["contribution"], "Histogram all contributions", all_hist_path)
 
 print("all correct instances...")
-all_metrics_path = os.path.join(args.p, "all_correct_metrics.txt")
+all_metrics_path = os.path.join(base_path, "all_correct_metrics.txt")
 print_metrics(df[round(df["prediction"])==df["label"]], all_metrics_path)
-pos_hist_path = os.path.join(args.p, "all_correct_hist.png")
+pos_hist_path = os.path.join(base_path, "all_correct_hist.png")
 plot_hist(df["contribution"], "Histogram positives' contributions", pos_hist_path)
 
 print("all incorrect instances...")
-all_metrics_path = os.path.join(args.p, "all_incorrect_metrics.txt")
+all_metrics_path = os.path.join(base_path, "all_incorrect_metrics.txt")
 print_metrics(df[round(df["prediction"])!=df["label"]], all_metrics_path)
-neg_hist_path = os.path.join(args.p, "all_incorrect_hist.png")
+neg_hist_path = os.path.join(base_path, "all_incorrect_hist.png")
 plot_hist(df["contribution"], "Histogram negatives' contributions", neg_hist_path)
 
-path = os.path.join(args.p, "descending_contribution.txt")
+path = os.path.join(base_path, "descending_contribution.txt")
 df.sort_values(by=["contribution"], ascending=False).to_csv(path)
 
-path = os.path.join(args.p, "descending_contribution_correct.txt")
+path = os.path.join(base_path, "descending_contribution_correct.txt")
 df[df["label"]==round(df["prediction"])].sort_values(by=["contribution"], ascending=False).to_csv(path)
 
-path = os.path.join(args.p, "descending_contribution_incorrect.txt")
+path = os.path.join(base_path, "descending_contribution_incorrect.txt")
 df[df["label"]!=round(df["prediction"])].sort_values(by=["contribution"], ascending=False).to_csv(path)
 
 # print(df.head())
