@@ -32,6 +32,7 @@ np.random.seed(0)
 random.seed(0)
 
 checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5"
+checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4" #64
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 PREFIX_DIR = "experiments/soa-dicts"
@@ -65,7 +66,8 @@ CONFIG={
     "max_vocab_size": 100000,
     "emb_dim": 300,
     "batch_size": 32,
-        "hidden_dim": 256,
+        # "hidden_dim": 256,
+        "hidden_dim": 64,
         "output_dim":1,
         "emb": None,
         "n_layers": 2,
@@ -73,9 +75,9 @@ CONFIG={
         "cuda": True,
         "restore_v_checkpoint" : True,
         # "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
-        "checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
+        ## "checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
         #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n1-h64-dr0.05/snapshot/2020-06-16_19-33-50_e4",
-        #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
+        "checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
         #"checkpoint_v_file": args.cp,
         "train": True,
         "max_words_dict": 4,
@@ -590,8 +592,9 @@ class FrozenVLSTM(AbstractModel):
 
         return metrics
 
-VANILLA_CACHE = "vanilla-2020-08-11_11-16-07"
-LOAD = True
+# VANILLA_CACHE = "vanilla-2020-08-11_11-16-07"
+VANILLA_CACHE = "vanilla-64-2020-08-31_17-30"
+LOAD = False
 
 if not LOAD:
     dataset = IMDBDataset(CONFIG)
