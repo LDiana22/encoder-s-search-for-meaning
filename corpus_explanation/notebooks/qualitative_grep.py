@@ -31,7 +31,7 @@ torch.cuda.manual_seed(0)
 np.random.seed(0)
 random.seed(0)
 
-checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5"
+#checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5"
 checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4" #64
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
@@ -106,7 +106,8 @@ CONFIG={
         "id": "vanilla",
         "train": False,
         "restore_checkpoint" : True,
-        "checkpoint_file": "experiments/soa-dicts/bilstm_mlp_improve_15-25_l20.1_dr0.5_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn15-1-25-decay0.0-L2-dr0.5-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e30-2020-06-17_14-52-49/snapshot/2020-06-17_16-02-07_e6"
+        "checkpoint_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4"
+        #"checkpoint_file": "experiments/soa-dicts/bilstm_mlp_improve_15-25_l20.1_dr0.5_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn15-1-25-decay0.0-L2-dr0.5-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e30-2020-06-17_14-52-49/snapshot/2020-06-17_16-02-07_e6"
     }
 
 
@@ -592,9 +593,9 @@ class FrozenVLSTM(AbstractModel):
 
         return metrics
 
-# VANILLA_CACHE = "vanilla-2020-08-11_11-16-07"
-VANILLA_CACHE = "vanilla-64-2020-08-31_17-30"
-LOAD = False
+VANILLA_CACHE = "vanilla-2020-08-11_11-16-07"
+#VANILLA_CACHE = "vanilla-64-2020-08-31_17-30"
+LOAD = True
 
 if not LOAD:
     dataset = IMDBDataset(CONFIG)
@@ -627,12 +628,12 @@ def compute_vanilla_preds(df):
             try:
                 #ipdb.set_trace(context=10)
                 res=torch.sigmoid(model(texts[i], torch.tensor([len_texts[i]]))).tolist()[0][0]
-                if df.loc[df["review"]==texts[i]]:
-                    if res == round(df["prediction"]):
-                        acc+=1
+                if round(df.iloc[i]["prediction"])==round(res):
+                    acc+=1
                 results.append(res)
                 torch.cuda.empty_cache()
             except:
+                import ipdb
                 ipdb.set_trace(context=10)
                 import sys, traceback
                 traceback.print_exc(file=sys.stdout)
