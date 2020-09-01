@@ -619,13 +619,18 @@ def compute_vanilla_preds(df):
     #results = [model(texts[i].unsqueeze(1), torch.tensor([len_texts[i]])) for i in range(0, instances)]
     results=[]
     print("Vanilla predicting")
+    acc = 0
     with torch.no_grad():
         for i in range(0, instances):
             if i%5000==0:
                 print(i)
             try:
                 #ipdb.set_trace(context=10)
-                results.append(torch.sigmoid(model(texts[i], torch.tensor([len_texts[i]]))).tolist()[0][0])
+                res=torch.sigmoid(model(texts[i], torch.tensor([len_texts[i]]))).tolist()[0][0]
+                if df.loc[df["review"]==texts[i]]:
+                    if res == round(df["prediction"]):
+                        acc+=1
+                results.append(res)
                 torch.cuda.empty_cache()
             except:
                 ipdb.set_trace(context=10)
@@ -635,6 +640,8 @@ def compute_vanilla_preds(df):
     #import itertools
     #results = list(itertools.chain.from_iterable(results))
     print(len(results))
+    print("Acc predictions: ")
+    print(100*acc/len(results))
     result=  pd.DataFrame(data={"review": df["review"].values, "vanilla_prediction": results})
     cache = f"vanilla-64-{formated_date}"
     print(f"Caching to {cache}")
