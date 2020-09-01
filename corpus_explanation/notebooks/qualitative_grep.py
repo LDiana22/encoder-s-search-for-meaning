@@ -636,7 +636,7 @@ def compute_vanilla_preds(df):
     #results = list(itertools.chain.from_iterable(results))
     print(len(results))
     result=  pd.DataFrame(data={"review": df["review"].values, "vanilla_prediction": results})
-    cache = os.path.join(raw_path, f"vanilla-{formated_date}")
+    cache = f"vanilla-64-{formated_date}"
     print(f"Caching to {cache}")
     result.to_csv(cache, sep="~")
     return result
@@ -685,7 +685,7 @@ def load_explanations(path, raw_path=""):
     df["label"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[2]) if len(x)>2 else None)
     df["raw_pred"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[3]) if len(x)>3 else None)
     df = df.drop_duplicates(subset=["review"])
-    vanilla = load_vanilla() if LOAD else compute_vanilla_preds()
+    vanilla = load_vanilla() if LOAD else compute_vanilla_preds(df)
     df = df.merge(vanilla, on="review", how="left")
     print("After merge")
     print(df.count())
