@@ -598,7 +598,7 @@ class FrozenVLSTM(AbstractModel):
 #VANILLA_CACHE = "vanilla-2020-08-11_11-16-07"
 #VANILLA_CACHE = "vanilla-64-2020-08-31_17-30"
 VANILLA_CACHE = "vanilla-64-2020-09-01_17-04-19"
-LOAD = False
+LOAD = True
 
 if not LOAD:
     dataset = IMDBDataset(CONFIG)
@@ -652,6 +652,7 @@ def compute_vanilla_preds(df):
     print("Acc predictions: ")
     print(100*acc/len(results))
     df["vanilla_prediction"] = pd.Series(results)
+    cache = f"vanilla-64-{formated_date}"
     print(f"Caching to {cache}")
     df[["review", "vanilla_prediction"]].to_csv(cache, sep="~")
     return df
@@ -743,14 +744,20 @@ def print_percentages(df, full_path):
     df["c"] = df.apply(lambda x: -1*x["contribution"] if x["label"]==0 else x["contribution"], axis=1)
     dp = df[round(df["c"]+ df["raw_pred"])!=round(df["prediction"])].count()["contribution"]
     
-    ccp = df[(round(df["vanilla_prediction"])!=round(df["prediction"])) & (df["label"]==round(df["prediction"]))].count()["contribution"]
-    icp = df[(round(df["vanilla_prediction"])!=round(df["prediction"])) & (df["label"]!=round(df["prediction"]))].count()["contribution"]
+    # ccp = df[(round(df["vanilla_prediction"])!=round(df["prediction"])) & (df["label"]==round(df["prediction"]))].count()["contribution"]
+    # icp = df[(round(df["vanilla_prediction"])!=round(df["prediction"])) & (df["label"]!=round(df["prediction"]))].count()["contribution"]
 
-    cp = df[round(df["vanilla_prediction"])!=round(df["prediction"])].count()["contribution"]
+    # cp = df[round(df["vanilla_prediction"])!=round(df["prediction"])].count()["contribution"]
+    
+    ccp = df[(round(df["raw_pred"])!=round(df["prediction"])) & (df["label"]==round(df["prediction"]))].count()["contribution"]
+    icp = df[(round(df["raw_pred"])!=round(df["prediction"])) & (df["label"]!=round(df["prediction"]))].count()["contribution"]
+
+    cp = df[round(df["raw_pred"])!=round(df["prediction"])].count()["contribution"]
     with open(full_path, "w") as f:
         v_acc = df[round(df['vanilla_prediction'])==df['label']].count()['prediction']*100/df.count()['prediction']
         m_acc = df[round(df['prediction'])==df['label']].count()['prediction']*100/df.count()['prediction']
         f.write(f"Vanilla acc: {v_acc}\n")
+        f.write(f"Raw_pred acc: {df[round(df['raw_pred'])==df['label']].count()['prediction']*100/df.count()['prediction']}\n")
         f.write(f"Model acc: {m_acc}\n")
         f.write(f"Changed prediction: {cp}\n")
         f.write(f"Different predictions (should be equal to changed pred): {dp}\n")
