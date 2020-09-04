@@ -44,9 +44,18 @@ def print_model_metrics(e1,e2):
     print(top[top["label"]==top["prediction"]]["explanation"].value_counts())
 
 # explanations_m1 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e20-2020-06-23_15-15-42/explanations/descending_contribution.txt"
-explanations_m1 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_rake-inst-distr100-4-300-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-07-10_08-52-54/explanations/new/descending_contribution.txt"
+#explanations_m1 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_rake-inst-distr100-4-300-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-07-10_08-52-54/explanations/new/descending_contribution.txt"
 #explanations_m2 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-24_15-27-01/explanations/descending_contribution.txt" # small
-explanations_m2 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-24_15-27-01/explanations/new/descending_contribution.txt"
+#explanations_m2 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-24_15-27-01/explanations/new/descending_contribution.txt"
+# explanations_m1 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.1_dr0.7_lr0.001_soa_vlstm2-256-0.5_rake-inst-distr100-4-300-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-07-10_08-52-54/explanations/new/descending_contribution.txt"
+# explanations_m2 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.8_lr0.01_soa_vlstm2-64-0.5_pretrained_rake-4-600-dnn30-1-30-decay0.0-L2-dr0.8-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-06-24_15-27-01/explanations/descending_contribution.txt" # small
+
+explanations_m1 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.7_lr0.001_soa_vlstm2-256-0.5_rake-inst-distr100-4-600-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-09-02_12-07-23/explanations/new/descending_contribution.txt"
+explanations_m2 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.001_dr0.7_lr0.01_soa_vlstm2-64-0.3_rake-inst-distr100-4-600-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-09-03_21-28-16/explanations/new-raw/descending_contribution.txt"
+
+
+
+
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 
@@ -70,7 +79,7 @@ e2=e2.drop(["review"], axis=1)
 e2.columns = [col +"_M2" if col !="id" else col for col in e2.columns]
 
 print_model_metrics(e1,e2)
-exit()
+#exit()
 
 e1_correct = e1[(e1["prediction"]==e1["label"]) & (e1["contribution"]>0)].sort_values(["contribution"], ascending=[False])
 e1_incorrect = e1[(e1["prediction"]!=e1["label"]) & (e1["contribution"]>0)]
