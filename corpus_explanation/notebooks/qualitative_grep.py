@@ -21,6 +21,8 @@ from torchtext.data import Pipeline
 import numpy as np
 import random
 import io
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
 torch.manual_seed(0)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark=False
@@ -142,7 +144,7 @@ class IMDBDataset:
     # self.train_data = self._load_data(TEXT, LABEL, "../.data/imdb/aclImdb", "train")
     # self.test_data = self._load_data(TEXT, LABEL, "../.data/imdb/aclImdb", "test")
     self.train_data = self._load_data(TEXT, LABEL, IMDB_PATH, "train")
-    # self.test_data = self._load_data(TEXT, LABEL, IMDB_PATH, "test")
+    self.test_data = self._load_data(TEXT, LABEL, IMDB_PATH, "test")
     self.train_data, self.valid_data = self.train_data.split(random_state=random.getstate())
 
     # start = datetime.now()
@@ -593,13 +595,16 @@ class FrozenVLSTM(AbstractModel):
 
         return metrics
 
-VANILLA_CACHE = "vanilla-2020-08-11_11-16-07"
+#VANILLA_CACHE = "vanilla-2020-08-11_11-16-07"
 #VANILLA_CACHE = "vanilla-64-2020-08-31_17-30"
-LOAD = True
+VANILLA_CACHE = "vanilla-64-2020-09-01_17-04-19"
+LOAD = False
 
 if not LOAD:
     dataset = IMDBDataset(CONFIG)
-
+    
+    train_iterator, valid_iterator, test_iterator = dataset.iterators()
+    
     model = FrozenVLSTM(f"raw-pred-vanilla-lstm", MODEL_MAPPING, CONFIG)
 
     model.load_checkpoint(checkpoint)
@@ -608,7 +613,8 @@ if not LOAD:
     nlp = spacy.load('en')
     for param in model.parameters():
         param.requires_grad=False
-
+    test_metrics = model.evaluate(test_iterator, "test_f")
+    print("Test metrics: " + str(test_metrics))
 
 def compute_vanilla_preds(df):
 
