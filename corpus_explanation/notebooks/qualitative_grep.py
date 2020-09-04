@@ -606,6 +606,8 @@ if not LOAD:
     model.eval()
     import spacy
     nlp = spacy.load('en')
+    for param in model.parameters():
+        param.requires_grad=False
 
 
 def compute_vanilla_preds(df):
@@ -643,11 +645,15 @@ def compute_vanilla_preds(df):
     print(len(results))
     print("Acc predictions: ")
     print(100*acc/len(results))
-    result=  pd.DataFrame(data={"review": df["review"].values, "vanilla_prediction": results})
-    cache = f"vanilla-64-{formated_date}"
+    df["vanilla_prediction"] = pd.Series(results)
     print(f"Caching to {cache}")
-    result.to_csv(cache, sep="~")
-    return result
+    df[["review", "vanilla_prediction"]].to_csv(cache, sep="~")
+    return df
+    # result=  pd.DataFrame(data={"review": df["review"].values, "vanilla_prediction": results})
+    # cache = f"vanilla-64-{formated_date}"
+    # print(f"Caching to {cache}")
+    # result.to_csv(cache, sep="~")
+    # return result
 
 def load_vanilla():
     print(f"Loading vanilla preds from {VANILLA_CACHE}")
@@ -694,7 +700,10 @@ def load_explanations(path, raw_path=""):
     df["raw_pred"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[3]) if len(x)>3 else None)
     df = df.drop_duplicates(subset=["review"])
     vanilla = load_vanilla() if LOAD else compute_vanilla_preds(df)
-    df = df.merge(vanilla, on="review", how="left")
+    if LOAD:
+        df = df.merge(vanilla, on="review", how="left")
+    else:
+        df = vanilla
     print("After merge")
     print(df.count())
     return df
