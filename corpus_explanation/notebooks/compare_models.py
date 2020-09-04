@@ -123,8 +123,13 @@ print(res2[res2.apply(lambda entry: round(float(entry["contribution_M2"]) + floa
 print("Top 100 best contributions from M1 and M2")
 result = pd.merge(left=e1_correct, right=e2_correct, left_on="id", right_on="id")
 result = result[(result["contribution_M2"]>0)&(result["contribution"]>0)]
-result = result[result["explanation"] != result["explanation_M2"]]
-print("merged correct and positive contribution for both")
+print("positive contributions")
+print(result.shape)
+result = result[(result["explanation"]!=result["explanation_M2"])]
+print("same expl")
+print(result[result["explanation"]==result["explanation_M2"]].count())
+print(result.shape)
+print("merged correct and positive contribution for both, diff expl")
 print(result.shape)
 print(result[result["contribution"]>0].count()["contribution"])
 result = pd.concat([result.sort_values(["contribution"], ascending=[False]).head(50), result.sort_values(["contribution_M2"], ascending=[False]).head(50)])
