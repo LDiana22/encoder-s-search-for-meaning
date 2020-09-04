@@ -123,6 +123,7 @@ print(res2[res2.apply(lambda entry: round(float(entry["contribution_M2"]) + floa
 print("Top 100 best contributions from M1 and M2")
 result = pd.merge(left=e1_correct, right=e2_correct, left_on="id", right_on="id")
 result = result[(result["contribution_M2"]>0)&(result["contribution"]>0)]
+result = result[result["explanation"] != result["explanation_M2"]]
 print("merged correct and positive contribution for both")
 print(result.shape)
 print(result[result["contribution"]>0].count()["contribution"])
