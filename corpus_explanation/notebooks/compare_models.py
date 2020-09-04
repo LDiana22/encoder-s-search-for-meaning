@@ -122,9 +122,13 @@ print(res2[res2.apply(lambda entry: round(float(entry["contribution_M2"]) + floa
 
 print("Top 100 best contributions from M1 and M2")
 result = pd.merge(left=e1_correct, right=e2_correct, left_on="id", right_on="id")
+print("merged correct")
+print(result.shape)
+print(result[result["contribution"]>0].count()["contribution"])
 result = pd.concat([result.sort_values(["contribution"], ascending=[False]).head(50), result.sort_values(["contribution_M2"], ascending=[False]).head(50)])
 print(result.shape)
 print(result)
+print(result[result["contribution"]>0].count()["contribution"])
 result = result.sample(frac=1).reset_index(drop=True)
 result.to_csv(args.o)
 # res.sort_values(["contribution", "contribution_M2"], ascending=[False, False], inplace=True)
