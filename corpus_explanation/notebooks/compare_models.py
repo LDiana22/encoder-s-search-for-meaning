@@ -88,14 +88,15 @@ def polarity(phrase):
 
 
 
-def print_polairty(df1, df2):
+def print_polarity(df1, df2):
     df1["polarity"] = df1["explanation"].apply(polarity)
-    df1["polarity_M2"] = df1["explanation_M2"].apply(polarity)
-    print(f"Polarity coherence with label M1: {df1[df1['polarity']==df1['label']].count()}")
-    print(f"Polarity coherence with label M2: {df2[df2['polarity_M2']==df2['label']].count()}")
+    df2["polarity_M2"] = df2["explanation_M2"].apply(polarity)
+    print(f"All: {df1.count()['polarity']} {df2.count()['polarity_M2']}")
+    print(f"Polarity coherence with label M1: {df1[df1['polarity']==df1['label']].count()['polarity']*100/df1.count()['polarity']}")
+    print(f"Polarity coherence with label M2: {df2[df2['polarity_M2']==df2['label_M2']].count()['polarity_M2']*100/df2.count()['polarity_M2']}")
 
-    print(f"Polarity coherence with prediction M1: {df1[df1['polarity']==df1['prediction']].count()}")
-    print(f"Polarity coherence with prediction M2: {df2[df2['polarity_M2']==df2['prediction_M2']].count()}")
+    print(f"Polarity coherence with prediction M1: {df1[df1['polarity']==df1['prediction']].count()['polarity']*100/df1.count()['polarity']}")
+    print(f"Polarity coherence with prediction M2: {df2[df2['polarity_M2']==df2['prediction_M2']].count()['polarity_M2']*100/df2.count()['polarity_M2']}")
 
 
 start = datetime.now()
