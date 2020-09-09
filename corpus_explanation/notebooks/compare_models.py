@@ -75,8 +75,27 @@ def print_model_metrics(e1,e2, out="output"):
 explanations_m1 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.7_lr0.001_soa_vlstm2-256-0.5_rake-inst-distr100-4-600-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-09-02_12-07-23/explanations/new/descending_contribution.txt"
 explanations_m2 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.001_dr0.7_lr0.01_soa_vlstm2-64-0.3_rake-inst-distr100-4-600-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-09-03_21-28-16/explanations/new-raw/descending_contribution.txt"
 
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
+analyzer = SentimentIntensityAnalyzer()
+
+def polarity(phrase):
+    if analyzer.polarity_scores(phrase)['neg']>0.5:
+        return 1
+    if analyzer.polarity_scores(phrase)['pos']>0.5:
+        return 0
+    return None
 
 
+
+def print_polairty(df1, df2):
+    df1["polarity"] = df1["explanation"].apply(polarity)
+    df1["polarity_M2"] = df1["explanation_M2"].apply(polarity)
+    print(f"Polarity coherence with label M1: {df1[df1['polarity']==df1['label']].count()}")
+    print(f"Polarity coherence with label M2: {df2[df2['polarity_M2']==df2['label']].count()}")
+
+    print(f"Polarity coherence with prediction M1: {df1[df1['polarity']==df1['prediction']].count()}")
+    print(f"Polarity coherence with prediction M2: {df2[df2['polarity_M2']==df2['prediction_M2']].count()}")
 
 
 start = datetime.now()
@@ -100,7 +119,7 @@ e1 = load_explanations(args.p1)#.sort_values(by="id") #large (VLSTM+)
 e2 = load_explanations(args.p2)#.sort_values(by="id") #small
 e2=e2.drop(["review"], axis=1)
 e2.columns = [col +"_M2" if col !="id" else col for col in e2.columns]
-
+print_polarity(e1,e2)
 
 
 #print_model_metrics(e1,e2)
@@ -219,25 +238,5 @@ def sample_c1_2(res1,res2):
 res = sample_c1_2(res1,res2)
 print(res.shape)
 
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-
-analyzer = SentimentIntensityAnalyzer()
-
-def polarity(phrase):
-    if analyzer.polarity_scores(phrase)['neg']>0.5:
-        return 1
-    if analyzer.polarity_scores(phrase)['pos']>0.5:
-        return 0
-    return None
-
-res["E1_polarity"] = res["explanation"].apply(polarity)
-
-res["E2_polarity"] = res["explanation_M2"].apply(polarity)
-
-print(f"Polarity coherence with label M1: {res[res['E1_polarity']==res['label']].count()}")
-print(f"Polarity coherence with label M2: {res[res['E2_polarity']==res['label']].count()}")
-
-print(f"Polarity coherence with prediction M1: {res[res['E1_polarity']==res['prediction']].count()}")
-print(f"Polarity coherence with prediction M2: {res[res['E2_polarity']==res['prediction_M2']].count()}")
 
 #res.to_csv(args.o)
