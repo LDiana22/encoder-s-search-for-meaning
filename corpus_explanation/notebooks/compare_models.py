@@ -17,22 +17,44 @@ def load_explanations(path):
     df["explanation"] = df["explanation"].apply(lambda s: s.split("'")[1])
     return df
 
-def print_model_metrics(e1,e2):
+def print_model_metrics(e1,e2, out="output"):
     print("M1(large)")
     print("Highest contribution explanations")
     e1.sort_values(["contribution"], ascending=[False], inplace=True)
-    # print("Most frequent explanations")
-    # print(e1[e1["contribution"]>0]["explanation"].value_counts()[:20])
-    # print(e2[e2["contribution_M2"]>0]["explanation_M2"].value_counts()[:20])
-
-    # print(e1[(e1["label"]==e1["prediction"]) & (e1["label"]==0)].head(100)["explanation"].value_counts()[:20])
-    # print(e2[(e2["label_M2"]==e2["prediction_M2"]) & (e2["label_M2"]==0)].head(100)["explanation_M2"].value_counts()[:20])
+    e2.sort_values(["contribution_M2"], ascending=[False], inplace=True)
+    # print("Most frequent explanations M1")
+    # e1[e1["contribution"]>0]["explanation"].value_counts().to_csv(out+"-mostfreq-M1.txt")
+    # print(e1[e1["contribution"]>0]["explanation"].value_counts()[:50])
+    # print("Mist frequent explanations M2")
+    # print(e2[e2["contribution_M2"]>0]["explanation_M2"].value_counts()[:50])
+    # with open(out+"-mostfreq-256.txt", "w") as f:
+    #     counts = e1[e1["contribution"]>0]["explanation"].value_counts()
+    #     expl = "\n\item ".join(e1[e1["contribution"]>0]["explanation"].value_counts().to_string().split("\n"))
+    #     f.write(expl)
     
-    # print(e1[(e1["label"]==e1["prediction"]) & (e1["label"]==1)].head(100)["explanation"].value_counts()[:20])
-    # print(e2[(e2["label_M2"]==e2["prediction_M2"]) & (e2["label_M2"]==1)].head(100)["explanation_M2"].value_counts()[:20])
-        
-    print(e1[(e1["label"]!=e1["prediction"]) & (e1["label"]==0)].head(100)["explanation"].value_counts()[:20])
-    print(e2[(e2["label_M2"]!=e2["prediction_M2"]) & (e2["label_M2"]==0)].head(100)["explanation_M2"].value_counts()[:20])
+    # with open(out+"-mostfreq-64.txt", "w") as f:
+    #     counts = e2[e2["contribution_M2"]>0]["explanation_M2"].value_counts()
+    #     expl = "\n\item ".join(e2[e2["contribution_M2"]>0]["explanation_M2"].value_counts().to_string().split("\n"))
+    #     f.write(expl)
+    # e2[e2["contribution_M2"]>0]["explanation_M2"].value_counts().to_csv(out+"-mostfreq-M2.txt")
+    #print("correct prediction - M1 - Neg")
+    #print(e1[(e1["label"]==e1["prediction"]) & (e1["label"]==1)].head(100)[["explanation", "contribution"]][:30])
+    
+
+    #print(e1[(e1["label"]==e1["prediction"]) & (e1["label"]==1)].head(100)["explanation"].value_counts()[:30])
+    
+    #print("correct prediction - M2 - Neg")
+    #print(e2[(e2["label_M2"]==e2["prediction_M2"]) & (e2["label_M2"]==1)].head(100)[["explanation_M2", "contribution_M2"]][:30])
+    #print(e2[(e2["label_M2"]==e2["prediction_M2"]) & (e2["label_M2"]==1)].head(100)["explanation_M2"].value_counts()[:30])
+    #print(e1[(e1["label"]==e1["prediction"]) & (e1["label"]==1)].head(100)["explanation"].value_counts()[:20])
+    #print(e2[(e2["label_M2"]==e2["prediction_M2"]) & (e2["label_M2"]==1)].head(100)["explanation_M2"].value_counts()[:20])
+    print("False pos - M1")
+       
+    print(e1[(e1["label"]!=e1["prediction"]) & (e1["label"]==0)].head(100)[["explanation", "contribution"]][:30])
+    print(e1[(e1["label"]!=e1["prediction"]) & (e1["label"]==0)].head(100)["explanation"].value_counts()[:30])
+    print("False pos - M2")
+    print(e2[(e2["label_M2"]!=e2["prediction_M2"]) & (e2["label_M2"]==0)].head(100)[["explanation_M2", "contribution_M2"]][:30])
+    print(e2[(e2["label_M2"]!=e2["prediction_M2"]) & (e2["label_M2"]==0)].head(100)["explanation_M2"].value_counts()[:30])
     
     return
     # print(e1[e1["label"]==e1["prediction"]].head(100)["explanation"].value_counts())
@@ -52,6 +74,7 @@ def print_model_metrics(e1,e2):
 
 explanations_m1 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.01_dr0.7_lr0.001_soa_vlstm2-256-0.5_rake-inst-distr100-4-600-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-09-02_12-07-23/explanations/new/descending_contribution.txt"
 explanations_m2 = "experiments/soa-dicts/bilstm_mlp_improve_30-30_l20.001_dr0.7_lr0.01_soa_vlstm2-64-0.3_rake-inst-distr100-4-600-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-09-03_21-28-16/explanations/new-raw/descending_contribution.txt"
+
 
 
 
@@ -78,8 +101,10 @@ e2 = load_explanations(args.p2)#.sort_values(by="id") #small
 e2=e2.drop(["review"], axis=1)
 e2.columns = [col +"_M2" if col !="id" else col for col in e2.columns]
 
-print_model_metrics(e1,e2)
-#exit()
+
+
+#print_model_metrics(e1,e2)
+exit()
 
 e1_correct = e1[(e1["prediction"]==e1["label"]) & (e1["contribution"]>0)].sort_values(["contribution"], ascending=[False])
 e1_incorrect = e1[(e1["prediction"]!=e1["label"]) & (e1["contribution"]>0)]
@@ -106,6 +131,21 @@ print(f"E1_INC/E2_C: {res2.shape}")
 #ies2 = pd.concat(columns=e1_correct.columns+e2_correct.columns, join="outer")
 res = pd.concat([res1,res2]) 
 print(f"Together: {res.shape}")
+print(res.describe())
+res = res[(res["contribution"]>0)&(res["contribution_M2"]>0)]
+print("res pos cont")
+print(res.shape)
+res = res[res["explanation"]!=res["explanation_M2"]]
+print("diff expl")
+print(res.shape)
+
+half_correct_incorrect =pd.concat([res.sort_values(["contribution"], ascending=[False]).head(25), res.sort_values(["contribution_M2"], ascending=[False]).head(25)])
+print("Final")
+print(res.describe())
+print(res.shape)
+#res.to_csv(args.o)
+#exit()
+
 
 #contribution was not enough
 print("Inccorect predictions where the contribution was not enough to change the prediction")
@@ -119,20 +159,44 @@ print("Other")
 print(res1[res1.apply(lambda entry: round(float(entry["contribution"]) + float(entry["raw_pred"])) != round(float(entry["raw_pred"])), axis=1)].shape)
 print(res2[res2.apply(lambda entry: round(float(entry["contribution_M2"]) + float(entry["raw_pred_M2"])) != round(float(entry["raw_pred_M2"])), axis=1)].shape)
 
-
-print("Top 100 best contributions from M1 and M2")
-result = pd.merge(left=e1_correct, right=e2_correct, left_on="id", right_on="id")
-result = result[(result["contribution_M2"]>0)&(result["contribution"]>0)]
+print("All reviews")
+#result = pd.merge(left=e1_correct, right=e2_correct, left_on="id", right_on="id")
+result = pd.merge(left=e1, right=e2, left_on="id", right_on="id")
+result =result[(result["contribution"]>0)&(result["contribution_M2"]>0)]
+comparison= result[(result["contribution_M2"]>0)&(result["contribution"]>0)&(result["prediction"]!=result["prediction_M2"])&(result["explanation"]!=result["explanation_M2"])]
+comparison = pd.concat([comparison.sort_values(["contribution"], ascending=[False]).head(25), comparison.sort_values(["contribution_M2"], ascending=[False]).head(25)])
+print("Comparison positive contribution, different prediction, different expl")
+print(comparison.describe())
+print("M1")
+print(e1[e1["contribution"]>0].sort_values(["contribution"], ascending=[False]).head(100).describe())
+print("M2")
+print(e2[e2["contribution_M2"]>0].sort_values(["contribution_M2"], ascending=[False]).head(100).describe())
+print("max contribution M1, contribution M2")
+print(result[result["contribution"]==max(result["contribution"])]["contribution_M2"])
+eq = result[result["prediction"]==result["prediction_M2"]]
+final_result = pd.concat([comparison, eq.sort_values(["contribution"], ascending=[False]).head(25), eq.sort_values(["contribution_M2"], ascending=[False]).head(25)])
+print("final")
+print(final_result.shape)
+print(final_result[["contribution", "contribution_M2"]].describe())
+final_result.to_csv(args.o)
+exit()
 print("positive contributions")
 print(result.shape)
-result = result[(result["explanation"]!=result["explanation_M2"])]
-print("same expl")
-print(result[result["explanation"]==result["explanation_M2"]].count())
-print(result.shape)
-print("merged correct and positive contribution for both, diff expl")
-print(result.shape)
-print(result[result["contribution"]>0].count()["contribution"])
-result = pd.concat([result.sort_values(["contribution"], ascending=[False]).head(50), result.sort_values(["contribution_M2"], ascending=[False]).head(50)])
+#result = result[result["explanation"]!=result["explanation_M2"]]
+print(result.describe())
+result = pd.concat([result.sort_values(["contribution"], ascending=[False]).head(25), result.sort_values(["contribution_M2"], ascending=[False]).head(25)])
+print("same prediction, same explanation")
+print(result[result["explanation"]==result["explanation_M2"]].count()["prediction"])
+result = pd.concat([result, half_correct_incorrect])
+result2 = pd.merge(left=e1, right=e2, left_on="id", right_on="id")
+result2 = result2[(result2["contribution"]>0)&(result2["contribution_M2"]>0)&(result2["explanation"]!=result2["explanation_M2"])]
+eq = result2[result2["prediction"]==result2["prediction_M2"]]
+neq = result2[result2["prediction"]!=result2["prediction_M2"]]
+result_met2 = pd.concat([eq.sort_values(["contribution"], ascending=[False]).head(25), eq.sort_values(["contribution_M2"], ascending=[False]).head(25), neq.sort_values(["contribution"], ascending=[False]).head(25), neq.sort_values(["contribution_M2"], ascending=[False]).head(25)])
+intersection = pd.merge(result, result_met2, how="inner", left_on="id", right_on="id")
+print("Common between c/i and top pos contributions")
+print(intersection.count())
+exit()
 print(result.shape)
 print(result)
 print(result[result["contribution"]>0].count()["contribution"])
@@ -176,4 +240,4 @@ print(f"Polarity coherence with label M2: {res[res['E2_polarity']==res['label']]
 print(f"Polarity coherence with prediction M1: {res[res['E1_polarity']==res['prediction']].count()}")
 print(f"Polarity coherence with prediction M2: {res[res['E2_polarity']==res['prediction_M2']].count()}")
 
-res.to_csv(args.o)
+#res.to_csv(args.o)
