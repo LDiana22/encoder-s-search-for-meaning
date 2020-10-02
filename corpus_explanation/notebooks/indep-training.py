@@ -1973,7 +1973,7 @@ class MLPIndependentOneDict(AbstractModel):
         expl_text = np.array(list(dictionary.keys()))[most_important_expl_idx]
         #expl: (count in class, distr value)
         for i, text in enumerate(expl_text):
-            decoded[text]= (dictionary[text], distr[most_important_expl_idx[i]].item())
+            decoded[text]= decoded.get(text, []).append((dictionary[text], distr[most_important_expl_idx[i]].item()))
         #         batch_explanations.append(decoded)
         # list of 
         # ordered dict {expl:count} for a given dictionary/class
