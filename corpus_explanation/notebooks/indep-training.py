@@ -3099,7 +3099,7 @@ try:
     parser.add_argument('-d', metavar='dictionary_type', type=str, default=None,
                         help='Dictionary type: tfidf, rake-inst, rake-corpus, textrank, yake')
 
-    parser.add_argument('-dcp', type=str, help="dict load")
+    parser.add_argument('-dcp', type=str, help="dict load", default="experiments/soa-dicts/dictionaries/rake-max-words-instance-5-5-filtered/dictionary-2020-07-14_15-07-42.h5")
     parser.add_argument('-cp', type=str, help='vanilla checkpoint')
     parser.add_argument('-m', metavar='model_type', type=str,
                         help='frozen_mlp_bilstm, frozen_bilstm_mlp, bilstm_mlp_similarity')
@@ -3142,9 +3142,9 @@ try:
         "cuda": True,
         "restore_v_checkpoint" : True,
         # "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
-        "checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
+        #"checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
         #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n1-h64-dr0.05/snapshot/2020-06-16_19-33-50_e4",
-        #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
+        "checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
         #"checkpoint_v_file": args.cp,
         "train": True,
         "max_words_dict": args.p,
@@ -3164,7 +3164,7 @@ try:
         # "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
         # "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-max-words-instance-300-4/dictionary-2020-06-02_16-00-44.h5",
         #"dict_checkpoint":"experiments/dict_acquisition/dictionaries/textrank-filtered_True-p5-d300/dictionary-2020-06-05_14-56-57.h5",
-        #"dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
+        #"dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5", # sorted reverse alphabetically
         "toy_data": args.td,
         "lr": args.lr,
         "l2_wd": args.l2, 
@@ -3172,8 +3172,8 @@ try:
         "phrase_len":4,
         "id":args.m,
         "train": not args.eval,
-        "restore_checkpoint" : args.eval,
-        "checkpoint_file": "experiments/soa-dicts/bilstm_mlp_improve_15-25_l20.1_dr0.5_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn15-1-25-decay0.0-L2-dr0.5-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e30-2020-06-17_14-52-49/snapshot/2020-06-17_16-02-07_e6"
+        "restore_checkpoint" : args.eval
+        #"checkpoint_file": "experiments/soa-dicts/bilstm_mlp_improve_15-25_l20.1_dr0.5_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn15-1-25-decay0.0-L2-dr0.5-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e30-2020-06-17_14-52-49/snapshot/2020-06-17_16-02-07_e6"
     })
     print(experiment.config)
 
