@@ -1460,7 +1460,7 @@ class MLPGen(AbstractModel):
         expl_text = np.array(list(dictionary.keys()))[most_important_expl_idx]
         #expl: (count in class, distr value)
         for i, text in enumerate(expl_text):
-            decoded[text]= (dictionary[text], distr[most_important_expl_idx[i]].item())
+            decoded[text]= decoded.get(text, []).append((dictionary[text], distr[most_important_expl_idx[i]].item()))
 #         batch_explanations.append(decoded)
         # list of 
         # ordered dict {expl:count} for a given dictionary/class
@@ -3172,7 +3172,8 @@ try:
         "train": not args.eval,
         "restore_checkpoint" : args.eval
         #"checkpoint_file": "experiments/soa-dicts/bilstm_mlp_improve_15-25_l20.1_dr0.5_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn15-1-25-decay0.0-L2-dr0.5-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e30-2020-06-17_14-52-49/snapshot/2020-06-17_16-02-07_e6"
-    })
+        #"checkpoint_file":"experiments/soa-dicts/soft_bilstm_mlp_improve_30-30_l20.01_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-10-02_13-45-59/snapshot/2020-10-02_15-40-18_e10"
+        })
     print(experiment.config)
 
     start = datetime.now()
