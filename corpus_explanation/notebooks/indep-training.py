@@ -1953,7 +1953,7 @@ class MLPIndependentOneDict(AbstractModel):
             for tensor in tensor_list]).to(self.device)
 
 
-    def _decode_expl_distr(self, distr, dictionary, threshold_expl_score=0.1):
+    def _decode_expl_distr(self, distr, dictionary, threshold_expl_score=0.001):
         """
         An expl distribution for a given dict
         dictionary - the dict corresponding to the class of the distribution
