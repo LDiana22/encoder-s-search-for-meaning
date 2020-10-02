@@ -97,6 +97,9 @@ def print_polarity(df1, df2):
 
     print(f"Polarity coherence with prediction M1: {df1[df1['polarity']==df1['prediction']].count()['polarity']*100/df1.count()['polarity']}")
     print(f"Polarity coherence with prediction M2: {df2[df2['polarity_M2']==df2['prediction_M2']].count()['polarity_M2']*100/df2.count()['polarity_M2']}")
+    import ipdb
+    ipdb.set_trace(context=20)
+    print("here")
 
 
 start = datetime.now()
@@ -120,11 +123,15 @@ e1 = load_explanations(args.p1)#.sort_values(by="id") #large (VLSTM+)
 e2 = load_explanations(args.p2)#.sort_values(by="id") #small
 e2=e2.drop(["review"], axis=1)
 e2.columns = [col +"_M2" if col !="id" else col for col in e2.columns]
-print_polarity(e1,e2)
+#print_polarity(e1,e2)
 
 
 #print_model_metrics(e1,e2)
-exit()
+
+df = pd.merge(left=e1, right=e2, left_on="id", right_on="id")
+import ipdb
+ipdb.set_trace(context=10)
+#exit()
 
 e1_correct = e1[(e1["prediction"]==e1["label"]) & (e1["contribution"]>0)].sort_values(["contribution"], ascending=[False])
 e1_incorrect = e1[(e1["prediction"]!=e1["label"]) & (e1["contribution"]>0)]
