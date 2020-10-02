@@ -35,6 +35,7 @@ random.seed(0)
 
 #checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5"
 checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4" #64
+#checkpoint ="experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.1/snapshot/2020-07-05_18-26-59_e4"
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 PREFIX_DIR = "experiments/soa-dicts"
@@ -50,8 +51,6 @@ CONFIG={
     "patience": 10,
 
     "objective": "cross_entropy",
-    "lr": 0.001,
-    "l2_wd": 0,
 
     "gumbel_decay": 1e-5,
 
@@ -81,7 +80,7 @@ CONFIG={
         #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n1-h64-dr0.05/snapshot/2020-06-16_19-33-50_e4",
         "checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
         #"checkpoint_v_file": args.cp,
-        "train": True,
+        "train": False,
         "max_words_dict": 4,
         "patience": 5,
         "epochs": 0,
@@ -92,7 +91,7 @@ CONFIG={
         "n2": 1,
         "n3": 30,
         "alpha_decay": 0.01,
-        "dropout": 0.5, 
+        "dropout": 0.3, 
         "load_dictionary":True,
         "dict_checkpoint": "experiments/dictionaries_load/dictionaries/rake-inst-unsorted-dist100-600-600-4-filteredTrue/dictionary-2020-07-09_23-31-43.h5",
         #"dict_checkpoint": "experiments/dictionaries_load/dictionaries/test-rake-corpus-600-4-filtered/dictionary-2020-07-07_18-18-56.h5",
@@ -102,7 +101,7 @@ CONFIG={
         #"dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
         "toy_data": False,
         "lr": 0.01,
-        "l2_wd": 0.01, 
+        "l2_wd": 0.001, 
         "filterpolarity": True,
         "phrase_len":4,
         "id": "vanilla",
@@ -744,10 +743,10 @@ def print_percentages(df, full_path):
     df["c"] = df.apply(lambda x: -1*x["contribution"] if x["label"]==0 else x["contribution"], axis=1)
     dp = df[round(df["c"]+ df["raw_pred"])!=round(df["prediction"])].count()["contribution"]
     
-    # ccp = df[(round(df["vanilla_prediction"])!=round(df["prediction"])) & (df["label"]==round(df["prediction"]))].count()["contribution"]
-    # icp = df[(round(df["vanilla_prediction"])!=round(df["prediction"])) & (df["label"]!=round(df["prediction"]))].count()["contribution"]
+    #ccp = df[(round(df["vanilla_prediction"])!=round(df["prediction"])) & (df["label"]==round(df["prediction"]))].count()["contribution"]
+    #icp = df[(round(df["vanilla_prediction"])!=round(df["prediction"])) & (df["label"]!=round(df["prediction"]))].count()["contribution"]
 
-    # cp = df[round(df["vanilla_prediction"])!=round(df["prediction"])].count()["contribution"]
+    #cp = df[round(df["vanilla_prediction"])!=round(df["prediction"])].count()["contribution"]
     
     ccp = df[(round(df["raw_pred"])!=round(df["prediction"])) & (df["label"]==round(df["prediction"]))].count()["contribution"]
     icp = df[(round(df["raw_pred"])!=round(df["prediction"])) & (df["label"]!=round(df["prediction"]))].count()["contribution"]
@@ -819,7 +818,7 @@ def sample_metrics(df, path, sample_count=10):
 ##################################################################
 
 #sample_metrics(df[df["prediction"]==df["label"]], args.p)
-base_path = os.path.join(args.p, 'new')
+base_path = os.path.join(args.p, 'new-raw')
 if not os.path.exists(base_path):
     os.makedirs(base_path)
 print("all instances...")

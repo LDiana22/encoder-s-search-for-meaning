@@ -108,6 +108,8 @@ print(keywords_list)
 
 vocab = []
 i = 1
+import ipdb
+ipdb.set_trace(context=10)
 while i <len(a):
 	phrase = a[i-1]
 	c_word = a[i]
@@ -117,7 +119,7 @@ while i <len(a):
 		c_word = a[i]
 	vocab +=phrase
 	i=i+1
-
+ipdb.set_trace(context=10)
 print(vocab)
 
 
