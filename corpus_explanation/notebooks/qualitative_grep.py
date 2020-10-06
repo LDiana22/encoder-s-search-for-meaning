@@ -35,6 +35,7 @@ random.seed(0)
 
 #checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5"
 checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4" #64
+#experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4
 #checkpoint ="experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.1/snapshot/2020-07-05_18-26-59_e4"
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
@@ -93,7 +94,8 @@ CONFIG={
         "alpha_decay": 0.01,
         "dropout": 0.3, 
         "load_dictionary":True,
-        "dict_checkpoint": "experiments/dictionaries_load/dictionaries/rake-inst-unsorted-dist100-600-600-4-filteredTrue/dictionary-2020-07-09_23-31-43.h5",
+        "dict_checkpoint": "experiments/soa-dicts/dictionaries/rake-max-words-instance-5-5-filtered/dictionary-2020-07-14_15-07-42.h5",
+        #"dict_checkpoint": "experiments/dictionaries_load/dictionaries/rake-inst-unsorted-dist100-600-600-4-filteredTrue/dictionary-2020-07-09_23-31-43.h5",
         #"dict_checkpoint": "experiments/dictionaries_load/dictionaries/test-rake-corpus-600-4-filtered/dictionary-2020-07-07_18-18-56.h5",
         # "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
         # "dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-max-words-instance-300-4/dictionary-2020-06-02_16-00-44.h5",
@@ -111,7 +113,79 @@ CONFIG={
         #"checkpoint_file": "experiments/soa-dicts/bilstm_mlp_improve_15-25_l20.1_dr0.5_soa_vlstm2-256-0.5_pretrained_rake-4-600-dnn15-1-25-decay0.0-L2-dr0.5-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e30-2020-06-17_14-52-49/snapshot/2020-06-17_16-02-07_e6"
     }
 
+#h
 
+CONFIG = {
+    "toy_data": False, # load only a small subset
+
+    "cuda": True,
+
+    "embedding": "glove",
+
+    "restore_checkpoint" : False,
+    "checkpoint_file": None,
+
+    "dropout": 0.3,
+    "weight_decay": 5e-06,
+
+    "alpha": 0.5,
+
+    "patience": 10,
+
+    "epochs": 200,
+
+    "objective": "cross_entropy",
+    "init_lr": 0.0001,
+
+    "gumbel_decay": 1e-5,
+
+
+    "max_words_dict": 5,
+
+
+    "prefix_dir" : PREFIX_DIR,
+
+    "dirs": {
+        "metrics": "metrics",
+        "checkpoint": "snapshot",
+        "dictionary": "dictionaries",
+        "explanations": "explanations",
+        "plots": "plots"
+        },
+
+    "aspect": "palate", # aroma, palate, smell, all
+    "max_vocab_size": 100000,
+    "emb_dim": 300,
+    "batch_size": 32,
+    "output_dim": 1,
+    "load_dictionary": True,
+
+    "lr": 0.001,
+    "hidden_dim": 64,
+    "n_layers": 2,
+    "max_dict": 1000, 
+    "cuda": True,
+    "restore_v_checkpoint" : True,
+    #"checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
+    "checkpoint_v_file" : "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
+    #"checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
+    "train": False,
+    "phrase_len": 4,
+    "patience":20,
+    "epochs": 10,
+    'alpha': 0.5,
+    "n1": 1,
+    "n3": 1,
+    "alpha_decay": 0,
+    "l2_wd":0.1,
+    #"dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
+    #"dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
+    
+    "dict_checkpoint": "experiments/dictionaries_load/dictionaries/test-rake-corpus-600-4-filtered/dictionary-2020-07-07_18-18-56.h5",
+    "filterpolarity": True,
+    "toy_data": False
+}
+#h
 def remove_br_tag(token):
     return re.sub(r"br|(/><.*)|(</?(.*)/?>)|(<?(.*)/?>)|(<?/?(.*?)/?>?)", "", token)
 
@@ -221,6 +295,7 @@ class IMDBDataset:
   def override(self, args):
     self.args.update(args)
     return self
+
 
 class AbstractModel(nn.Module):
     """
@@ -448,6 +523,10 @@ class AbstractModel(nn.Module):
         metrics[f"{prefix}_weightedf1"] = e_wf1/size
         return metrics
 
+
+#here
+
+
 class FrozenVLSTM(AbstractModel):
     """
     Baseline - no generator model
@@ -464,20 +543,11 @@ class FrozenVLSTM(AbstractModel):
         super().__init__(id, mapping_file_location, model_args)
         self.device = torch.device('cuda' if model_args["cuda"] else 'cpu')
 
-        #UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
-        #PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
-        
-        
+        # UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
+        # PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
         self.input_size = model_args["max_vocab_size"]
         self.embedding = nn.Embedding(self.input_size, model_args["emb_dim"])
-        if model_args["emb"]=="glove":
-
-            self.embedding.weight.data.copy_(model_args["vectors"])
-            self.embedding.weight.data[model_args["unk_idx"]] = torch.zeros(model_args["emb_dim"])
-            self.embedding.weight.data[model_args["pad_idx"]] = torch.zeros(model_args["emb_dim"])
-        else:
-            nn.init.uniform_(self.embedding.weight.data,-1,1)
-
+        nn.init.uniform_(self.embedding.weight.data,-1,1)
 
         self.lstm = nn.LSTM(model_args["emb_dim"], 
                            model_args["hidden_dim"], 
@@ -487,7 +557,6 @@ class FrozenVLSTM(AbstractModel):
         self.lin = nn.Linear(2*model_args["hidden_dim"], model_args["output_dim"])
         self.dropout = nn.Dropout(model_args["dropout"])
 
-        #self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()))
         self.optimizer = optim.Adam(self.parameters())
         self.criterion = nn.BCEWithLogitsLoss().to(self.device)
 
@@ -535,30 +604,25 @@ class FrozenVLSTM(AbstractModel):
         e.g. metrics={"train_acc": 90.0, "train_loss": 0.002}
         """
         e_loss = 0
-        e_acc, e_prec_neg, e_prec_pos, e_rec_neg, e_rec_pos = 0,0,0,0,0
-        e_f1_neg, e_f1_pos, e_macrof1, e_microf1, e_wf1 = 0,0,0,0,0
+        e_acc, e_prec, e_rec = 0,0,0
+        e_f1, e_macrof1, e_microf1, e_wf1 = 0,0,0,0
 
         self.train()
 
         for batch in iterator:
             self.optimizer.zero_grad()
             text, text_lengths = batch.text
-            #logits = self.forward(text, text_lengths)[0].squeeze()
-            logits = self.forward(text, text_lengths).squeeze()
-
-
+            logits = self.forward(text, text_lengths)[0].squeeze()
             batch.label = batch.label.to(self.device)
-            loss = self.criterion(logits, batch.label)       
+            loss = self.criterion(logits, batch.label)
+
             y_pred = torch.round(torch.sigmoid(logits)).detach().cpu().numpy()
             y_true = batch.label.cpu().numpy()
             #metrics
             acc = accuracy_score(y_true, y_pred)
-            prec_neg = precision_score(y_true, y_pred, pos_label=1)
-            prec_pos = precision_score(y_true, y_pred, pos_label=0)
-            rec_neg = recall_score(y_true, y_pred, pos_label=1)
-            rec_pos = recall_score(y_true, y_pred, pos_label=0)
-            f1_neg = f1_score(y_true, y_pred, pos_label=1)
-            f1_pos = f1_score(y_true, y_pred, pos_label=0)
+            prec = precision_score(y_true, y_pred)
+            rec = recall_score(y_true, y_pred)
+            f1 = f1_score(y_true, y_pred)
             macrof1 = f1_score(y_true, y_pred, average='macro')
             microf1 = f1_score(y_true, y_pred, average='micro')
             wf1 = f1_score(y_true, y_pred, average='weighted')
@@ -568,12 +632,9 @@ class FrozenVLSTM(AbstractModel):
 
             e_loss += loss.item()
             e_acc += acc
-            e_prec_neg += prec_neg
-            e_prec_pos += prec_pos
-            e_rec_neg += rec_neg
-            e_rec_pos += rec_pos
-            e_f1_neg += f1_neg
-            e_f1_pos += f1_pos
+            e_prec += prec
+            e_rec += rec
+            e_f1 += f1
             e_macrof1 += macrof1
             e_microf1 += microf1
             e_wf1 += wf1
@@ -582,22 +643,25 @@ class FrozenVLSTM(AbstractModel):
         size = len(iterator)
         metrics["train_loss"] = e_loss/size
         metrics["train_acc"] = e_acc/size
-        metrics["train_prec_neg"] = e_prec_neg/size
-        metrics["train_prec_pos"] = e_prec_pos/size
-        metrics["train_rec_neg"] = e_rec_neg/size
-        metrics["train_rec_pos"] = e_rec_pos/size
-        metrics["train_f1_neg"] = e_f1_neg/size
-        metrics["train_f1_pos"] = e_f1_pos/size
+        metrics["train_prec"] = e_prec/size
+        metrics["train_rec"] = e_rec/size
+        metrics["train_f1"] = e_f1/size
         metrics["train_macrof1"] = e_macrof1/size
         metrics["train_microf1"] = e_microf1/size
         metrics["train_weightedf1"] = e_wf1/size
 
         return metrics
 
+
+
+
+
 #VANILLA_CACHE = "vanilla-2020-08-11_11-16-07"
 #VANILLA_CACHE = "vanilla-64-2020-08-31_17-30"
 VANILLA_CACHE = "vanilla-64-2020-09-01_17-04-19"
-LOAD = True
+VANILLA_CACHE = "vanilla-64-2020-09-04_13-51-07"
+VANILLA_CACHE = "vanilla-64-2020-08-31_19-36-11"
+LOAD = False
 
 if not LOAD:
     dataset = IMDBDataset(CONFIG)
@@ -735,6 +799,8 @@ def print_metrics(df, full_path, field="contribution"):
         f.write(f"Min: {min_c}\n")
         f.write(f"Max: {max_c}\n")
         f.write(f"StdDev: {std}\n")
+        #import ipdb
+        #ipdb.set_trace(context=10)
         f.write(f"Positive %: {df[df[field]>0][field].count()*100/df[field].count()}\n\n")
         f.write(f"Positive contributions count {df[df[field]>0][field].count()}\n")
         f.write(f"All contributions count {df[field].count()}\n")
@@ -831,6 +897,7 @@ plot_hist(df["contribution"], "Histogram all contributions", all_hist_path)
 
 print("all correct instances...")
 all_metrics_path = os.path.join(base_path, "all_correct_metrics.txt")
+print(df[round(df["prediction"])==df["label"]].count())
 print_metrics(df[round(df["prediction"])==df["label"]], all_metrics_path)
 pos_hist_path = os.path.join(base_path, "all_correct_hist.png")
 plot_hist(df["contribution"], "Histogram positives' contributions", pos_hist_path)
