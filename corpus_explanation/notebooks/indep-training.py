@@ -62,11 +62,11 @@ random.seed(0)
 
 VECTOR_CACHE = "../.vector_cache"
 UCI_PATH = "../.data/uci"
-IMDB_PATH = "../.data/imdb/aclImdb"
+IMDB_PATH = "../.data/imdb/ro"
 #PREFIX_DIR = "experiments/independent"
 #MODEL_MAPPING = "experiments/model_mappings/independent"
-PREFIX_DIR = "experiments/soa-dicts"
-MODEL_MAPPING = "experiments/soa-dicts/model_mapping"
+PREFIX_DIR = "experiments/ro"
+MODEL_MAPPING = "experiments/ro/model_mapping"
 
 MODEL_NAME = "mlp+frozen_bilstm_gumb-emb-one-dict-long"
 
@@ -2774,7 +2774,8 @@ class MLPAfterIndependentOneDictSimilarity(AbstractModel):
         embedded = self.dropout(self.embedding(text))
 
         #embedded = [sent len, batch size, emb dim]
-        self.vanilla.eval()
+        #todo here
+        #self.vanilla.eval()
         output, hidden = self.vanilla.raw_forward(embedded, text_lengths)
         self.raw_predictions = torch.sigmoid(output).squeeze().detach()
         #output = [sent len, batch size, hid dim * num directions]
@@ -3138,14 +3139,15 @@ try:
         "n_layers": args.nl,
         "max_dict": 1000, 
         "cuda": True,
-        "restore_v_checkpoint" : True,
+        "restore_v_checkpoint" : False,
         # "checkpoint_v_file": "experiments/gumbel-seed-true/v-lstm/snapshot/2020-04-10_15-04-57_e2",
-        "checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
+        #"checkpoint_v_file" :"experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5",
         #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n1-h64-dr0.05/snapshot/2020-06-16_19-33-50_e4",
-        #"checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
+        "checkpoint_v_file": "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4",
         #"checkpoint_v_file": args.cp,
         "train": True,
-        "max_words_dict": args.p,
+        "phrase_len": args.p,
+        "max_words_dict": 600,
         "patience": 5,
         "epochs": args.e,
         "alpha": args.a,
@@ -3156,7 +3158,7 @@ try:
         "n3": args.n3,
         "alpha_decay": args.decay,
         "dropout": args.dr, 
-        "load_dictionary":True,
+        "load_dictionary":False,
         "dict_checkpoint": args.dcp,
         #"dict_checkpoint": "experiments/dictionaries_load/dictionaries/test-rake-corpus-600-4-filtered/dictionary-2020-07-07_18-18-56.h5",
         # "dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
@@ -3166,7 +3168,7 @@ try:
         "toy_data": args.td,
         "lr": args.lr,
         "l2_wd": args.l2, 
-        "filterpolarity": True,
+        "filterpolarity": False,
         "phrase_len":4,
         "id":args.m,
         "train": not args.eval,
@@ -3175,7 +3177,7 @@ try:
         #"checkpoint_file":"experiments/soa-dicts/soft_bilstm_mlp_improve_30-30_l20.01_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-e20-dnn30-1-30-decay0.0-L2-dr0.7-eval1-rake-inst-4-600-improveloss_mean-alpha0.7-c-e10-2020-10-02_13-45-59/snapshot/2020-10-02_15-40-18_e10"
         })
     print(experiment.config)
-
+#python -u indep-training.py -d "rake-inst" -m "ro_bilstm_mlp_improve_30-30_l20.01_dr0.7_lr0.001_soa_vlstm2-256-0.5_pretrained_rake-4-600-e10" -a 0.7 -decay 0 -n1 30 -n3 30 -e 10 -dr 0.7 -lr 0.001 -l2 0.1 -nl 2 -hd 256 &> out/ro_soa_vlstm-2-256-0.5_rake-4-600-mlp-30-30-lr.001-l2-0.01-dr0.7-10-11.txt &
     start = datetime.now()
     dataset = IMDBDataset(experiment.config)
     print(f"Time data load: {str(datetime.now()-start)}")
