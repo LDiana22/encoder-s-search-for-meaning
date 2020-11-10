@@ -33,14 +33,15 @@ torch.cuda.manual_seed(0)
 np.random.seed(0)
 random.seed(0)
 
-#checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5"
-checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4" #64
-#experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4
+checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h256-dr0.5/snapshot/2020-06-16_22-06-00_e5"
+#checkpoint = "experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.3/snapshot/2020-06-24_09-58-30_e4" #64
 #checkpoint ="experiments/soa-dicts/vanilla-lstm-n2-h64-dr0.1/snapshot/2020-07-05_18-26-59_e4"
 start = datetime.now()
 formated_date = start.strftime(DATE_FORMAT)
 PREFIX_DIR = "experiments/soa-dicts"
 MODEL_MAPPING = "experiments/soa-dicts/model_mapping"
+PREFIX_DIR = "experiments/independent"
+MODEL_MAPPING = "experiments/model_mappings/independent"
 
 IMDB_PATH = "../.data/imdb/aclImdb"
 CONFIG={
@@ -160,7 +161,7 @@ CONFIG = {
     "output_dim": 1,
     "load_dictionary": True,
 
-    "lr": 0.001,
+    "lr": 0.01,
     "hidden_dim": 64,
     "n_layers": 2,
     "max_dict": 1000, 
@@ -177,7 +178,7 @@ CONFIG = {
     "n1": 1,
     "n3": 1,
     "alpha_decay": 0,
-    "l2_wd":0.1,
+    "l2_wd":0.001,
     #"dict_checkpoint": "experiments/independent/dictionaries/rake-polarity/dictionary.h5",
     #"dict_checkpoint": "experiments/dict_acquisition/dictionaries/rake-instance-600-4-filteredTrue/dictionary-2020-06-07_23-18-09.h5",
     
@@ -661,7 +662,8 @@ class FrozenVLSTM(AbstractModel):
 VANILLA_CACHE = "vanilla-64-2020-09-01_17-04-19"
 VANILLA_CACHE = "vanilla-64-2020-09-04_13-51-07"
 VANILLA_CACHE = "vanilla-64-2020-08-31_19-36-11"
-LOAD = False
+VANILLA_CACHE = "vanilla-64-2020-10-06_14-52-43"
+LOAD = True
 
 if not LOAD:
     dataset = IMDBDataset(CONFIG)
@@ -760,15 +762,22 @@ def fix_file(path):
 
 def load_explanations(path, raw_path=""):
     print(f"Loading from {path}")
+    #parca il <unk> mike  smecher si beton lmao ~ [OrderedDict([('vazut acest film pentru', None)]), 0.0, 0.0, tensor(0.4055, device='cuda:0')] ~ C: 0.05429545044898987
     df = pd.read_csv(path, sep="~", header=0, names=["review", "explanation", "contribution"])
     #df["contribution"] = df["contribution"].apply(lambda c: float(str(c).split(":")[0]))
     df["contribution"] = df["contribution"].apply(lambda c: float(c))
     df["frequency"] = df["explanation"].apply(lambda f: list(re.findall(r'(\d+)', str(f)))).apply(lambda x: x[0] if x else None)
-    df["confidence_score"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+', str(f))).apply(lambda x: float(x[0]) if x else None)
-    df["prediction"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+',str(f))).apply(lambda x: float(x[1]) if len(x)>1 else None)
-    df["label"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[2]) if len(x)>2 else None)
-    df["raw_pred"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[3]) if len(x)>3 else None)
+    #df["confidence_score"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+', str(f))).apply(lambda x: float(x[0]) if x else None)
+    #df["prediction"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+',str(f))).apply(lambda x: float(x[1]) if len(x)>1 else None)
+    #df["label"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[2]) if len(x)>2 else None)
+    #df["raw_pred"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[3]) if len(x)>3 else None)
+    
+    df["prediction"] = df["explanation"].apply(lambda f: re.findall(r'\d+\.\d+',str(f))).apply(lambda x: float(x[0]) if len(x)>1 else None)
+    df["label"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[1]) if len(x)>2 else None)
+    df["raw_pred"] = df["explanation"].apply(lambda x: re.findall(r'\d+\.\d+', str(x))).apply(lambda x: float(x[2]) if len(x)>2 else None)
+    df["explanation"] = df["explanation"].apply(lambda x: x.split('([(\'')[1].split('\', ')[0])
     df = df.drop_duplicates(subset=["review"])
+    print(df.head())
     vanilla = load_vanilla() if LOAD else compute_vanilla_preds(df)
     if LOAD:
         df = df.merge(vanilla, on="review", how="left")
@@ -776,6 +785,9 @@ def load_explanations(path, raw_path=""):
         df = vanilla
     print("After merge")
     print(df.count())
+    print("acc raw_pred")
+    df["raw_pred"] = df["raw_pred"].apply(round)
+    print(df[df["raw_pred"]==df["label"]].count()["raw_pred"]*100/df.count()["label"])
     return df
 ##################################################################
 
@@ -891,7 +903,6 @@ print("all instances...")
 all_metrics_path = os.path.join(base_path, "all_instances_metrics.txt")
 print_metrics(df, all_metrics_path)
 print_percentages(df, os.path.join(base_path, "percentages-changed-preds.txt"))
-
 all_hist_path = os.path.join(base_path, "all_instances_hist.png")
 plot_hist(df["contribution"], "Histogram all contributions", all_hist_path)
 
@@ -917,6 +928,15 @@ df[df["label"]==round(df["prediction"])].sort_values(by=["contribution"], ascend
 path = os.path.join(base_path, "descending_contribution_incorrect.txt")
 df[df["label"]!=round(df["prediction"])].sort_values(by=["contribution"], ascending=False).to_csv(path)
 
+# just sayin'...
+# df["explanation"] = df["explanation"].apply(lambda s: s.split("([('")[1].split("'")[0])                                                                                                                                                                 
+print("Val counts pos class")
+v1=df[(df["prediction"]==0.0) & (df["label"]==0.0) & (df["contribution"]>0)]["explanation"].value_counts().head(20)
+print(v1)
+print("Val counts neg class")
+v2=df[(df["prediction"]==1.0) & (df["label"]==1.0) & (df["contribution"]>0)]["explanation"].value_counts().head(20)
+print(v2)
+print("Val counts pos class\n", v1,"\nVal counts neg class\n", v2, file=open(os.path.join(base_path, "distributions.txt"), "w"))
 # print(df.head())
 # print(df[(df["prediction"]==df["label"])].shape)
 # print(df[(df["prediction"]==df["label"])]["contribution"].mean())
