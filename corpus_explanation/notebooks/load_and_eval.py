@@ -508,7 +508,7 @@ class FrozenVLSTM(AbstractModel):
         """
         super().__init__(id, mapping_file_location, model_args)
         self.device = torch.device('cuda' if model_args["cuda"] else 'cpu')
-
+        self.vocab = model_args.vocab
         # UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
         # PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token]
         self.input_size = model_args["max_vocab_size"]
@@ -1428,6 +1428,7 @@ if "mlp_improve" in args.m:
 elif args.m == "frozen":
   vanilla_args = copy.deepcopy(CONFIG)
   vanilla_args["restore_checkpoint"] = True
+  vanilla_args["text"]= dataset.TEXT 
   model = FrozenVLSTM("frozen-bi-lstm", MODEL_MAPPING, vanilla_args)
   print(vanilla_args["checkpoint_v_file"])
   model.load_checkpoint(vanilla_args["checkpoint_v_file"])
